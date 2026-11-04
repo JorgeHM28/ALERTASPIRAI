@@ -28,100 +28,126 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<Geometry>("Area")
-                        .HasColumnType("geometry(Geometry, 4326)");
+                        .HasColumnType("geometry(Geometry, 4326)")
+                        .HasColumnName("area");
 
                     b.Property<string>("Certeza")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("certeza");
 
                     b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
 
                     b.Property<string>("Descripcion")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("descripcion");
 
                     b.Property<string>("DescripcionArea")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("descripcion_area");
 
                     b.Property<DateTimeOffset>("Enviado")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviado");
 
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("estado");
 
                     b.Property<string>("Evento")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("evento");
 
                     b.Property<DateTimeOffset?>("Expira")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expira");
 
                     b.Property<string>("Formato")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("formato");
 
                     b.Property<string>("IdentificadorCap")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("identificador_cap");
 
                     b.Property<string>("Instruccion")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("instruccion");
 
                     b.Property<Guid>("RegistradoPorId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("registrado_por_id");
 
                     b.Property<string>("Remitente")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("remitente");
 
                     b.Property<string>("Severidad")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("severidad");
 
                     b.Property<string>("TipoMensaje")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("tipo_mensaje");
 
                     b.Property<string>("Titular")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("titular");
 
                     b.Property<string>("Urgencia")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("urgencia");
 
                     b.Property<DateTimeOffset?>("Vigente")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("vigente");
 
                     b.Property<string>("XmlCap")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("xml_cap");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_avisos");
 
-                    b.HasIndex("Area");
+                    b.HasIndex("Area")
+                        .HasDatabaseName("ix_avisos_area");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Area"), "gist");
 
-                    b.HasIndex("Enviado");
+                    b.HasIndex("Enviado")
+                        .HasDatabaseName("ix_avisos_enviado");
 
-                    b.HasIndex("RegistradoPorId");
+                    b.HasIndex("RegistradoPorId")
+                        .HasDatabaseName("ix_avisos_registrado_por_id");
 
                     b.HasIndex("Remitente", "IdentificadorCap")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_avisos_remitente_identificador_cap");
 
                     b.ToTable("avisos", (string)null);
                 });
@@ -130,33 +156,42 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
 
                     b.Property<string>("Municipio")
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("municipio");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
 
                     b.Property<int?>("Poblacion")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("poblacion");
 
                     b.Property<Point>("Ubicacion")
-                        .HasColumnType("geometry(Point, 4326)");
+                        .HasColumnType("geometry(Point, 4326)")
+                        .HasColumnName("ubicacion");
 
                     b.Property<Guid>("ZonaId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("zona_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_comunidades");
 
                     b.HasIndex("ZonaId", "Nombre")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_comunidades_zona_id_nombre");
 
                     b.ToTable("comunidades", (string)null);
                 });
@@ -165,29 +200,37 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("Cargo")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("cargo");
 
                     b.Property<Guid>("ComunidadId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("comunidad_id");
 
                     b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_contactos");
 
-                    b.HasIndex("ComunidadId");
+                    b.HasIndex("ComunidadId")
+                        .HasDatabaseName("ix_contactos_comunidad_id");
 
                     b.ToTable("contactos", (string)null);
                 });
@@ -196,48 +239,60 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("email");
 
                     b.Property<string>("HashContrasena")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("hash_contrasena");
 
                     b.Property<string>("NombreCompleto")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre_completo");
 
                     b.Property<string>("NombreUsuario")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("nombre_usuario");
 
                     b.Property<string>("Rol")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rol");
 
                     b.Property<DateTimeOffset?>("UltimoAcceso")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ultimo_acceso");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_usuarios");
 
                     b.HasIndex("Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_usuarios_email");
 
                     b.HasIndex("NombreUsuario")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_usuarios_nombre_usuario");
 
                     b.ToTable("usuarios", (string)null);
                 });
@@ -246,37 +301,46 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<Geometry>("Area")
                         .IsRequired()
-                        .HasColumnType("geometry(Geometry, 4326)");
+                        .HasColumnType("geometry(Geometry, 4326)")
+                        .HasColumnName("area");
 
                     b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("descripcion");
 
                     b.Property<string>("NivelRiesgo")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("nivel_riesgo");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_zonas");
 
-                    b.HasIndex("Area");
+                    b.HasIndex("Area")
+                        .HasDatabaseName("ix_zonas_area");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Area"), "gist");
 
                     b.HasIndex("Nombre")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_zonas_nombre");
 
                     b.ToTable("zonas", (string)null);
                 });
@@ -287,7 +351,8 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .WithMany()
                         .HasForeignKey("RegistradoPorId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_avisos_usuarios_registrado_por_id");
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Comunidades.Comunidad", b =>
@@ -296,7 +361,8 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .WithMany()
                         .HasForeignKey("ZonaId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_comunidades_zonas_zona_id");
 
                     b.Navigation("Zona");
                 });
@@ -307,40 +373,49 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .WithMany("Contactos")
                         .HasForeignKey("ComunidadId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_contactos_comunidades_comunidad_id");
 
                     b.OwnsMany("SistemaAlertas.Domain.Comunidades.CanalContacto", "Canales", b1 =>
                         {
                             b1.Property<int>("Id")
                                 .ValueGeneratedOnAdd()
-                                .HasColumnType("integer");
+                                .HasColumnType("integer")
+                                .HasColumnName("id");
 
                             NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
 
                             b1.Property<Guid>("ContactoId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uuid")
+                                .HasColumnName("contacto_id");
 
                             b1.Property<string>("Destino")
                                 .IsRequired()
                                 .HasMaxLength(150)
-                                .HasColumnType("character varying(150)");
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("destino");
 
                             b1.Property<bool>("Preferido")
-                                .HasColumnType("boolean");
+                                .HasColumnType("boolean")
+                                .HasColumnName("preferido");
 
                             b1.Property<string>("Tipo")
                                 .IsRequired()
                                 .HasMaxLength(32)
-                                .HasColumnType("character varying(32)");
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("tipo");
 
-                            b1.HasKey("Id");
+                            b1.HasKey("Id")
+                                .HasName("pk_contacto_canales");
 
-                            b1.HasIndex("ContactoId");
+                            b1.HasIndex("ContactoId")
+                                .HasDatabaseName("ix_contacto_canales_contacto_id");
 
                             b1.ToTable("contacto_canales", (string)null);
 
                             b1.WithOwner()
-                                .HasForeignKey("ContactoId");
+                                .HasForeignKey("ContactoId")
+                                .HasConstraintName("fk_contacto_canales_contactos_contacto_id");
                         });
 
                     b.Navigation("Canales");

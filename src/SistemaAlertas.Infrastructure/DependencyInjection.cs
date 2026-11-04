@@ -16,7 +16,8 @@ public static class DependencyInjection
 
         // Npgsql ya mantiene su propio pool de conexiones: por eso no se implementa Object Pool.
         services.AddDbContext<AlertasDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite()));
+            options.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite())
+                   .UseSnakeCaseNamingConvention());
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AlertasDbContext>());
 
         var jwt = configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>() ?? new OpcionesJwt();

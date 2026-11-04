@@ -12,6 +12,17 @@ Criterio: un patrón se usa solo si resuelve un problema real del sistema. Se ev
 | Singleton clásico | Se descarta | — | — |
 | Object Pool | Se descarta | — | — |
 
+## Dónde está en el código
+
+| Patrón | Archivos |
+|---|---|
+| Factory Method | `src/SistemaAlertas.Application/Avisos/Importacion/IImportadorAviso.cs` (producto), `ImportadorCapXml.cs` y `ImportadorCapJson.cs` (productos concretos), `IFabricaImportadores.cs` y `FabricaImportadores.cs` (creador). Lo usa `ServicioAvisos.ImportarAsync`. |
+| Builder | `src/SistemaAlertas.Application/Cap/MensajeCapBuilder.cs` (`MensajeCapBuilder` e `InfoCapBuilder`), que produce el `record MensajeCap` de `src/SistemaAlertas.Domain/Cap/MensajeCap.cs`. Lo usan los dos importadores y `ServicioAvisos.RegistrarManualAsync`. |
+| Singleton vía DI | `src/SistemaAlertas.Application/DependencyInjection.cs` (importadores y fábrica) y `src/SistemaAlertas.Infrastructure/DependencyInjection.cs` (hasher, generador JWT, opciones). |
+| Prototype | Sprint 2. `MensajeCap` ya es un `record` inmutable, así que `with` funcionará sin cambios. |
+
+Las pruebas que demuestran cada patrón están en `tests/SistemaAlertas.Tests/MensajeCapBuilderTests.cs` e `ImportadoresTests.cs`.
+
 ## Patrones que se usan
 
 ### Factory Method
