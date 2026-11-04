@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\SistemaAlertas.Infrastructure\SistemaAlertas.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\docs\ejemplos\*" LinkBase="ejemplos" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -1,6 +1,7 @@
 services:
   db:
     image: postgis/postgis:17-3.5
+    platform: linux/amd64 # la imagen oficial no publica arm64; en Mac Apple Silicon corre con Rosetta
     container_name: sistema_alertas_db
     environment:
       POSTGRES_DB: sistema_alertas

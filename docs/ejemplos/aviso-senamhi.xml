@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>SENAMHI-SCZ-2026-1104-001</identifier>
+  <sender>avisos@senamhi.gob.bo</sender>
+  <sent>2026-11-04T08:00:00-04:00</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <scope>Public</scope>
+  <info>
+    <language>es-BO</language>
+    <category>Met</category>
+    <event>Crecida del río Piraí</event>
+    <urgency>Expected</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-11-04T08:00:00-04:00</effective>
+    <expires>2026-11-05T20:00:00-04:00</expires>
+    <senderName>SENAMHI Santa Cruz</senderName>
+    <headline>Alerta naranja por crecida del río Piraí</headline>
+    <description>Precipitaciones de 60 a 90 mm en la cuenca alta en las próximas 24 horas.</description>
+    <instruction>Alejarse de las riberas y preparar mochila de emergencia.</instruction>
+    <area>
+      <areaDesc>Ribera Piraí - Porongo</areaDesc>
+      <polygon>-17.77,-63.255 -17.77,-63.215 -17.825,-63.215 -17.825,-63.255 -17.77,-63.255</polygon>
+    </area>
+  </info>
+</alert>
