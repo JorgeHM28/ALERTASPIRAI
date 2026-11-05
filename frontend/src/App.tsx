@@ -23,11 +23,15 @@ export default function App() {
 
   return (
     <div className="app">
+      <a className="saltar" href="#contenido">Saltar al contenido</a>
       <header>
-        <h1>SAT Río Piraí</h1>
-        <nav>
+        <div className="marca">
+          <span className="marca-simbolo" aria-hidden="true">≈</span>
+          <div><h1>SAT Río Piraí</h1><span className="marca-descripcion">Sistema de alertas tempranas</span></div>
+        </div>
+        <nav aria-label="Navegación principal">
           {paginas.map(([id, nombre]) => (
-            <button key={id} className={pagina === id ? 'activo' : ''} onClick={() => setPagina(id)}>{nombre}</button>
+            <button key={id} aria-current={pagina === id ? "page" : undefined} className={pagina === id ? 'activo' : ''} onClick={() => setPagina(id)}>{nombre}</button>
           ))}
         </nav>
         <div className="usuario">
@@ -35,7 +39,8 @@ export default function App() {
           <button onClick={() => { guardarSesion(null); setSesion(null) }}>Salir</button>
         </div>
       </header>
-      <main>
+      <main id="contenido">
+        <div className="contexto">CENTRO DE GESTIÓN <span>Río Piraí · Santa Cruz</span></div>
         {pagina === 'avisos' && <Avisos rol={usuario.rol} />}
         {pagina === 'zonas' && <Zonas rol={usuario.rol} />}
         {pagina === 'comunidades' && <Comunidades rol={usuario.rol} />}
@@ -63,12 +68,19 @@ function Login({ alEntrar }: { alEntrar: (s: Sesion) => void }) {
 
   return (
     <div className="login">
+      <div className="login-presentacion">
+        <span className="eyebrow">SAT / RÍO PIRAÍ</span>
+        <h2>Información oportuna.<br />Comunidades preparadas.</h2>
+        <p>Gestiona avisos, zonas de riesgo y contactos comunitarios desde un solo lugar.</p>
+        <span className="login-region">Santa Cruz · Bolivia</span>
+      </div>
       <form onSubmit={entrar} className="tarjeta">
-        <h1>Sistema de Alertas Tempranas</h1>
-        <p className="tenue">Río Piraí · Santa Cruz</p>
-        <label>Usuario<input value={nombreUsuario} onChange={(e) => setNombreUsuario(e.target.value)} autoFocus required /></label>
-        <label>Contraseña<input type="password" value={contrasena} onChange={(e) => setContrasena(e.target.value)} required /></label>
-        {error && <p className="error">{error}</p>}
+        <span className="eyebrow">ACCESO AL SISTEMA</span>
+        <h1>Bienvenido de nuevo</h1>
+        <p className="tenue">Ingresa con tu cuenta para continuar.</p>
+        <label>Usuario<input autoComplete="username" placeholder="Tu nombre de usuario" value={nombreUsuario} onChange={(e) => setNombreUsuario(e.target.value)} autoFocus required /></label>
+        <label>Contraseña<input type="password" autoComplete="current-password" placeholder="Tu contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)} required /></label>
+        {error && <p className="error" role="alert">{error}</p>}
         <button className="primario" disabled={cargando}>{cargando ? 'Entrando…' : 'Entrar'}</button>
       </form>
     </div>
