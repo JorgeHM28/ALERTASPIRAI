@@ -1,0 +1,16 @@
+name: Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:5080'
+    enabled: true
+    type: default
+    description: URL de la API (dotnet run o docker compose)
+  - key: adminUsuario
+    value: admin
+    enabled: true
+    type: default
+  - key: adminContrasena
+    value: Admin12345
+    enabled: true
+    type: secret
+    description: Contraseña semilla de desarrollo (appsettings.Development.json)

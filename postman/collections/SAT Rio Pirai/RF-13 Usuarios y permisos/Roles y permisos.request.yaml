@@ -1,0 +1,12 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/usuarios/roles'
+order: 5000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const roles = pm.response.json().map(r => r.rol);
+      pm.test('existen los 4 roles', () => pm.expect(roles).to.have.members(['Administrador','Operador','Aprobador','Consulta']));

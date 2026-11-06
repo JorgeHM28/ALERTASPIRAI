@@ -1,0 +1,37 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 3000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "identifier": "COED-SCZ-{{$timestamp}}",
+      "sender": "coed@santacruz.gob.bo",
+      "sent": "2026-11-04T09:30:00-04:00",
+      "status": "Actual",
+      "msgType": "Alert",
+      "scope": "Public",
+      "info": [
+        {
+          "language": "es-BO",
+          "category": ["Met"],
+          "event": "Desborde en Urubó",
+          "urgency": "Immediate",
+          "severity": "Extreme",
+          "certainty": "Observed",
+          "headline": "Desborde observado en Playa Piraí",
+          "area": [ { "areaDesc": "Urubó - Playa Piraí", "polygon": ["-17.735,-63.215 -17.735,-63.185 -17.77,-63.185 -17.77,-63.215 -17.735,-63.215"] } ]
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+
+      pm.test('lo procesó el importador JSON', () => pm.expect(pm.response.json().formato).to.eql('CapJson'));

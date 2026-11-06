@@ -1,0 +1,3 @@
+$kind: collection
+description: 'Importación de mensajes CAP 1.2 (XML y JSON, con Factory Method) y registro manual (con Builder).'
+order: 4000

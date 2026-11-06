@@ -8,22 +8,46 @@ Sistema de alertas de inundación basado en CAP 1.2 (OASIS). Proyecto de Sistema
 - Frontend: React 19 + Vite + TypeScript + Leaflet
 
 ## Cómo ejecutar
+
+### Opción 1: todo con Docker (recomendada para el equipo)
+Solo necesitas Docker Desktop abierto.
+
+```bash
+docker compose up -d --build     # base de datos, API y frontend
+```
+
+| Servicio | Dirección | Contenedor |
+|---|---|---|
+| Web | http://localhost:5173 | `sistema_alertas_web` |
+| API | http://localhost:5080 (OpenAPI en `/openapi/v1.json`) | `sistema_alertas_api` |
+| PostgreSQL + PostGIS | localhost:5433 | `sistema_alertas_db` |
+
+Comandos útiles: `docker compose logs -f api` (ver logs), `docker compose down` (apagar) y `docker compose down -v` (apagar y borrar los datos).
+
+### Opción 2: desarrollo local (para programar)
 Requisitos: .NET SDK 10, Node 20 o superior y Docker Desktop.
 
 ```bash
-docker compose up -d                                  # PostgreSQL + PostGIS en el puerto 5433
+docker compose up -d db                               # solo la base de datos
 dotnet run --project src/SistemaAlertas.Api           # API en http://localhost:5080 (aplica migraciones al iniciar)
 cd frontend && npm install && npm run dev             # Web en http://localhost:5173
 ```
 
+No mezcles las dos opciones: si la API de Docker está corriendo, ocupa el puerto 5080.
+
 Usuario inicial (solo en Development): **admin / Admin12345**. Cámbiale la contraseña después de entrar.
 
-Para probar rápido, en la web:
+Para probar rápido en la web:
 1. **Zonas → Importar GeoJSON** con `docs/ejemplos/zonas-pirai.geojson`.
-2. **Comunidades → Nueva comunidad** dentro de una zona y agrégale contactos con sus canales.
+2. **Comunidades → Nueva comunidad** dentro de una zona, y agrégale contactos con sus canales.
 3. **Avisos → Importar CAP** con `docs/ejemplos/aviso-senamhi.xml` o `docs/ejemplos/aviso-cap.json`, o **Registrar a mano**.
 
-Pruebas: `dotnet test` (39 pruebas del Builder, los importadores, la fábrica y las reglas de dominio).
+## Pruebas
+
+- **Unitarias:** `dotnet test` ejecuta 39 pruebas del Builder, los importadores, la fábrica y las reglas de dominio.
+- **API con Postman:** la colección `postman/collections/SAT Rio Pirai` tiene una carpeta por requisito (RF-13, RF-09, RF-12 y RF-01), con 32 peticiones y 50 tests. Incluye los casos de error y de permisos, por ejemplo "Consulta no puede crear zonas → 403".
+  - En la app de Postman, abre esta carpeta del repo (Local View) o impórtala con **Import**, elige el entorno **Local** y ejecuta la colección completa con **Run**. El login guarda el token solo.
+  - Por consola: `postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml`
 
 ## Alcance del Sprint 1
 
@@ -52,6 +76,7 @@ src/SistemaAlertas.Application     Casos de uso, Builder CAP, Factory Method de 
 src/SistemaAlertas.Infrastructure  EF Core + PostGIS, migraciones, hash de contraseñas, JWT
 src/SistemaAlertas.Api             Controladores REST, autorización por rol, manejo de errores
 tests/SistemaAlertas.Tests         Pruebas xUnit
+postman/                           Colección y entorno de Postman (formato v3, YAML)
 frontend/                          SPA React + Leaflet
 docs/patrones.md                   Patrones creacionales usados y descartados
 docs/ejemplos/                     GeoJSON y mensajes CAP de ejemplo

@@ -1,0 +1,3 @@
+$kind: collection
+description: 'Login con JWT y matriz de permisos por rol (Administrador, Operador, Aprobador, Consulta).'
+order: 1000

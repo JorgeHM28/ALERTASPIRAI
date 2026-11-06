@@ -1,0 +1,28 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/avisos'
+order: 5000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "evento": "Crecida del río Piraí",
+      "urgencia": "Immediate",
+      "severidad": "Severe",
+      "certeza": "Observed",
+      "titular": "Alerta roja en Porongo",
+      "instruccion": "Evacuar hacia zonas altas.",
+      "zonaIds": ["{{zonaId}}"]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+
+      const a = pm.response.json();
+      pm.test('se generó como aviso manual', () => pm.expect(a.formato).to.eql('Manual'));
+      pm.collectionVariables.set('avisoManualId', a.id);

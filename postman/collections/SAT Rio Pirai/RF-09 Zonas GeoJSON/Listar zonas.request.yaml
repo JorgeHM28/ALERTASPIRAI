@@ -1,0 +1,17 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/zonas'
+order: 2000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const zona = pm.response.json().find(z => z.nombre === 'Ribera Piraí - Porongo');
+      pm.test('incluye la zona Ribera Piraí - Porongo con su área', () => {
+        pm.expect(zona).to.exist;
+        pm.expect(zona.areaKm2).to.be.above(0);
+        pm.expect(zona.geometria.type).to.eql('Polygon');
+      });
+      pm.collectionVariables.set('zonaId', zona.id);

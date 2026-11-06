@@ -1,0 +1,32 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 2000
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+      <identifier>{{avisoXmlIdentificador}}</identifier>
+      <sender>avisos@senamhi.gob.bo</sender>
+      <sent>2026-11-04T08:00:00-04:00</sent>
+      <status>Actual</status>
+      <msgType>Alert</msgType>
+      <scope>Public</scope>
+      <info>
+        <category>Met</category>
+        <event>Crecida</event>
+        <urgency>Expected</urgency>
+        <severity>Severe</severity>
+        <certainty>Likely</certainty>
+      </info>
+    </alert>
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('avisa que ya existe', () => pm.expect(pm.response.json().detail).to.include('ya fue registrado'));

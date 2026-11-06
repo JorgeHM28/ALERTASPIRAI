@@ -1,0 +1,11 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/comunidades/{{comunidadId}}'
+order: 5000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      pm.test('tiene el contacto creado', () => pm.expect(pm.response.json().contactos).to.have.lengthOf(1));

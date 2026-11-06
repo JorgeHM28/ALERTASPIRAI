@@ -1,0 +1,9 @@
+$kind: http-request
+method: DELETE
+url: '{{baseUrl}}/api/zonas/{{zonaId}}'
+order: 6000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));

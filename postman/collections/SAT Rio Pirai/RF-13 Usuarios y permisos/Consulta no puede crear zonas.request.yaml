@@ -1,0 +1,25 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/zonas'
+order: 10000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "No permitida",
+      "nivelRiesgo": "Bajo",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.2,-17.7],[-63.1,-17.7],[-63.1,-17.8],[-63.2,-17.7]]]}
+    }
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenConsulta}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 403', () => pm.response.to.have.status(403));

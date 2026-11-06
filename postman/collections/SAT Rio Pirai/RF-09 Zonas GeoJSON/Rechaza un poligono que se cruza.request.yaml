@@ -1,0 +1,21 @@
+$kind: http-request
+name: 'Rechaza un polígono que se cruza'
+method: POST
+url: '{{baseUrl}}/api/zonas'
+order: 5000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Corbata {{$timestamp}}",
+      "nivelRiesgo": "Bajo",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.2,-17.7],[-63.1,-17.8],[-63.1,-17.7],[-63.2,-17.8],[-63.2,-17.7]]]}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));

@@ -1,0 +1,38 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/zonas/importar'
+order: 1000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": { "nombre": "Ribera Piraí - Porongo", "nivelRiesgo": "MuyAlto", "descripcion": "Margen izquierda del río frente a Porongo, zona de desborde frecuente." },
+          "geometry": { "type": "Polygon", "coordinates": [[[-63.2550,-17.7700],[-63.2150,-17.7700],[-63.2150,-17.8250],[-63.2550,-17.8250],[-63.2550,-17.7700]]] }
+        },
+        {
+          "type": "Feature",
+          "properties": { "nombre": "Urubó - Playa Piraí", "nivelRiesgo": "Alto", "descripcion": "Urbanizaciones del Urubó cercanas al cauce." },
+          "geometry": { "type": "Polygon", "coordinates": [[[-63.2150,-17.7350],[-63.1850,-17.7350],[-63.1850,-17.7700],[-63.2150,-17.7700],[-63.2150,-17.7350]]] }
+        },
+        {
+          "type": "Feature",
+          "properties": { "nombre": "Montero Norte", "nivelRiesgo": "Medio", "descripcion": "Llanura de inundación aguas abajo." },
+          "geometry": { "type": "Polygon", "coordinates": [[[-63.3000,-17.2800],[-63.2300,-17.2800],[-63.2300,-17.3300],[-63.3000,-17.3300],[-63.3000,-17.2800]]] }
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const r = pm.response.json();
+      pm.test('importa o actualiza las 3 zonas del ejemplo', () => pm.expect(r.creadas + r.actualizadas).to.eql(3));

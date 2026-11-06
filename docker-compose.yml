@@ -1,3 +1,5 @@
+# Sistema completo:            docker compose up -d --build
+# Solo la base (para dotnet run): docker compose up -d db
 services:
   db:
     image: postgis/postgis:17-3.5
@@ -11,6 +13,37 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alertas -d sistema_alertas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: src/SistemaAlertas.Api/Dockerfile
+    container_name: sistema_alertas_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development # crea el usuario admin y publica /openapi
+      ConnectionStrings__Alertas: Host=db;Port=5432;Database=sistema_alertas;Username=alertas;Password=alertas_dev
+      Cors__Origenes__0: http://localhost:5173
+    ports:
+      - "5080:8080"
+
+  web:
+    build:
+      context: frontend
+      args:
+        VITE_API_URL: http://localhost:5080
+    container_name: sistema_alertas_web
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
 
 volumes:
   pgdata:

@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/comunidades'
+order: 1000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Porongo Centro {{$timestamp}}",
+      "municipio": "Porongo",
+      "poblacion": 1200,
+      "latitud": -17.80,
+      "longitud": -63.23,
+      "zonaId": "{{zonaId}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('comunidadId', pm.response.json().id);

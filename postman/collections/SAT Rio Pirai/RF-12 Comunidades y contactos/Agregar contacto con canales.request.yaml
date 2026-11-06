@@ -1,0 +1,31 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/comunidades/{{comunidadId}}/contactos'
+order: 3000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Juan Pérez",
+      "cargo": "Presidente OTB",
+      "activo": true,
+      "canales": [
+        { "tipo": "Sms", "destino": "+591 71234567", "preferido": true },
+        { "tipo": "Email", "destino": "Juan@Ejemplo.com", "preferido": false }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+
+      const c = pm.response.json();
+      pm.test('normaliza el teléfono y el email', () => {
+        pm.expect(c.canales[0].destino).to.eql('+59171234567');
+        pm.expect(c.canales[1].destino).to.eql('juan@ejemplo.com');
+      });
+      pm.collectionVariables.set('contactoId', c.id);
