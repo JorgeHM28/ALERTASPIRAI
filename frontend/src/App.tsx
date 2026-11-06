@@ -1,88 +1,91 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
+import { ArrowRight, Bell, Eye, EyeOff, LogOut, Map, MapPin, ShieldCheck, Users, Waves } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 import { api, guardarSesion, leerSesion, type Sesion } from './api'
-import Zonas from './paginas/Zonas'
-import Comunidades from './paginas/Comunidades'
-import Avisos from './paginas/Avisos'
-import Usuarios from './paginas/Usuarios'
+import { Alert } from './components/ui/Alert'
+const Zonas = lazy(() => import('./paginas/Zonas'))
+const Comunidades = lazy(() => import('./paginas/Comunidades'))
+const Avisos = lazy(() => import('./paginas/Avisos'))
+const Usuarios = lazy(() => import('./paginas/Usuarios'))
 
 type Pagina = 'avisos' | 'zonas' | 'comunidades' | 'usuarios'
+const paginas: { id: Pagina; nombre: string; Icon: typeof Bell }[] = [
+  { id: 'avisos', nombre: 'Avisos', Icon: Bell },
+  { id: 'zonas', nombre: 'Zonas de riesgo', Icon: Map },
+  { id: 'comunidades', nombre: 'Comunidades', Icon: MapPin },
+  { id: 'usuarios', nombre: 'Usuarios', Icon: Users },
+]
 
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion)
   const [pagina, setPagina] = useState<Pagina>('avisos')
-
   if (!sesion) return <Login alEntrar={(s) => { guardarSesion(s); setSesion(s) }} />
-
   const { usuario } = sesion
-  const paginas: [Pagina, string][] = [
-    ['avisos', 'Avisos'], ['zonas', 'Zonas'], ['comunidades', 'Comunidades'],
-    ...(usuario.rol === 'Administrador' ? [['usuarios', 'Usuarios'] as [Pagina, string]] : []),
-  ]
-
-  return (
-    <div className="app">
-      <a className="saltar" href="#contenido">Saltar al contenido</a>
-      <header>
-        <div className="marca">
-          <span className="marca-simbolo" aria-hidden="true">≈</span>
-          <div><h1>SAT Río Piraí</h1><span className="marca-descripcion">Sistema de alertas tempranas</span></div>
-        </div>
-        <nav aria-label="Navegación principal">
-          {paginas.map(([id, nombre]) => (
-            <button key={id} aria-current={pagina === id ? "page" : undefined} className={pagina === id ? 'activo' : ''} onClick={() => setPagina(id)}>{nombre}</button>
-          ))}
-        </nav>
-        <div className="usuario">
-          <span>{usuario.nombreCompleto} · <b>{usuario.rol}</b></span>
-          <button onClick={() => { guardarSesion(null); setSesion(null) }}>Salir</button>
-        </div>
-      </header>
-      <main id="contenido">
-        <div className="contexto">CENTRO DE GESTIÓN <span>Río Piraí · Santa Cruz</span></div>
+  return <div className="app dashboard">
+    <a className="saltar" href="#contenido">Saltar al contenido</a>
+    <aside className="sidebar">
+      <div className="marca"><span className="marca-simbolo"><Waves size={25} aria-hidden="true" /></span>
+        <div><h1>SAT Río Piraí</h1><span className="marca-descripcion">ALERTAS TEMPRANAS</span></div></div>
+      <span className="nav-label">CENTRO DE GESTIÓN</span>
+      <nav aria-label="Navegación principal">{paginas.filter(p => p.id !== 'usuarios' || usuario.rol === 'Administrador').map(({ id, nombre, Icon }) =>
+        <button key={id} aria-current={pagina === id ? 'page' : undefined} className={pagina === id ? 'activo' : ''} onClick={() => setPagina(id)}>
+          <Icon size={19} aria-hidden="true" />{nombre}{pagina === id && <span className="nav-dot" />}
+        </button>)}</nav>
+      <div className="sidebar-region"><MapPin size={18} aria-hidden="true" /><div>Cuenca del río Piraí<small>Santa Cruz · Bolivia</small></div></div>
+      <div className="sidebar-person"><span className="avatar">{usuario.nombreCompleto.slice(0, 1).toUpperCase()}</span>
+        <div><strong>{usuario.nombreCompleto}</strong><small>{usuario.rol}</small></div>
+        <button className="icon-button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={() => { guardarSesion(null); setSesion(null) }}><LogOut size={18} /></button>
+      </div>
+    </aside>
+    <div className="workspace">
+      <header className="topbar"><div><span className="tenue">Centro de gestión</span><span className="breadcrumb-slash">/</span><strong>{paginas.find(p => p.id === pagina)?.nombre}</strong></div>
+        <span className="access-badge"><ShieldCheck size={15} aria-hidden="true" />Acceso {usuario.rol.toLowerCase()}</span></header>
+      <main id="contenido" tabIndex={-1}>
+        <div className="contexto"><span>SISTEMA DE ALERTAS TEMPRANAS</span><span>Río Piraí · Santa Cruz</span></div>
+        <Suspense fallback={<p role="status" className="tenue">Cargando sección…</p>}>
         {pagina === 'avisos' && <Avisos rol={usuario.rol} />}
         {pagina === 'zonas' && <Zonas rol={usuario.rol} />}
         {pagina === 'comunidades' && <Comunidades rol={usuario.rol} />}
-        {pagina === 'usuarios' && <Usuarios usuarioActualId={usuario.id} />}
+        {pagina === 'usuarios' && usuario.rol === 'Administrador' && <Usuarios usuarioActualId={usuario.id} />}
+        </Suspense>
+        <footer className="app-footer"><span>SAT Río Piraí · Gestión del riesgo</span><span>Componentes <a href="https://easyui.site/" target="_blank" rel="noreferrer">EasyUI</a> · MIT</span></footer>
       </main>
     </div>
-  )
+  </div>
 }
 
 function Login({ alEntrar }: { alEntrar: (s: Sesion) => void }) {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
+  const [mostrar, setMostrar] = useState(false)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
-
   async function entrar(e: React.FormEvent) {
-    e.preventDefault()
-    setCargando(true); setError('')
-    try {
-      alEntrar(await api<Sesion>('/api/auth/login', { method: 'POST', json: { nombreUsuario, contrasena } }))
-    } catch (err) {
-      setError((err as Error).message === 'Failed to fetch' ? 'No se pudo conectar con la API.' : (err as Error).message)
-    } finally { setCargando(false) }
+    e.preventDefault(); setCargando(true); setError('')
+    try { alEntrar(await api<Sesion>('/api/auth/login', { method: 'POST', json: { nombreUsuario, contrasena } })) }
+    catch (err) { setError(err instanceof Error && err.message !== 'Failed to fetch' ? err.message : 'No se pudo conectar con la API. Intenta de nuevo.') }
+    finally { setCargando(false) }
   }
-
-  return (
-    <div className="login">
-      <div className="login-presentacion">
-        <span className="eyebrow">SAT / RÍO PIRAÍ</span>
-        <h2>Información oportuna.<br />Comunidades preparadas.</h2>
-        <p>Gestiona avisos, zonas de riesgo y contactos comunitarios desde un solo lugar.</p>
-        <span className="login-region">Santa Cruz · Bolivia</span>
+  return <div className="login">
+    <div className="login-presentacion">
+      <div className="marca"><span className="marca-simbolo"><Waves size={26} aria-hidden="true" /></span><strong>SAT Río Piraí</strong></div>
+      <div className="login-story"><span className="eyebrow">TERRITORIO CONECTADO. COMUNIDADES PREPARADAS.</span>
+        <h2>Anticiparnos<br />hace la diferencia.</h2>
+        <p>Información oportuna para gestionar el riesgo y cuidar a las comunidades de la cuenca del río Piraí.</p>
+        <div className="river-art" aria-hidden="true"><svg viewBox="0 0 560 160" fill="none"><path d="M-20 130C110 150 90 30 210 65S320 160 390 80 480 15 580 40" /><path d="M-20 110C100 130 100 10 220 45S330 140 400 60 490 -5 580 20" /><path d="M-20 150C120 170 80 50 200 85S310 180 380 100 470 35 580 60" /><circle cx="212" cy="65" r="7" /><circle cx="390" cy="80" r="7" /></svg><span><MapPin size={14} /> Cuenca del río Piraí</span></div>
       </div>
-      <form onSubmit={entrar} className="tarjeta">
-        <span className="eyebrow">ACCESO AL SISTEMA</span>
-        <h1>Bienvenido de nuevo</h1>
-        <p className="tenue">Ingresa con tu cuenta para continuar.</p>
-        <label>Usuario<input autoComplete="username" placeholder="Tu nombre de usuario" value={nombreUsuario} onChange={(e) => setNombreUsuario(e.target.value)} autoFocus required /></label>
-        <label>Contraseña<input type="password" autoComplete="current-password" placeholder="Tu contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)} required /></label>
-        {error && <p className="error" role="alert">{error}</p>}
-        <button className="primario" disabled={cargando}>{cargando ? 'Entrando…' : 'Entrar'}</button>
-      </form>
+      <span className="login-region">Santa Cruz · Bolivia <span>Prevención que nos une.</span></span>
     </div>
-  )
+    <div className="login-access"><form onSubmit={entrar} className="tarjeta" aria-busy={cargando}>
+      <span className="login-lock"><ShieldCheck size={24} aria-hidden="true" /></span><span className="eyebrow">ACCESO AL SISTEMA</span>
+      <div><h1>Bienvenido de nuevo</h1><p className="tenue">Ingresa tus datos para continuar.</p></div>
+      <label>Usuario<input autoComplete="username" placeholder="Tu nombre de usuario" value={nombreUsuario} onChange={e => setNombreUsuario(e.target.value)} autoFocus required /></label>
+      <label>Contraseña<span className="password-field"><input type={mostrar ? 'text' : 'password'} autoComplete="current-password" placeholder="Tu contraseña" value={contrasena} onChange={e => setContrasena(e.target.value)} required />
+        <button type="button" className="icon-button" aria-label={mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={mostrar} onClick={() => setMostrar(!mostrar)}>{mostrar ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>
+      {error && <Alert key={error} tone="danger">{error}</Alert>}
+      <button className="primario login-submit" disabled={cargando}>{cargando ? 'Entrando…' : 'Entrar al sistema'}<ArrowRight size={18} aria-hidden="true" /></button>
+      <p className="login-note"><ShieldCheck size={14} aria-hidden="true" />Acceso reservado a personal autorizado.</p>
+    </form><p className="login-credit">Sistema de alertas tempranas · Río Piraí</p></div>
+  </div>
 }

@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { api, fecha, puedeEditar, type AvisoDetalle, type AvisoResumen, type Rol, type Zona } from '../api'
 import Mapa from './Mapa'
+import { Bell, CircleCheck, Clock3, FileText, Plus, RefreshCw, Search, ShieldAlert, Upload } from 'lucide-react'
+import { Alert } from '../components/ui/Alert'
+import { UnfoldAccordion } from '../components/ui/UnfoldAccordion'
 
 const URGENCIAS = ['Immediate', 'Expected', 'Future', 'Past', 'Unknown']
 const SEVERIDADES = ['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown']
 const CERTEZAS = ['Observed', 'Likely', 'Possible', 'Unlikely', 'Unknown']
 const COLOR_SEVERIDAD: Record<string, string> = { Extreme: '#c62828', Severe: '#ef6c00', Moderate: '#f9a825', Minor: '#2e7d32', Unknown: '#757575' }
+const NOMBRE_SEVERIDAD: Record<string, string> = { Extreme: 'Extrema', Severe: 'Severa', Moderate: 'Moderada', Minor: 'Menor', Unknown: 'Desconocida' }
 
 type Modo = 'lista' | 'importar' | 'manual'
 
@@ -16,55 +20,97 @@ export default function Avisos({ rol }: { rol: Rol }) {
   const [modo, setModo] = useState<Modo>('lista')
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const editar = puedeEditar(rol)
+  const [busqueda, setBusqueda] = useState('')
+  const [severidad, setSeveridad] = useState('')
+  const [filtro, setFiltro] = useState('todos')
+  const [pagina, setPagina] = useState(1)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
 
-  const cargar = () => api<AvisoResumen[]>('/api/avisos').then(setAvisos)
+  const cargar = () => {
+    setCargando(true); setError('')
+    return api<AvisoResumen[]>('/api/avisos').then(setAvisos)
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'No se pudieron cargar los avisos.'))
+      .finally(() => setCargando(false))
+  }
   useEffect(() => { cargar() }, [])
+
+  const pendientes = avisos.filter(a => a.estado !== 'Descartado')
+  const filtrados = avisos.filter(a =>
+    (filtro === 'todos' || (filtro === 'descartados' ? a.estado === 'Descartado' : a.estado !== 'Descartado')) &&
+    (!severidad || a.severidad === severidad) &&
+    `${a.titular ?? ''} ${a.evento} ${a.remitente} ${a.identificadorCap}`.toLocaleLowerCase().includes(busqueda.toLocaleLowerCase()))
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / 8))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const visibles = filtrados.slice((paginaActual - 1) * 8, paginaActual * 8)
+  const abrir = (a: AvisoResumen) => api<AvisoDetalle>(`/api/avisos/${a.id}`).then(setDetalle)
+    .catch((e: unknown) => setError(e instanceof Error ? e.message : 'No se pudo abrir el aviso.'))
 
   const registrado = (a: AvisoResumen) => {
     setAviso({ ok: true, texto: `Aviso "${a.evento}" registrado (${a.identificadorCap}).` })
-    setModo('lista'); cargar(); api<AvisoDetalle>(`/api/avisos/${a.id}`).then(setDetalle)
+    setModo('lista'); cargar(); abrir(a)
   }
 
   async function descartar(id: string) {
     if (!confirm('¿Descartar este aviso?')) return
-    await api(`/api/avisos/${id}/descartar`, { method: 'POST' }); cargar(); setDetalle(null)
+    try { await api(`/api/avisos/${id}/descartar`, { method: 'POST' }); cargar(); setDetalle(null) }
+    catch (e) { setError(e instanceof Error ? e.message : 'No se pudo descartar el aviso.') }
   }
 
   return (
     <section>
       <div className="barra">
-        <h2>Avisos</h2>
+        <div><h2>Avisos tempranos</h2><p className="tenue">Información oportuna para tomar mejores decisiones.</p></div>
         {editar && (
           <div className="acciones">
-            <button className={modo === 'importar' ? 'primario' : ''} onClick={() => setModo('importar')}>Importar CAP</button>
-            <button className={modo === 'manual' ? 'primario' : ''} onClick={() => setModo('manual')}>Registrar a mano</button>
+            <button className={modo === 'importar' ? 'primario' : ''} onClick={() => setModo('importar')}><Upload size={16} aria-hidden="true" />Importar CAP</button>
+            <button className="primario" onClick={() => setModo('manual')}><Plus size={17} aria-hidden="true" />Registrar a mano</button>
           </div>
         )}
       </div>
-      {aviso && <p className={aviso.ok ? 'exito' : 'error'}>{aviso.texto}</p>}
+      <div className="stats-grid" aria-label="Resumen de avisos">
+        {[{ nombre: 'Avisos registrados', valor: avisos.length, Icon: Bell, clase: 'teal', nota: 'Todos los registros' },
+          { nombre: 'Sin descartar', valor: pendientes.length, Icon: Clock3, clase: 'blue', nota: 'Pendientes de seguimiento' },
+          { nombre: 'Severidad alta', valor: pendientes.filter(a => ['Severe', 'Extreme'].includes(a.severidad)).length, Icon: ShieldAlert, clase: 'amber', nota: 'Severos o extremos, sin descartar' },
+          { nombre: 'Descartados', valor: avisos.length - pendientes.length, Icon: CircleCheck, clase: 'slate', nota: 'Registros descartados' }].map(({ nombre, valor, Icon, clase, nota }) =>
+          <div className="stat-card" key={nombre}><div className="stat-heading"><span>{nombre}</span><span className={`stat-icon ${clase}`}><Icon size={19} aria-hidden="true" /></span></div><strong>{cargando || error ? '—' : valor}</strong><small>{nota}</small></div>)}
+      </div>
+      {aviso && <Alert key={aviso.texto} tone={aviso.ok ? 'success' : 'danger'} dismissible>{aviso.texto}</Alert>}
+      {error && <Alert key={error} tone="danger">{error} <button type="button" onClick={cargar}>Reintentar</button></Alert>}
 
       {modo === 'importar' && <ImportarCap alRegistrar={registrado} alCancelar={() => setModo('lista')} />}
       {modo === 'manual' && <RegistroManual alRegistrar={registrado} alCancelar={() => setModo('lista')} />}
 
-      <div className="dos-columnas">
-        <table>
+      <div className="avisos-layout">
+        <div className="list-panel">
+        <div className="list-heading"><h3>Registro de avisos <span className="count-chip">{cargando || error ? '—' : avisos.length}</span></h3><button className="icon-button" onClick={cargar} disabled={cargando} aria-label="Actualizar avisos" title="Actualizar avisos"><RefreshCw size={17} /></button></div>
+        <div className="list-filters"><div className="filter-tabs" role="group" aria-label="Estado del aviso">{[['todos', 'Todos'], ['pendientes', 'Sin descartar'], ['descartados', 'Descartados']].map(([id, nombre]) => <button key={id} aria-pressed={filtro === id} className={filtro === id ? 'selected' : ''} onClick={() => { setFiltro(id); setPagina(1) }}>{nombre}</button>)}</div>
+          <div className="filter-fields"><label className="search-field"><Search size={17} aria-hidden="true" /><input aria-label="Buscar avisos" placeholder="Buscar evento, origen o identificador…" value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1) }} /></label>
+          <select aria-label="Filtrar por severidad" value={severidad} onChange={e => { setSeveridad(e.target.value); setPagina(1) }}><option value="">Toda severidad</option>{SEVERIDADES.map(s => <option key={s} value={s}>{NOMBRE_SEVERIDAD[s]}</option>)}</select></div>
+        </div>
+        <div className="table-scroll" aria-busy={cargando}><table>
           <thead><tr><th>Enviado</th><th>Evento</th><th>Severidad</th><th>Origen</th><th>Estado</th></tr></thead>
           <tbody>
-            {avisos.map((a) => (
-              <tr key={a.id} className={`clicable ${a.estado === 'Descartado' ? 'tachado' : ''}`}
-                onClick={() => api<AvisoDetalle>(`/api/avisos/${a.id}`).then(setDetalle)}>
+            {!cargando && !error && visibles.map((a) => (
+              <tr key={a.id} className={`clicable ${detalle?.resumen.id === a.id ? 'selected-row' : ''} ${a.estado === 'Descartado' ? 'tachado' : ''}`}
+                onClick={() => abrir(a)}>
                 <td>{fecha(a.enviado)}</td>
-                <td>{a.titular ?? a.evento}<div className="tenue">{a.remitente}</div></td>
-                <td><span className="etiqueta" style={{ background: COLOR_SEVERIDAD[a.severidad] }}>{a.severidad}</span></td>
+                <td><button className="row-link" onClick={e => { e.stopPropagation(); abrir(a) }}>{a.titular ?? a.evento}</button><div className="tenue">{a.remitente}</div></td>
+                <td><span className={`severity severity-${a.severidad}`}><span aria-hidden="true" />{NOMBRE_SEVERIDAD[a.severidad] ?? a.severidad}</span></td>
                 <td>{a.formato}</td><td>{a.estado}</td>
               </tr>
             ))}
-            {avisos.length === 0 && <tr><td colSpan={5} className="tenue">Todavía no hay avisos.</td></tr>}
+            {cargando && <tr><td colSpan={5}><div className="table-empty" role="status"><RefreshCw size={26} /><strong>Cargando avisos…</strong><span>Consultando los registros del sistema.</span></div></td></tr>}
+            {!cargando && error && <tr><td colSpan={5}><div className="table-empty"><ShieldAlert size={26} /><strong>Registros no disponibles</strong><span>Reintenta la conexión para consultar los avisos.</span></div></td></tr>}
+            {!cargando && !error && filtrados.length === 0 && <tr><td colSpan={5}><div className="table-empty"><Bell size={28} /><strong>{avisos.length ? 'Sin coincidencias' : 'Todavía no hay avisos'}</strong><span>{avisos.length ? 'Prueba con otro texto o cambia los filtros.' : 'Los avisos registrados aparecerán aquí.'}</span>{(busqueda || severidad || filtro !== 'todos') && <button onClick={() => { setBusqueda(''); setSeveridad(''); setFiltro('todos'); setPagina(1) }}>Limpiar filtros</button>}</div></td></tr>}
           </tbody>
-        </table>
+        </table></div>
+        <div className="pagination"><span role="status">{cargando ? 'Consultando registros…' : error ? 'Sin conexión con los registros' : `${filtrados.length} aviso(s) · Página ${paginaActual} de ${totalPaginas}`}</span><div><button disabled={cargando || paginaActual <= 1} onClick={() => setPagina(paginaActual - 1)}>Anterior</button><button disabled={cargando || paginaActual >= totalPaginas} onClick={() => setPagina(paginaActual + 1)}>Siguiente</button></div></div>
+        </div>
 
         {detalle ? (
-          <div className="tarjeta">
+          <div className="tarjeta detail-panel">
+            <div className="detail-eyebrow"><FileText size={16} aria-hidden="true" />DETALLE DEL AVISO<button className="row-link" onClick={() => setDetalle(null)}>Cerrar</button></div>
             <h3>{detalle.resumen.titular ?? detalle.resumen.evento}</h3>
             <p className="tenue">{detalle.resumen.identificadorCap} · {detalle.resumen.remitente}</p>
             <dl>
@@ -75,7 +121,7 @@ export default function Avisos({ rol }: { rol: Rol }) {
               {detalle.instruccion && <><dt>Instrucción</dt><dd>{detalle.instruccion}</dd></>}
             </dl>
             {detalle.area && <Mapa alto={220} capas={[{ clave: detalle.resumen.id, geometria: detalle.area, color: COLOR_SEVERIDAD[detalle.resumen.severidad], etiqueta: detalle.resumen.descripcionArea ?? '' }]} />}
-            <details><summary>Mensaje CAP 1.2 (XML)</summary><pre>{detalle.xmlCap}</pre></details>
+            <UnfoldAccordion key={detalle.resumen.id} title="Mensaje CAP 1.2" subtitle="Ver el documento XML original"><pre>{detalle.xmlCap}</pre></UnfoldAccordion>
             <div className="acciones">
               <button onClick={() => {
                 const url = URL.createObjectURL(new Blob([detalle.xmlCap], { type: 'application/xml' }))
@@ -85,10 +131,14 @@ export default function Avisos({ rol }: { rol: Rol }) {
               {editar && detalle.resumen.estado !== 'Descartado' && <button className="peligro" onClick={() => descartar(detalle.resumen.id)}>Descartar</button>}
             </div>
           </div>
-        ) : <p className="tenue">Elige un aviso para ver el detalle y su mensaje CAP.</p>}
+        ) : <aside className="detail-empty"><span className="detail-empty-icon"><FileText size={28} aria-hidden="true" /></span><span className="eyebrow">CADA DETALLE CUENTA</span><h3>La información, en contexto.</h3><p>Selecciona un aviso para consultar su alcance, vigencia y mensaje CAP.</p><div><MapPinPlaceholder /></div><small>El detalle aparecerá en este panel.</small></aside>}
       </div>
     </section>
   )
+}
+
+function MapPinPlaceholder() {
+  return <div className="detail-lines" aria-hidden="true"><span /><span /><span /></div>
 }
 
 function ImportarCap({ alRegistrar, alCancelar }: { alRegistrar: (a: AvisoResumen) => void; alCancelar: () => void }) {
@@ -142,7 +192,7 @@ function RegistroManual({ alRegistrar, alCancelar }: { alRegistrar: (a: AvisoRes
   return (
     <form className="tarjeta" onSubmit={enviar}>
       <h3>Registrar aviso</h3>
-      <p className="tenue">El sistema genera el mensaje CAP 1.2 con el patrón Builder, que valida los campos obligatorios.</p>
+      <p className="tenue">Completa los datos y selecciona las zonas afectadas para generar el mensaje CAP 1.2.</p>
       <label>Evento<input required value={f.evento} onChange={(e) => setF({ ...f, evento: e.target.value })} /></label>
       <div className="fila">{sel('urgencia', URGENCIAS, 'Urgencia')}{sel('severidad', SEVERIDADES, 'Severidad')}{sel('certeza', CERTEZAS, 'Certeza')}</div>
       <label>Titular<input value={f.titular} onChange={(e) => setF({ ...f, titular: e.target.value })} /></label>
