@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaAlertas.Api.Comun;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Application.Avisos;
 using SistemaAlertas.Application.Avisos.Importacion;
 using SistemaAlertas.Domain.Avisos;
@@ -17,7 +18,7 @@ public sealed record AvisoDetalleDto(AvisoResumen Resumen, string? Descripcion, 
 [ApiController]
 [Route("api/avisos")]
 [Authorize(Politicas.Lectura)]
-public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, IFabricaImportadores fabrica,
+public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, IModuloCap moduloCap,
     IConversorGeoJson geoJson) : ControllerBase
 {
     private const int TamanoMaximo = 1_000_000;
@@ -73,7 +74,7 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
     }
 
     [HttpGet("formatos")]
-    public IEnumerable<FormatoAviso> Formatos() => fabrica.FormatosSoportados;
+    public IEnumerable<FormatoAviso> Formatos() => moduloCap.FormatosSoportados;
 
     /// <summary>Registro manual: el sistema genera el mensaje CAP con el Builder.</summary>
     [HttpPost]
@@ -100,6 +101,18 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
 
         var aviso = await servicio.ImportarAsync(contenido, formato, User.Id(), ct);
         return CreatedAtAction(nameof(Obtener), new { id = aviso.Id }, AvisoMapeo.ResumenDe(aviso));
+    }
+
+    /// <summary>Valida un mensaje CAP 1.2 en XML sin registrarlo. Devuelve la lista de errores (vacía si es válido).</summary>
+    [HttpPost("validar-cap")]
+    [Consumes("application/xml", "text/xml", "text/plain")]
+    public async Task<ActionResult<ResultadoValidacionCap>> ValidarCap(CancellationToken ct)
+    {
+        using var lector = new StreamReader(Request.Body);
+        var buffer = new char[TamanoMaximo + 1];
+        var leidos = await lector.ReadBlockAsync(buffer, ct);
+        if (leidos > TamanoMaximo) return Problem(statusCode: 413, title: "Mensaje demasiado grande", detail: "El límite es 1 MB.");
+        return moduloCap.Validar(new string(buffer, 0, leidos));
     }
 
     [HttpPost("{id:guid}/descartar")]

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SistemaAlertas.Application.Avisos;
 using SistemaAlertas.Application.Avisos.Importacion;
+using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Application.Usuarios;
 
 namespace SistemaAlertas.Application;
@@ -14,6 +15,10 @@ public static class DependencyInjection
         services.AddSingleton<IImportadorAviso, ImportadorCapXml>();
         services.AddSingleton<IImportadorAviso, ImportadorCapJson>();
         services.AddSingleton<IFabricaImportadores, FabricaImportadores>();
+
+        // Facade del subsistema CAP: importar, generar y validar.
+        services.AddSingleton<IValidadorCap, ValidadorCap>();
+        services.AddSingleton<IModuloCap, ModuloCap>();
 
         // Scoped: dependen del DbContext, que es una instancia por petición.
         services.AddScoped<ServicioAvisos>();

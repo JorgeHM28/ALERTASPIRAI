@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using SistemaAlertas.Application.Abstracciones;
-using SistemaAlertas.Application.Avisos.Importacion;
 using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Cap;
@@ -20,25 +19,24 @@ public sealed class OpcionesCap
 }
 
 /// <summary>Casos de uso de RF-01: registrar un aviso a mano o importarlo desde un mensaje CAP.</summary>
-public sealed class ServicioAvisos(IAppDbContext db, IFabricaImportadores fabrica, OpcionesCap opciones)
+public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, OpcionesCap opciones)
 {
     public async Task<Aviso> ImportarAsync(string contenido, FormatoAviso? formato, Guid usuarioId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(contenido)) throw new ExcepcionDominio("El contenido del aviso está vacío.");
 
-        // Factory Method: el servicio no sabe qué clase concreta va a leer el contenido.
-        var importador = formato is { } f ? fabrica.Crear(f) : fabrica.CrearSegunContenido(contenido);
-        var mensaje = importador.Importar(contenido);
+        // Facade: el módulo CAP elige el importador (Factory Method) y traduce el contenido (Adapter).
+        var (mensaje, formatoLeido) = moduloCap.Importar(contenido, formato);
 
         if (await db.Avisos.AnyAsync(a => a.IdentificadorCap == mensaje.Identifier && a.Remitente == mensaje.Sender, ct))
             throw new ExcepcionDominio($"El aviso {mensaje.Identifier} de {mensaje.Sender} ya fue registrado.");
 
         // Se guarda el XML CAP normalizado, aunque haya llegado en JSON.
-        var xml = importador.Formato == FormatoAviso.CapXml ? contenido : CapXml.Serializar(mensaje);
+        var xml = formatoLeido == FormatoAviso.CapXml ? contenido : moduloCap.Generar(mensaje);
         var area = AreaDe(mensaje);
 
         // El original se guarda tal cual llegó (XML oficial o JSON exacto), con su hash SHA-256.
-        var aviso = new Aviso(mensaje, importador.Formato, xml, area, usuarioId, contenidoOriginal: contenido);
+        var aviso = new Aviso(mensaje, formatoLeido, xml, area, usuarioId, contenidoOriginal: contenido);
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
         return aviso;
@@ -84,7 +82,7 @@ public sealed class ServicioAvisos(IAppDbContext db, IFabricaImportadores fabric
             _ => zonas[0].Area.Factory.BuildGeometry(zonas.Select(z => z.Area)).Union()
         };
 
-        var aviso = new Aviso(mensaje, FormatoAviso.Manual, CapXml.Serializar(mensaje), area, usuarioId);
+        var aviso = new Aviso(mensaje, FormatoAviso.Manual, moduloCap.Generar(mensaje), area, usuarioId);
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
         return aviso;
