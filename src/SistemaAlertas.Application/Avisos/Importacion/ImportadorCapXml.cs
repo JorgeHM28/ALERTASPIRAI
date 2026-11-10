@@ -8,7 +8,16 @@ using SistemaAlertas.Domain.Comun;
 
 namespace SistemaAlertas.Application.Avisos.Importacion;
 
-/// <summary>Importador concreto: mensaje CAP 1.2 en XML (el formato estándar de OASIS).</summary>
+/// <summary>
+/// Importador concreto: mensaje CAP 1.2 en XML (el formato estándar de OASIS).
+/// <para>
+/// Además de producto del Factory Method, cumple el rol de <b>Adapter</b>: el SENAMHI y otras fuentes oficiales
+/// publican XML CAP 1.2 (interfaz ajena, el adaptado), mientras que el sistema trabaja con <see cref="IImportadorAviso"/>
+/// (el objetivo) y con el modelo <see cref="MensajeCap"/>, del que <c>ServicioAvisos</c> crea la entidad
+/// <see cref="Aviso"/> de RF-01. Traduce nombres de elementos, enumeraciones, fechas y polígonos CAP al modelo interno,
+/// y los errores de XML a <see cref="ExcepcionDominio"/>, así que nadie más en el sistema conoce el XML de OASIS.
+/// </para>
+/// </summary>
 public sealed class ImportadorCapXml : IImportadorAviso
 {
     public FormatoAviso Formato => FormatoAviso.CapXml;

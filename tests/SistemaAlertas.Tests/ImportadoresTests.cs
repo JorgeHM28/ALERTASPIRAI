@@ -114,3 +114,48 @@ public class ImportadoresTests
         Assert.Equal("-17.77,-63.25 -17.77,-63.21 -17.82,-63.21 -17.77,-63.25", PoligonoCap.DesdeGeometria(g));
     }
 }
+
+/// <summary>Adapter: XML CAP 1.2 del SENAMHI traducido al modelo interno y a la entidad Aviso de RF-01.</summary>
+public class ImportadorCapAdapterTests
+{
+    private static readonly string RutaEjemplos = Path.Combine(AppContext.BaseDirectory, "ejemplos");
+
+    [Fact]
+    public void El_xml_cap_valido_se_traduce_a_la_entidad_aviso()
+    {
+        var xml = File.ReadAllText(Path.Combine(RutaEjemplos, "aviso-senamhi.xml"));
+        IImportadorAviso adaptador = new ImportadorCapXml();
+
+        var mensaje = adaptador.Importar(xml);
+        var aviso = new Aviso(mensaje, adaptador.Formato, xml,
+            PoligonoCap.UnirAreas(mensaje.Infos.SelectMany(i => i.Areas).SelectMany(a => a.Polygons)), Guid.NewGuid(), xml);
+
+        Assert.Equal("SENAMHI-SCZ-2026-1104-001", aviso.IdentificadorCap);
+        Assert.Equal(mensaje.Sender, aviso.Remitente);
+        Assert.Equal(FormatoAviso.CapXml, aviso.Formato);
+        Assert.Equal(SeveridadCap.Severe, aviso.Severidad);
+        Assert.NotNull(aviso.Area);
+        Assert.Equal(64, aviso.HashOriginal!.Length);
+    }
+
+    [Theory]
+    [InlineData("<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\"><identifier>x</identifier>")]
+    [InlineData("<?xml version=\"1.0\"?><!DOCTYPE alert [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><alert>&x;</alert>")]
+    public void El_xml_mal_formado_o_con_dtd_se_rechaza(string xml)
+    {
+        var ex = Assert.Throws<ExcepcionDominio>(() => new ImportadorCapXml().Importar(xml));
+        Assert.Contains("XML no es válido", ex.Message);
+    }
+
+    [Fact]
+    public void Un_xml_cap_sin_campos_obligatorios_se_rechaza()
+    {
+        const string xml = """
+            <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+              <identifier>x</identifier><sent>2026-11-04T08:00:00-04:00</sent>
+              <status>Actual</status><msgType>Alert</msgType><scope>Public</scope>
+            </alert>
+            """;
+        Assert.Throws<ExcepcionDominio>(() => new ImportadorCapXml().Importar(xml));
+    }
+}
