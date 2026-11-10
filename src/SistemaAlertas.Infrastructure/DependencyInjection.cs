@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Application.Difusion;
+using SistemaAlertas.Infrastructure.Difusion;
 using SistemaAlertas.Infrastructure.Geo;
 using SistemaAlertas.Application.Comunidades;
 using SistemaAlertas.Infrastructure.Persistence;
@@ -42,6 +45,17 @@ public static class DependencyInjection
 
         // Adapter: SimuladorEmisor o TwilioEmisor según Sms:Modo (RF-04).
         services.AddCanalSms(configuration);
+
+        // Subsistema de difusión (RF-04) que coordina la fachada ServicioDifusion.
+        // La difusión usa el repositorio real (sin proxy): es un proceso del sistema y necesita los números completos.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IDestinatariosDifusion>(sp => sp.GetRequiredService<RepositorioContactos>());
+        services.AddScoped<IFuenteVersionesAprobadas, FuenteVersionesDesdeAvisos>();
+        services.AddSingleton<IPublicadorWeb, PublicadorWebEnMemoria>();
+        services.AddSingleton<ColaSmsEnMemoria>();
+        services.AddSingleton<IColaSms>(sp => sp.GetRequiredService<ColaSmsEnMemoria>());
+        services.AddSingleton<IGestorTareasManuales, GestorTareasManualesEnMemoria>();
+        services.AddSingleton<IRegistroIncidencias, RegistroIncidenciasEnLog>();
         return services;
     }
 }

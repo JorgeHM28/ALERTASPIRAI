@@ -49,6 +49,7 @@ builder.Services.AddAuthorization(o =>
         o.AddPolicy(politica, p => p.RequireAuthenticatedUser().RequireRole(roles.Select(r => r.ToString())));
 });
 builder.Services.AddHostedService<RevisionVigenciaAvisos>();
+builder.Services.AddHostedService<ProcesadorColaSms>();
 
 builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy
