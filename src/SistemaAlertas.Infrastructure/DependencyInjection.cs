@@ -5,6 +5,7 @@ using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Infrastructure.Geo;
 using SistemaAlertas.Infrastructure.Persistence;
 using SistemaAlertas.Infrastructure.Seguridad;
+using SistemaAlertas.Infrastructure.Sms;
 
 namespace SistemaAlertas.Infrastructure;
 
@@ -30,6 +31,9 @@ public static class DependencyInjection
 
         // Adapter: NetTopologySuite/PostGIS a GeoJSON para el mapa (RF-09).
         services.AddSingleton<IConversorGeoJson, ConversorGeoJson>();
+
+        // Adapter: SimuladorEmisor o TwilioEmisor según Sms:Modo (RF-04).
+        services.AddCanalSms(configuration);
         return services;
     }
 }
