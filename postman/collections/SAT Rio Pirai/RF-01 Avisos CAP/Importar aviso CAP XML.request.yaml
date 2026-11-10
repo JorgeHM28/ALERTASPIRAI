@@ -1,4 +1,5 @@
 $kind: http-request
+name: 'Importar aviso CAP XML completo'
 method: POST
 url: '{{baseUrl}}/api/avisos/importar'
 order: 1000
@@ -12,10 +13,11 @@ body:
     <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
       <identifier>SENAMHI-SCZ-{{$timestamp}}</identifier>
       <sender>avisos@senamhi.gob.bo</sender>
-      <sent>2026-11-04T08:00:00-04:00</sent>
+      <sent>{{capEfectivo}}</sent>
       <status>Actual</status>
       <msgType>Alert</msgType>
       <scope>Public</scope>
+      <!-- Documento oficial: este comentario debe conservarse en el original -->
       <info>
         <language>es-BO</language>
         <category>Met</category>
@@ -23,8 +25,8 @@ body:
         <urgency>Expected</urgency>
         <severity>Severe</severity>
         <certainty>Likely</certainty>
-        <effective>2026-11-04T08:00:00-04:00</effective>
-        <expires>2026-11-05T20:00:00-04:00</expires>
+        <effective>{{capEfectivo}}</effective>
+        <expires>{{capExpiraFutura}}</expires>
         <senderName>SENAMHI Santa Cruz</senderName>
         <headline>Alerta naranja por crecida del río Piraí</headline>
         <description>Precipitaciones de 60 a 90 mm en la cuenca alta en las próximas 24 horas.</description>
@@ -36,6 +38,14 @@ body:
       </info>
     </alert>
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      // Fechas relativas a hoy, en formato CAP (sin milisegundos).
+      const cap = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+      const ahora = Date.now();
+      pm.collectionVariables.set('capEfectivo', cap(new Date(ahora - 3600e3)));
+      pm.collectionVariables.set('capExpiraFutura', cap(new Date(ahora + 2 * 86400e3)));
   - type: afterResponse
     language: text/javascript
     code: |-
@@ -43,5 +53,12 @@ scripts:
 
       const a = pm.response.json();
       pm.test('lo procesó el importador XML', () => pm.expect(a.formato).to.eql('CapXml'));
+      pm.test('aviso completo y vigente: apto para difusión', () => {
+        pm.expect(a.incompleto).to.be.false;
+        pm.expect(a.vencido).to.be.false;
+        pm.expect(a.aptoParaDifusion).to.be.true;
+        pm.expect(a.motivosNoApto).to.be.empty;
+      });
+      pm.test('conserva el documento original', () => pm.expect(a.tieneOriginal).to.be.true);
       pm.collectionVariables.set('avisoXmlId', a.id);
       pm.collectionVariables.set('avisoXmlIdentificador', a.identificadorCap);

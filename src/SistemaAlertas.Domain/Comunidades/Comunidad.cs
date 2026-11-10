@@ -36,9 +36,9 @@ public class Comunidad : Entidad
         ZonaId = zonaId;
     }
 
-    public Contacto AgregarContacto(string nombre, string? cargo)
+    public Contacto AgregarContacto(DatosContacto datos)
     {
-        var contacto = new Contacto(Id, nombre, cargo);
+        var contacto = new Contacto(Id, datos);
         _contactos.Add(contacto);
         return contacto;
     }

@@ -38,12 +38,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = NombresClaim.Rol,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+        o.Events = new JwtBearerEvents { OnTokenValidated = ValidacionSesion.AlValidarToken };
     });
 builder.Services.AddAuthorization(o =>
 {
-    foreach (var (politica, roles) in Politicas.Matriz)
+    foreach (var (politica, roles) in Politicas.Todas())
         o.AddPolicy(politica, p => p.RequireAuthenticatedUser().RequireRole(roles.Select(r => r.ToString())));
 });
+builder.Services.AddHostedService<RevisionVigenciaAvisos>();
 
 builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy

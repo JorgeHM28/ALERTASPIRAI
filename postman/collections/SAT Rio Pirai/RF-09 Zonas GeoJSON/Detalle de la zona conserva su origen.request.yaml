@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/zonas/{{zonaPruebaId}}'
+order: 2600
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('quedó el último documento válido', () => {
+        const z = pm.response.json();
+        pm.expect(z.fuenteInstitucional).to.eql('Gobernación de Santa Cruz');
+        pm.expect(z.referenciaDocumento).to.eql('Resolución SDGR 12/2026');
+      });

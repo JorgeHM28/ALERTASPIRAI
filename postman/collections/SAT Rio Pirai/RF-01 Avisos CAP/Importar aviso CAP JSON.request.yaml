@@ -10,11 +10,9 @@ body:
   content: |-
     {
       "identifier": "COED-SCZ-{{$timestamp}}",
-      "sender": "coed@santacruz.gob.bo",
-      "sent": "2026-11-04T09:30:00-04:00",
-      "status": "Actual",
-      "msgType": "Alert",
-      "scope": "Public",
+      "sender":     "coed@santacruz.gob.bo",
+      "sent": "{{capEfectivo}}",
+      "status": "Actual", "msgType": "Alert", "scope": "Public",
       "info": [
         {
           "language": "es-BO",
@@ -24,14 +22,27 @@ body:
           "severity": "Extreme",
           "certainty": "Observed",
           "headline": "Desborde observado en Playa Piraí",
+          "instruction": "Evacuar hacia el puente Foianini.",
+          "expires": "{{capExpiraFutura}}",
           "area": [ { "areaDesc": "Urubó - Playa Piraí", "polygon": ["-17.735,-63.215 -17.735,-63.185 -17.77,-63.185 -17.77,-63.215 -17.735,-63.215"] } ]
         }
       ]
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      // Fechas relativas a hoy, en formato CAP (sin milisegundos).
+      const cap = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+      const ahora = Date.now();
+      pm.collectionVariables.set('capEfectivo', cap(new Date(ahora - 3600e3)));
+      pm.collectionVariables.set('capExpiraFutura', cap(new Date(ahora + 2 * 86400e3)));
   - type: afterResponse
     language: text/javascript
     code: |-
       pm.test('responde 201', () => pm.response.to.have.status(201));
 
-      pm.test('lo procesó el importador JSON', () => pm.expect(pm.response.json().formato).to.eql('CapJson'));
+      const a = pm.response.json();
+      pm.test('lo procesó el importador JSON', () => pm.expect(a.formato).to.eql('CapJson'));
+      pm.test('aviso completo: apto para difusión', () => pm.expect(a.aptoParaDifusion).to.be.true);
+      pm.collectionVariables.set('avisoJsonId', a.id);

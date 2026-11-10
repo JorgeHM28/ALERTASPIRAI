@@ -1,0 +1,31 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/usuarios'
+order: 6100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "{{usuarioMulti}}",
+      "nombreCompleto": "Operadora y aprobadora",
+      "email": "{{usuarioMulti}}@sat-pirai.local",
+      "roles": ["Operador", "Aprobador"],
+      "contrasena": "Multi12345"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.collectionVariables.set('usuarioMulti', 'multi' + Date.now());
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+
+      const u = pm.response.json();
+      pm.test('tiene los dos roles', () => pm.expect(u.roles).to.have.members(['Operador', 'Aprobador']));
+      pm.test('suma los permisos de ambos roles', () => pm.expect(u.permisos).to.have.members(['Lectura', 'Edicion', 'Aprobacion']));
+      pm.collectionVariables.set('usuarioMultiId', u.id);

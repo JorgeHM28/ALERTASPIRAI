@@ -43,13 +43,14 @@ public sealed class GeneradorTokenJwt(OpcionesJwt opciones) : IGeneradorToken
     public (string Token, DateTimeOffset Expira) Generar(Usuario usuario)
     {
         var expira = DateTimeOffset.UtcNow.AddMinutes(opciones.MinutosValidez);
-        var claims = new[]
+        // Un claim "role" por cada rol: el usuario puede tener varios.
+        var claims = new List<Claim>
         {
-            new Claim(NombresClaim.Id, usuario.Id.ToString()),
-            new Claim(NombresClaim.Usuario, usuario.NombreUsuario),
-            new Claim(NombresClaim.Nombre, usuario.NombreCompleto),
-            new Claim(NombresClaim.Rol, usuario.Rol.ToString())
+            new(NombresClaim.Id, usuario.Id.ToString()),
+            new(NombresClaim.Usuario, usuario.NombreUsuario),
+            new(NombresClaim.Nombre, usuario.NombreCompleto)
         };
+        claims.AddRange(usuario.Roles.Select(r => new Claim(NombresClaim.Rol, r.ToString())));
         var credenciales = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(opciones.Clave)), SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(opciones.Emisor, opciones.Audiencia, claims,

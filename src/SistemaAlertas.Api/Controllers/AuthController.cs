@@ -27,7 +27,7 @@ public sealed class AuthController(ServicioUsuarios servicio, IAppDbContext db, 
     [Authorize(Politicas.Lectura)]
     public async Task<ActionResult<UsuarioDto>> Yo(CancellationToken ct)
     {
-        var usuario = await db.Usuarios.FindAsync([User.Id()], ct);
+        var usuario = await servicio.ObtenerAsync(User.Id(), ct);
         return usuario is null ? NotFound() : UsuarioDto.De(usuario);
     }
 
@@ -38,7 +38,7 @@ public sealed class AuthController(ServicioUsuarios servicio, IAppDbContext db, 
         var usuario = await db.Usuarios.FindAsync([User.Id()], ct) ?? throw new KeyNotFoundException("Usuario no encontrado.");
         if (!hasher.Verificar(usuario, solicitud.ContrasenaActual))
             return Problem(statusCode: 400, title: "Datos no válidos", detail: "La contraseña actual no es correcta.");
-        await servicio.CambiarContrasenaAsync(usuario.Id, solicitud.ContrasenaNueva, ct);
+        await servicio.CambiarContrasenaAsync(usuario.Id, solicitud.ContrasenaNueva, null, ct);
         return NoContent();
     }
 }

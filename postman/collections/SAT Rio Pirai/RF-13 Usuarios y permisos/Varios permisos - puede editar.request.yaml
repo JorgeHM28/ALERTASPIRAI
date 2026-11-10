@@ -1,0 +1,27 @@
+$kind: http-request
+name: 'Varios permisos: puede editar'
+method: POST
+url: '{{baseUrl}}/api/zonas'
+order: 6400
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "",
+      "nivelRiesgo": "Bajo",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.2,-17.7],[-63.1,-17.7],[-63.1,-17.8],[-63.2,-17.7]]]}
+    }
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenMulti}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // El cuerpo es inválido a propósito: un 400 demuestra que pasó la autorización (no 403) sin crear nada.
+      pm.test('pasa la autorización de edición (400 de validación, no 403)', () => pm.response.to.have.status(400));

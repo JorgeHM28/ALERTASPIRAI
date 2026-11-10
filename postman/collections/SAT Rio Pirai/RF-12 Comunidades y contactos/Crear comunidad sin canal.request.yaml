@@ -1,0 +1,27 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/comunidades'
+order: 5200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Comunidad sin canal {{$timestamp}}",
+      "municipio": "Porongo",
+      "poblacion": 80,
+      "zonaId": "{{zonaId}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const c = pm.response.json();
+      pm.test('queda marcada sin canal', () => {
+        pm.expect(c.sinCanal).to.be.true;
+        pm.expect(c.contactosHabilitados).to.eql(0);
+      });
+      pm.collectionVariables.set('comunidadSinCanalId', c.id);

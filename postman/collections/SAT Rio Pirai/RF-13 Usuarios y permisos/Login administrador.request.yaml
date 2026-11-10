@@ -21,8 +21,9 @@ scripts:
       pm.test('responde 200', () => pm.response.to.have.status(200));
 
       const r = pm.response.json();
-      pm.test('devuelve un token y el rol Administrador', () => {
+      pm.test('devuelve un token y el rol Administrador con todos sus permisos', () => {
         pm.expect(r.token).to.be.a('string');
-        pm.expect(r.usuario.rol).to.eql('Administrador');
+        pm.expect(r.usuario.roles).to.include('Administrador');
+        pm.expect(r.usuario.permisos).to.include.members(['Lectura', 'Edicion', 'Administracion']);
       });
       pm.collectionVariables.set('token', r.token);

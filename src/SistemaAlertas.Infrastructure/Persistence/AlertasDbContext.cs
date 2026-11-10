@@ -14,6 +14,8 @@ public class AlertasDbContext(DbContextOptions<AlertasDbContext> options) : DbCo
     public DbSet<Comunidad> Comunidades => Set<Comunidad>();
     public DbSet<Contacto> Contactos => Set<Contacto>();
     public DbSet<Aviso> Avisos => Set<Aviso>();
+    public DbSet<RegistroBitacoraUsuario> BitacoraUsuarios => Set<RegistroBitacoraUsuario>();
+    public DbSet<HistorialContacto> HistorialContactos => Set<HistorialContacto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -8,10 +8,21 @@ scripts:
     code: |-
       pm.test('responde 200', () => pm.response.to.have.status(200));
 
-      const zona = pm.response.json().find(z => z.nombre === 'Ribera Piraí - Porongo');
+      const zonas = pm.response.json();
+      const zona = zonas.find(z => z.nombre === 'Ribera Piraí - Porongo');
       pm.test('incluye la zona Ribera Piraí - Porongo con su área', () => {
         pm.expect(zona).to.exist;
         pm.expect(zona.areaKm2).to.be.above(0);
         pm.expect(zona.geometria.type).to.eql('Polygon');
+      });
+      pm.test('la importación guardó los datos institucionales del archivo', () => {
+        pm.expect(zona.fuenteInstitucional).to.eql('SENAMHI Santa Cruz');
+        pm.expect(zona.referenciaDocumento).to.eql('Mapa de riesgo MR-07/2026');
+        pm.expect(zona.fechaDocumento).to.eql('2026-10-15');
+      });
+      pm.test('un Feature puede traer sus propios datos institucionales', () => {
+        const m = zonas.find(z => z.nombre === 'Montero Norte');
+        pm.expect(m.fuenteInstitucional).to.eql('Gobernación de Santa Cruz');
+        pm.expect(m.fechaDocumento).to.eql('2025-12-01');
       });
       pm.collectionVariables.set('zonaId', zona.id);

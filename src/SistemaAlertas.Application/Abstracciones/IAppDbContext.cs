@@ -13,5 +13,7 @@ public interface IAppDbContext
     DbSet<Comunidad> Comunidades { get; }
     DbSet<Contacto> Contactos { get; }
     DbSet<Aviso> Avisos { get; }
+    DbSet<RegistroBitacoraUsuario> BitacoraUsuarios { get; }
+    DbSet<HistorialContacto> HistorialContactos { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

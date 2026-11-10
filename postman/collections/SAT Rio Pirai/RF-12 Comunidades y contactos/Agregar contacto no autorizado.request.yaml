@@ -1,0 +1,29 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/comunidades/{{comunidadId}}/contactos'
+order: 3200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "María Rojas",
+      "cargo": "Vecina",
+      "activo": true,
+      "procedencia": "Padrón municipal de Porongo",
+      "autorizado": false,
+      "canales": [ { "tipo": "WhatsApp", "destino": "+59172222222", "preferido": true } ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const c = pm.response.json();
+      pm.test('no está habilitado: falta autorización', () => {
+        pm.expect(c.habilitado).to.be.false;
+        pm.expect(c.motivosNoHabilitado).to.include('sin autorización');
+      });
+      pm.collectionVariables.set('contactoNoAutorizadoId', c.id);

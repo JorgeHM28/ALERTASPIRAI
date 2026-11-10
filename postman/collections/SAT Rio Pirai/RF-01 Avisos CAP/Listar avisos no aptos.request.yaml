@@ -1,0 +1,19 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/avisos?apto=false&limite=500'
+order: 3400
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const ids = pm.response.json().map(a => a.id);
+      pm.test('incluye el incompleto y el vencido', () => {
+        pm.expect(ids).to.include(pm.collectionVariables.get('avisoIncompletoId'));
+        pm.expect(ids).to.include(pm.collectionVariables.get('avisoVencidoId'));
+      });
+      pm.test('no incluye los completos y vigentes', () => {
+        pm.expect(ids).to.not.include(pm.collectionVariables.get('avisoXmlId'));
+        pm.expect(ids).to.not.include(pm.collectionVariables.get('avisoJsonId'));
+      });
+      pm.test('todos tienen registrado el motivo', () => pm.response.json().forEach(a => pm.expect(a.motivosNoApto).to.not.be.empty));

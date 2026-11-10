@@ -11,7 +11,7 @@ body:
     {
       "nombreCompleto": "Usuario de solo lectura",
       "email": "{{usuarioConsulta}}@sat-pirai.local",
-      "rol": "Consulta",
+      "roles": ["Consulta"],
       "activo": false
     }
 scripts:

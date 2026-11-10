@@ -1,6 +1,6 @@
 $kind: http-request
 method: POST
-url: '{{baseUrl}}/api/zonas/importar'
+url: '{{baseUrl}}/api/zonas/importar?fuenteInstitucional=SENAMHI%20Santa%20Cruz&referenciaDocumento=Mapa%20de%20riesgo%20MR-07%2F2026&fechaDocumento=2026-10-15'
 order: 1000
 headers:
   - key: Content-Type
@@ -23,7 +23,8 @@ body:
         },
         {
           "type": "Feature",
-          "properties": { "nombre": "Montero Norte", "nivelRiesgo": "Medio", "descripcion": "Llanura de inundación aguas abajo." },
+          "properties": { "nombre": "Montero Norte", "nivelRiesgo": "Medio", "descripcion": "Llanura de inundación aguas abajo.",
+                          "fuenteInstitucional": "Gobernación de Santa Cruz", "referenciaDocumento": "Resolución SDGR 45/2025", "fechaDocumento": "2025-12-01" },
           "geometry": { "type": "Polygon", "coordinates": [[[-63.3000,-17.2800],[-63.2300,-17.2800],[-63.2300,-17.3300],[-63.3000,-17.3300],[-63.3000,-17.2800]]] }
         }
       ]

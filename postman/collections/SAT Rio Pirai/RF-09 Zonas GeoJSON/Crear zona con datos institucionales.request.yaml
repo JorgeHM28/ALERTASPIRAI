@@ -1,0 +1,32 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/zonas'
+order: 2100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Zona de prueba {{$timestamp}}",
+      "descripcion": "Creada por la colección de pruebas",
+      "nivelRiesgo": "Bajo",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.50,-17.50],[-63.49,-17.50],[-63.49,-17.51],[-63.50,-17.51],[-63.50,-17.50]]]},
+      "fuenteInstitucional": "SENAMHI Santa Cruz",
+      "referenciaDocumento": "Informe técnico IT-031/2026",
+      "fechaDocumento": "2026-09-30"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+
+      const z = pm.response.json();
+      pm.test('guarda fuente, referencia y fecha', () => {
+        pm.expect(z.fuenteInstitucional).to.eql('SENAMHI Santa Cruz');
+        pm.expect(z.referenciaDocumento).to.eql('Informe técnico IT-031/2026');
+        pm.expect(z.fechaDocumento).to.eql('2026-09-30');
+      });
+      pm.collectionVariables.set('zonaPruebaId', z.id);

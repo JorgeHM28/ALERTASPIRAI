@@ -1,0 +1,19 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/contactos/{{contactoNoAutorizadoId}}/historial'
+order: 5600
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const h = pm.response.json();
+      pm.test('tiene el alta y la modificación', () => pm.expect(h.map(x => x.accion)).to.have.members(['Modificacion', 'Alta']));
+      pm.test('la modificación dice qué cambió y quién lo hizo', () => {
+        const m = h.find(x => x.accion === 'Modificacion');
+        pm.expect(m.cambios).to.include('autorizado');
+        pm.expect(m.usuario).to.eql(pm.environment.get('adminUsuario'));
+        pm.expect(m.instantanea.referenciaAutorizacion).to.eql('Formulario de consentimiento F-221');
+      });
+      pm.test('el alta guarda el estado inicial (sin autorización)', () =>
+        pm.expect(h.find(x => x.accion === 'Alta').instantanea.autorizado).to.be.false);

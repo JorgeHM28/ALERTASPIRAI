@@ -12,6 +12,9 @@ body:
     {
       "nombre": "Juan Pérez",
       "activo": true,
+      "procedencia": "Asamblea comunal",
+      "autorizado": true,
+      "referenciaAutorizacion": "Acta de asamblea 14/2026",
       "canales": [ { "tipo": "WhatsApp", "destino": "71234567", "preferido": true } ]
     }
 scripts:

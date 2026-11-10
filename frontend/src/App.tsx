@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { ArrowRight, Bell, Eye, EyeOff, LogOut, Map, MapPin, ShieldCheck, Users, Waves } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
-import { api, guardarSesion, leerSesion, type Sesion } from './api'
+import { api, esAdministrador, guardarSesion, leerSesion, type Sesion } from './api'
 import { Alert } from './components/ui/Alert'
 const Zonas = lazy(() => import('./paginas/Zonas'))
 const Comunidades = lazy(() => import('./paginas/Comunidades'))
@@ -28,26 +28,26 @@ export default function App() {
       <div className="marca"><span className="marca-simbolo"><Waves size={25} aria-hidden="true" /></span>
         <div><h1>SAT Río Piraí</h1><span className="marca-descripcion">ALERTAS TEMPRANAS</span></div></div>
       <span className="nav-label">CENTRO DE GESTIÓN</span>
-      <nav aria-label="Navegación principal">{paginas.filter(p => p.id !== 'usuarios' || usuario.rol === 'Administrador').map(({ id, nombre, Icon }) =>
+      <nav aria-label="Navegación principal">{paginas.filter(p => p.id !== 'usuarios' || esAdministrador(usuario.roles)).map(({ id, nombre, Icon }) =>
         <button key={id} aria-current={pagina === id ? 'page' : undefined} className={pagina === id ? 'activo' : ''} onClick={() => setPagina(id)}>
           <Icon size={19} aria-hidden="true" />{nombre}{pagina === id && <span className="nav-dot" />}
         </button>)}</nav>
       <div className="sidebar-region"><MapPin size={18} aria-hidden="true" /><div>Cuenca del río Piraí<small>Santa Cruz · Bolivia</small></div></div>
       <div className="sidebar-person"><span className="avatar">{usuario.nombreCompleto.slice(0, 1).toUpperCase()}</span>
-        <div><strong>{usuario.nombreCompleto}</strong><small>{usuario.rol}</small></div>
+        <div><strong>{usuario.nombreCompleto}</strong><small>{usuario.roles.join(' · ')}</small></div>
         <button className="icon-button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={() => { guardarSesion(null); setSesion(null) }}><LogOut size={18} /></button>
       </div>
     </aside>
     <div className="workspace">
       <header className="topbar"><div><span className="tenue">Centro de gestión</span><span className="breadcrumb-slash">/</span><strong>{paginas.find(p => p.id === pagina)?.nombre}</strong></div>
-        <span className="access-badge"><ShieldCheck size={15} aria-hidden="true" />Acceso {usuario.rol.toLowerCase()}</span></header>
+        <span className="access-badge"><ShieldCheck size={15} aria-hidden="true" />Acceso {usuario.roles.join(' + ').toLowerCase()}</span></header>
       <main id="contenido" tabIndex={-1}>
         <div className="contexto"><span>SISTEMA DE ALERTAS TEMPRANAS</span><span>Río Piraí · Santa Cruz</span></div>
         <Suspense fallback={<p role="status" className="tenue">Cargando sección…</p>}>
-        {pagina === 'avisos' && <Avisos rol={usuario.rol} />}
-        {pagina === 'zonas' && <Zonas rol={usuario.rol} />}
-        {pagina === 'comunidades' && <Comunidades rol={usuario.rol} />}
-        {pagina === 'usuarios' && usuario.rol === 'Administrador' && <Usuarios usuarioActualId={usuario.id} />}
+        {pagina === 'avisos' && <Avisos roles={usuario.roles} />}
+        {pagina === 'zonas' && <Zonas roles={usuario.roles} />}
+        {pagina === 'comunidades' && <Comunidades roles={usuario.roles} />}
+        {pagina === 'usuarios' && esAdministrador(usuario.roles) && <Usuarios usuarioActualId={usuario.id} />}
         </Suspense>
         <footer className="app-footer"><span>SAT Río Piraí · Gestión del riesgo</span><span>Componentes <a href="https://easyui.site/" target="_blank" rel="noreferrer">EasyUI</a> · MIT</span></footer>
       </main>

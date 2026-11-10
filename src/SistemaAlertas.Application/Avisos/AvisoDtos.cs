@@ -18,10 +18,13 @@ public sealed record RegistrarAvisoManual(
 public sealed record AvisoResumen(
     Guid Id, string IdentificadorCap, string Remitente, DateTimeOffset Enviado, FormatoAviso Formato,
     EstadoAviso Estado, string Evento, UrgenciaCap Urgencia, SeveridadCap Severidad, CertezaCap Certeza,
-    string? Titular, string? DescripcionArea, DateTimeOffset? Expira, DateTimeOffset RegistradoEn);
+    string? Titular, string? DescripcionArea, DateTimeOffset? Expira, DateTimeOffset RegistradoEn,
+    EstadoCap EstadoCap, bool Incompleto, bool Vencido, bool AptoParaDifusion, IReadOnlyList<string> MotivosNoApto,
+    DateTimeOffset AptitudEvaluadaEn, bool TieneOriginal);
 
 public static class AvisoMapeo
 {
     public static AvisoResumen ResumenDe(Aviso a) => new(a.Id, a.IdentificadorCap, a.Remitente, a.Enviado, a.Formato,
-        a.Estado, a.Evento, a.Urgencia, a.Severidad, a.Certeza, a.Titular, a.DescripcionArea, a.Expira, a.CreadoEn);
+        a.Estado, a.Evento, a.Urgencia, a.Severidad, a.Certeza, a.Titular, a.DescripcionArea, a.Expira, a.CreadoEn,
+        a.EstadoCap, a.Incompleto, a.Vencido, a.AptoParaDifusion, a.MotivosNoApto, a.AptitudEvaluadaEn, a.ContenidoOriginal is not null);
 }

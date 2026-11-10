@@ -37,7 +37,8 @@ public sealed class ServicioAvisos(IAppDbContext db, IFabricaImportadores fabric
         var xml = importador.Formato == FormatoAviso.CapXml ? contenido : CapXml.Serializar(mensaje);
         var area = AreaDe(mensaje);
 
-        var aviso = new Aviso(mensaje, importador.Formato, xml, area, usuarioId);
+        // El original se guarda tal cual llegó (XML oficial o JSON exacto), con su hash SHA-256.
+        var aviso = new Aviso(mensaje, importador.Formato, xml, area, usuarioId, contenidoOriginal: contenido);
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
         return aviso;
@@ -87,6 +88,22 @@ public sealed class ServicioAvisos(IAppDbContext db, IFabricaImportadores fabric
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
         return aviso;
+    }
+
+    /// <summary>
+    /// Marca como vencidos los avisos cuya expiración ya pasó (y evalúa los que vienen de antes de esta regla) y deja registrado que no son aptos para difusión.
+    /// Devuelve cuántos cambiaron.
+    /// </summary>
+    public async Task<int> RevisarVigenciaAsync(CancellationToken ct)
+    {
+        var ahora = DateTimeOffset.UtcNow;
+        var sinEvaluar = Aviso.SinEvaluar;
+        var vencidos = await db.Avisos
+            .Where(a => (!a.Vencido && a.Expira != null && a.Expira <= ahora) || a.AptitudEvaluadaEn <= sinEvaluar)
+            .ToListAsync(ct);
+        var cambiados = vencidos.Count(a => a.EvaluarAptitud(ahora));
+        if (cambiados > 0) await db.SaveChangesAsync(ct);
+        return cambiados;
     }
 
     private static Geometry? AreaDe(MensajeCap mensaje)

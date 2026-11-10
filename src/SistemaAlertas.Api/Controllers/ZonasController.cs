@@ -10,9 +10,11 @@ using SistemaAlertas.Domain.Zonas;
 
 namespace SistemaAlertas.Api.Controllers;
 
-public sealed record GuardarZona(string Nombre, string? Descripcion, NivelRiesgo NivelRiesgo, JsonElement Geometria);
+/// <param name="FuenteInstitucional">Obligatoria al crear. Al actualizar, si no se envían los tres datos institucionales, se conservan los anteriores.</param>
+public sealed record GuardarZona(string Nombre, string? Descripcion, NivelRiesgo NivelRiesgo, JsonElement Geometria,
+    string? FuenteInstitucional, string? ReferenciaDocumento, DateOnly? FechaDocumento);
 public sealed record ZonaDto(Guid Id, string Nombre, string? Descripcion, NivelRiesgo NivelRiesgo, double AreaKm2,
-    int Comunidades, JsonElement Geometria);
+    int Comunidades, JsonElement Geometria, string? FuenteInstitucional, string? ReferenciaDocumento, DateOnly? FechaDocumento);
 public sealed record ResultadoImportacionZonas(int Creadas, int Actualizadas, IReadOnlyList<string> Errores);
 
 /// <summary>RF-09: zonas de riesgo en GeoJSON.</summary>
@@ -40,7 +42,10 @@ public sealed class ZonasController(IAppDbContext db) : ControllerBase
             coleccion.Add(new Feature(z.Area, new AttributesTable
             {
                 { "id", z.Id.ToString() }, { "nombre", z.Nombre },
-                { "descripcion", z.Descripcion ?? string.Empty }, { "nivelRiesgo", z.NivelRiesgo.ToString() }
+                { "descripcion", z.Descripcion ?? string.Empty }, { "nivelRiesgo", z.NivelRiesgo.ToString() },
+                { "fuenteInstitucional", z.FuenteInstitucional ?? string.Empty },
+                { "referenciaDocumento", z.ReferenciaDocumento ?? string.Empty },
+                { "fechaDocumento", z.FechaDocumento?.ToString("yyyy-MM-dd") ?? string.Empty }
             }));
         }
         return GeoJson.Escribir(coleccion);
@@ -59,7 +64,11 @@ public sealed class ZonasController(IAppDbContext db) : ControllerBase
     public async Task<ActionResult<ZonaDto>> Crear(GuardarZona dto, CancellationToken ct)
     {
         await ValidarNombreUnico(dto.Nombre, null, ct);
-        var zona = new Zona(dto.Nombre, dto.Descripcion, dto.NivelRiesgo, GeoJson.LeerGeometria(dto.Geometria));
+        var geometria = GeoJson.LeerGeometria(dto.Geometria);
+        Zona.ValidarArea(geometria);
+        var origen = OrigenInstitucional.Desde(dto.FuenteInstitucional, dto.ReferenciaDocumento, dto.FechaDocumento)
+            ?? throw new ExcepcionDominio("Indica la fuente institucional, la referencia y la fecha del documento de origen de la zona.");
+        var zona = new Zona(dto.Nombre, dto.Descripcion, dto.NivelRiesgo, geometria, origen);
         db.Zonas.Add(zona);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(Obtener), new { id = zona.Id }, ADto(zona, 0));
@@ -71,7 +80,8 @@ public sealed class ZonasController(IAppDbContext db) : ControllerBase
     {
         var zona = await db.Zonas.FindAsync([id], ct) ?? throw new KeyNotFoundException("Zona no encontrada.");
         await ValidarNombreUnico(dto.Nombre, id, ct);
-        zona.Actualizar(dto.Nombre, dto.Descripcion, dto.NivelRiesgo, GeoJson.LeerGeometria(dto.Geometria));
+        zona.Actualizar(dto.Nombre, dto.Descripcion, dto.NivelRiesgo, GeoJson.LeerGeometria(dto.Geometria),
+            OrigenInstitucional.Desde(dto.FuenteInstitucional, dto.ReferenciaDocumento, dto.FechaDocumento));
         await db.SaveChangesAsync(ct);
         return ADto(zona, await db.Comunidades.CountAsync(c => c.ZonaId == id, ct));
     }
@@ -92,11 +102,17 @@ public sealed class ZonasController(IAppDbContext db) : ControllerBase
     /// <summary>
     /// Importa una FeatureCollection GeoJSON. Cada Feature necesita la propiedad "nombre" (o "name");
     /// "nivelRiesgo" y "descripcion" son opcionales. Si ya existe una zona con ese nombre, se actualiza su geometría.
+    /// Los datos institucionales (fuente, referencia y fecha del documento) llegan en la query y valen para todo el archivo;
+    /// un Feature puede traer los suyos en las propiedades "fuenteInstitucional", "referenciaDocumento" y "fechaDocumento".
+    /// Una zona que ya existía y no recibe datos nuevos conserva los que tenía.
     /// </summary>
     [HttpPost("importar")]
     [Authorize(Politicas.Edicion)]
-    public async Task<ResultadoImportacionZonas> Importar(JsonElement featureCollection, CancellationToken ct)
+    public async Task<ResultadoImportacionZonas> Importar(JsonElement featureCollection,
+        [FromQuery] string? fuenteInstitucional, [FromQuery] string? referenciaDocumento, [FromQuery] DateOnly? fechaDocumento,
+        CancellationToken ct)
     {
+        var origenArchivo = OrigenInstitucional.Desde(fuenteInstitucional, referenciaDocumento, fechaDocumento);
         var coleccion = GeoJson.LeerColeccion(featureCollection);
         var existentes = await db.Zonas.ToDictionaryAsync(z => z.Nombre.ToLower(), ct);
         int creadas = 0, actualizadas = 0;
@@ -111,15 +127,22 @@ public sealed class ZonasController(IAppDbContext db) : ControllerBase
                 if (string.IsNullOrWhiteSpace(nombre)) throw new ExcepcionDominio("falta la propiedad 'nombre'.");
                 var nivel = Enum.TryParse<NivelRiesgo>(Atributo(f, "nivelRiesgo"), true, out var n) ? n : NivelRiesgo.Medio;
                 var descripcion = Atributo(f, "descripcion");
+                var fechaTexto = Atributo(f, "fechaDocumento");
+                DateOnly? fecha = string.IsNullOrWhiteSpace(fechaTexto) ? null
+                    : DateOnly.TryParse(fechaTexto, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d
+                    : throw new ExcepcionDominio($"fechaDocumento '{fechaTexto}' no es una fecha (usa AAAA-MM-DD).");
+                var origen = OrigenInstitucional.Desde(Atributo(f, "fuenteInstitucional"), Atributo(f, "referenciaDocumento"), fecha)
+                    ?? origenArchivo;
 
                 if (existentes.TryGetValue(nombre.Trim().ToLower(), out var zona))
                 {
-                    zona.Actualizar(nombre, descripcion ?? zona.Descripcion, nivel, f.Geometry);
+                    zona.Actualizar(nombre, descripcion ?? zona.Descripcion, nivel, f.Geometry, origen);
                     actualizadas++;
                 }
                 else
                 {
-                    zona = new Zona(nombre, descripcion, nivel, f.Geometry);
+                    zona = new Zona(nombre, descripcion, nivel, f.Geometry,
+                        origen ?? throw new ExcepcionDominio("faltan los datos institucionales (fuente, referencia y fecha del documento)."));
                     db.Zonas.Add(zona);
                     existentes[zona.Nombre.ToLower()] = zona;
                     creadas++;
@@ -149,7 +172,8 @@ public sealed class ZonasController(IAppDbContext db) : ControllerBase
         f.Attributes is not null && f.Attributes.Exists(nombre) ? f.Attributes[nombre]?.ToString() : null;
 
     private static ZonaDto ADto(Zona z, int comunidades) =>
-        new(z.Id, z.Nombre, z.Descripcion, z.NivelRiesgo, Math.Round(AreaKm2(z), 2), comunidades, GeoJson.Escribir(z.Area));
+        new(z.Id, z.Nombre, z.Descripcion, z.NivelRiesgo, Math.Round(AreaKm2(z), 2), comunidades, GeoJson.Escribir(z.Area),
+            z.FuenteInstitucional, z.ReferenciaDocumento, z.FechaDocumento);
 
     /// <summary>Área aproximada en km² (proyección equirectangular local; suficiente para mostrar).</summary>
     private static double AreaKm2(Zona z)

@@ -7,5 +7,11 @@ scripts:
     language: text/javascript
     code: |-
       pm.test('responde 200', () => pm.response.to.have.status(200));
-
-      pm.test('es una FeatureCollection', () => pm.expect(pm.response.json().type).to.eql('FeatureCollection'));
+      const fc = pm.response.json();
+      pm.test('es una FeatureCollection', () => pm.expect(fc.type).to.eql('FeatureCollection'));
+      pm.test('cada Feature lleva sus datos institucionales', () => {
+        const f = fc.features.find(x => x.properties.nombre === 'Ribera Piraí - Porongo');
+        pm.expect(f.properties.fuenteInstitucional).to.eql('SENAMHI Santa Cruz');
+        pm.expect(f.properties.referenciaDocumento).to.eql('Mapa de riesgo MR-07/2026');
+        pm.expect(f.properties.fechaDocumento).to.eql('2026-10-15');
+      });

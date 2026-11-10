@@ -12,7 +12,7 @@ body:
       "nombreUsuario": "{{usuarioConsulta}}",
       "nombreCompleto": "Usuario de solo lectura",
       "email": "{{usuarioConsulta}}@sat-pirai.local",
-      "rol": "Consulta",
+      "roles": ["Consulta"],
       "contrasena": "Consulta123"
     }
 scripts:

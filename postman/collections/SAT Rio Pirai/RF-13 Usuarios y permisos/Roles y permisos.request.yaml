@@ -8,5 +8,12 @@ scripts:
     code: |-
       pm.test('responde 200', () => pm.response.to.have.status(200));
 
-      const roles = pm.response.json().map(r => r.rol);
-      pm.test('existen los 4 roles', () => pm.expect(roles).to.have.members(['Administrador','Operador','Aprobador','Consulta']));
+      const roles = pm.response.json();
+      const de = (rol) => roles.find(r => r.rol === rol).permisos;
+      pm.test('existen los 4 roles', () => pm.expect(roles.map(r => r.rol)).to.have.members(['Administrador','Operador','Aprobador','Consulta']));
+      pm.test('cada rol da sus permisos', () => {
+        pm.expect(de('Administrador')).to.include('Administracion');
+        pm.expect(de('Operador')).to.have.members(['Lectura', 'Edicion']);
+        pm.expect(de('Aprobador')).to.have.members(['Lectura', 'Aprobacion']);
+        pm.expect(de('Consulta')).to.have.members(['Lectura']);
+      });

@@ -2,20 +2,17 @@ using SistemaAlertas.Domain.Usuarios;
 
 namespace SistemaAlertas.Api.Comun;
 
-/// <summary>Matriz de permisos de RF-13. Cada endpoint declara una de estas políticas.</summary>
+/// <summary>
+/// Políticas de autorización de RF-13. Cada endpoint declara un permiso; la política acepta a cualquier usuario
+/// que tenga al menos un rol con ese permiso (ver <see cref="MatrizPermisos"/>).
+/// </summary>
 public static class Politicas
 {
-    /// <summary>Ver datos: todos los roles.</summary>
-    public const string Lectura = nameof(Lectura);
-    /// <summary>Crear y modificar zonas, comunidades, contactos y avisos: Administrador y Operador.</summary>
-    public const string Edicion = nameof(Edicion);
-    /// <summary>Gestionar usuarios y roles: solo Administrador.</summary>
-    public const string Administracion = nameof(Administracion);
+    public const string Lectura = nameof(Permiso.Lectura);
+    public const string Edicion = nameof(Permiso.Edicion);
+    public const string Aprobacion = nameof(Permiso.Aprobacion);
+    public const string Administracion = nameof(Permiso.Administracion);
 
-    public static readonly IReadOnlyDictionary<string, Rol[]> Matriz = new Dictionary<string, Rol[]>
-    {
-        [Lectura] = [Rol.Administrador, Rol.Operador, Rol.Aprobador, Rol.Consulta],
-        [Edicion] = [Rol.Administrador, Rol.Operador],
-        [Administracion] = [Rol.Administrador]
-    };
+    public static IEnumerable<(string Politica, IReadOnlyList<Rol> Roles)> Todas() =>
+        Enum.GetValues<Permiso>().Select(p => (p.ToString(), MatrizPermisos.RolesCon(p)));
 }

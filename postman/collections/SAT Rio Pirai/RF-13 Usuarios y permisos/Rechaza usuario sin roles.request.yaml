@@ -1,0 +1,23 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/usuarios'
+order: 6200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "sinrol{{$timestamp}}",
+      "nombreCompleto": "Sin rol",
+      "email": "sinrol{{$timestamp}}@sat-pirai.local",
+      "roles": [],
+      "contrasena": "SinRol12345"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica que falta el rol', () => pm.expect(pm.response.json().detail).to.include('al menos un rol'));

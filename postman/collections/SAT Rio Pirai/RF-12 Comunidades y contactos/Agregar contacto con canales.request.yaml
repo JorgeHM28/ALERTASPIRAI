@@ -12,6 +12,10 @@ body:
       "nombre": "Juan Pérez",
       "cargo": "Presidente OTB",
       "activo": true,
+      "procedencia": "Asamblea comunal",
+      "autorizado": true,
+      "referenciaAutorizacion": "Acta de asamblea 14/2026",
+      "fechaAutorizacion": "2026-10-28",
       "canales": [
         { "tipo": "Sms", "destino": "+591 71234567", "preferido": true },
         { "tipo": "Email", "destino": "Juan@Ejemplo.com", "preferido": false }
@@ -28,4 +32,11 @@ scripts:
         pm.expect(c.canales[0].destino).to.eql('+59171234567');
         pm.expect(c.canales[1].destino).to.eql('juan@ejemplo.com');
       });
+      pm.test('guarda procedencia y autorización', () => {
+        pm.expect(c.procedencia).to.eql('Asamblea comunal');
+        pm.expect(c.autorizado).to.be.true;
+        pm.expect(c.referenciaAutorizacion).to.eql('Acta de asamblea 14/2026');
+        pm.expect(c.fechaAutorizacion).to.eql('2026-10-28');
+      });
+      pm.test('queda habilitado para recibir alertas', () => pm.expect(c.habilitado).to.be.true);
       pm.collectionVariables.set('contactoId', c.id);

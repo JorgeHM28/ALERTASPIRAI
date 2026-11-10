@@ -1,0 +1,30 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/comunidades/{{comunidadId}}/contactos'
+order: 3300
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Pedro Suárez",
+      "cargo": "Ex corregidor",
+      "activo": false,
+      "procedencia": "Asamblea comunal",
+      "autorizado": true,
+      "referenciaAutorizacion": "Acta de asamblea 9/2025",
+      "canales": [ { "tipo": "Llamada", "destino": "+59173333333", "preferido": true } ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const c = pm.response.json();
+      pm.test('no está habilitado: está inactivo', () => {
+        pm.expect(c.habilitado).to.be.false;
+        pm.expect(c.motivosNoHabilitado).to.include('inactivo');
+      });
+      pm.collectionVariables.set('contactoInactivoId', c.id);

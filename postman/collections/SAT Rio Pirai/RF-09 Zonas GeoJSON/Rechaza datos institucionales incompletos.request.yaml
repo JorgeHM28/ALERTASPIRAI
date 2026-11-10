@@ -1,0 +1,21 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/zonas/{{zonaPruebaId}}'
+order: 2500
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Zona de prueba editada {{$timestamp}}",
+      "nivelRiesgo": "Alto",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.50,-17.50],[-63.48,-17.50],[-63.48,-17.52],[-63.50,-17.52],[-63.50,-17.50]]]},
+      "fuenteInstitucional": "Otra fuente"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400: fuente, referencia y fecha van juntas', () => pm.response.to.have.status(400));

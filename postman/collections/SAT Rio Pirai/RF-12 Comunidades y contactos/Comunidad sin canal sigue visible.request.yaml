@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/comunidades?zonaId={{zonaId}}'
+order: 5300
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const c = pm.response.json().find(x => x.id === pm.collectionVariables.get('comunidadSinCanalId'));
+      pm.test('aparece en la lista de comunidades marcada sin canal', () => {
+        pm.expect(c).to.exist;
+        pm.expect(c.sinCanal).to.be.true;
+      });
