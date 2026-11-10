@@ -17,7 +17,8 @@ public sealed record AvisoDetalleDto(AvisoResumen Resumen, string? Descripcion, 
 [ApiController]
 [Route("api/avisos")]
 [Authorize(Politicas.Lectura)]
-public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, IFabricaImportadores fabrica) : ControllerBase
+public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, IFabricaImportadores fabrica,
+    IConversorGeoJson geoJson) : ControllerBase
 {
     private const int TamanoMaximo = 1_000_000;
 
@@ -42,7 +43,7 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
         var a = await db.Avisos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (a is null) return NotFound();
         return new AvisoDetalleDto(AvisoMapeo.ResumenDe(a), a.Descripcion, a.Instruccion, a.Vigente,
-            a.Area is null ? null : GeoJson.Escribir(a.Area), a.XmlCap, a.ContenidoOriginal, a.TipoContenidoOriginal, a.HashOriginal);
+            a.Area is null ? null : geoJson.AGeoJson(a.Area), a.XmlCap, a.ContenidoOriginal, a.TipoContenidoOriginal, a.HashOriginal);
     }
 
     /// <summary>

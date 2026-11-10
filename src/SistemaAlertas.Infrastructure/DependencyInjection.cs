@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Infrastructure.Geo;
 using SistemaAlertas.Infrastructure.Persistence;
 using SistemaAlertas.Infrastructure.Seguridad;
 
@@ -26,6 +27,9 @@ public static class DependencyInjection
         services.AddSingleton(jwt);
         services.AddSingleton<IHasherContrasena, HasherContrasena>();
         services.AddSingleton<IGeneradorToken, GeneradorTokenJwt>();
+
+        // Adapter: NetTopologySuite/PostGIS a GeoJSON para el mapa (RF-09).
+        services.AddSingleton<IConversorGeoJson, ConversorGeoJson>();
         return services;
     }
 }
