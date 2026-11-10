@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Infrastructure.Geo;
+using SistemaAlertas.Application.Comunidades;
 using SistemaAlertas.Infrastructure.Persistence;
+using SistemaAlertas.Infrastructure.Persistence.Repositorios;
 using SistemaAlertas.Infrastructure.Seguridad;
 using SistemaAlertas.Infrastructure.Sms;
 
@@ -21,6 +23,12 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite())
                    .UseSnakeCaseNamingConvention());
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AlertasDbContext>());
+
+        // Proxy de protección (RF-12): quien pide IRepositorioContactos recibe el proxy, que envuelve al repositorio real.
+        // IUsuarioActual lo registra la capa que conoce la petición (la API).
+        services.AddScoped<RepositorioContactos>();
+        services.AddScoped<IRepositorioContactos>(sp => new ProxyRepositorioContactos(
+            sp.GetRequiredService<RepositorioContactos>(), sp.GetRequiredService<IUsuarioActual>()));
 
         var jwt = configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>() ?? new OpcionesJwt();
         if (jwt.Clave.Length < 32)

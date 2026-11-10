@@ -23,4 +23,12 @@ public static class EnmascaradorDatos
         var arroba = texto.IndexOf('@');
         return arroba <= 0 ? "***" : texto[0] + "***" + texto[arroba..];
     }
+
+    /// <summary>Destino de un canal según su tipo: teléfono o correo enmascarado; la radio no es un dato personal.</summary>
+    public static string Destino(Domain.Comunidades.TipoCanal tipo, string destino) => tipo switch
+    {
+        Domain.Comunidades.TipoCanal.Email => Email(destino),
+        Domain.Comunidades.TipoCanal.Radio => destino,
+        _ => Telefono(destino)
+    };
 }

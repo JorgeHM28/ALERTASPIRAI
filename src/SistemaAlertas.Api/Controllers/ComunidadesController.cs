@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using SistemaAlertas.Api.Comun;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Application.Comunidades;
 using SistemaAlertas.Domain.Comun;
 using SistemaAlertas.Domain.Comunidades;
 using SistemaAlertas.Domain.Zonas;
@@ -17,7 +18,7 @@ public sealed record GuardarContacto(string Nombre, string? Cargo, bool Activo, 
     string Procedencia, bool Autorizado, string? ReferenciaAutorizacion, DateOnly? FechaAutorizacion);
 public sealed record ContactoDto(Guid Id, Guid ComunidadId, string Nombre, string? Cargo, bool Activo, IReadOnlyList<CanalDto> Canales,
     string Procedencia, bool Autorizado, string? ReferenciaAutorizacion, DateOnly? FechaAutorizacion,
-    bool Habilitado, IReadOnlyList<string> MotivosNoHabilitado);
+    bool Habilitado, IReadOnlyList<string> MotivosNoHabilitado, bool DatosOcultos = false);
 /// <param name="ContactosHabilitados">Contactos activos, autorizados y con canal: los únicos que reciben alertas.</param>
 /// <param name="SinCanal">La comunidad no tiene ningún contacto habilitado: no recibirá alertas hasta que se corrija.</param>
 public sealed record ComunidadDto(Guid Id, string Nombre, string? Municipio, int? Poblacion, double? Latitud, double? Longitud,
@@ -35,7 +36,11 @@ public sealed record DestinatariosDto(IReadOnlyList<DestinatarioDto> Destinatari
 [ApiController]
 [Route("api/comunidades")]
 [Authorize(Politicas.Lectura)]
-public sealed class ComunidadesController(IAppDbContext db) : ControllerBase
+/// <remarks>
+/// Las lecturas de contactos pasan por <see cref="IRepositorioContactos"/>, que en ejecución es el Proxy de protección:
+/// solo quien tiene permiso de edición ve los teléfonos completos.
+/// </remarks>
+public sealed class ComunidadesController(IAppDbContext db, IRepositorioContactos contactos) : ControllerBase
 {
     private static readonly GeometryFactory Geo = new(new PrecisionModel(), Zona.Srid);
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -53,7 +58,10 @@ public sealed class ComunidadesController(IAppDbContext db) : ControllerBase
     public async Task<ActionResult<ComunidadDto>> Obtener(Guid id, CancellationToken ct)
     {
         var c = await Cargar(id, ct, seguimiento: false);
-        return c is null ? NotFound() : ADto(c, incluirContactos: true);
+        if (c is null) return NotFound();
+        // Proxy: los contactos llegan enmascarados si el usuario no tiene permiso de verlos.
+        var visibles = await contactos.ListarPorComunidadAsync(id, ct);
+        return ADto(c, incluirContactos: false) with { Contactos = visibles.Select(VistaADto).ToList() };
     }
 
     [HttpPost]
@@ -122,14 +130,13 @@ public sealed class ComunidadesController(IAppDbContext db) : ControllerBase
     [HttpGet("/api/contactos/{contactoId:guid}/historial")]
     public async Task<IEnumerable<HistorialContactoDto>> Historial(Guid contactoId, CancellationToken ct)
     {
-        var registros = await db.HistorialContactos.AsNoTracking().Where(h => h.ContactoId == contactoId)
-            .OrderByDescending(h => h.CreadoEn).ToListAsync(ct);
+        var registros = await contactos.HistorialAsync(contactoId, ct);
         if (registros.Count == 0 && !await db.Contactos.AnyAsync(c => c.Id == contactoId, ct))
             throw new KeyNotFoundException("Contacto no encontrado.");
         var ids = registros.Select(r => r.UsuarioId).Distinct().ToList();
         var usuarios = await db.Usuarios.Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.NombreUsuario, ct);
-        return registros.Select(r => new HistorialContactoDto(r.Id, r.CreadoEn, r.Accion, r.UsuarioId, usuarios.GetValueOrDefault(r.UsuarioId),
-            r.Cambios, JsonDocument.Parse(r.Instantanea).RootElement.Clone()));
+        return registros.Select(r => new HistorialContactoDto(r.Id, r.Fecha, r.Accion, r.UsuarioId, usuarios.GetValueOrDefault(r.UsuarioId),
+            r.Cambios, JsonSerializer.SerializeToElement(r.Instantanea, Json)));
     }
 
     /// <summary>
@@ -143,9 +150,11 @@ public sealed class ComunidadesController(IAppDbContext db) : ControllerBase
         if (zonaIds is { Length: > 0 }) q = q.Where(c => zonaIds.Contains(c.ZonaId));
         var comunidades = await q.OrderBy(c => c.Nombre).ToListAsync(ct);
 
-        var destinatarios = comunidades.SelectMany(c => c.Contactos.Where(x => x.Habilitado).OrderBy(x => x.Nombre)
+        // Proxy: los canales salen del repositorio protegido, enmascarados si el usuario no tiene permiso.
+        var canales = (await contactos.ListarHabilitadosAsync(zonaIds, ct)).ToDictionary(x => x.Id, x => x.Canales);
+        var destinatarios = comunidades.SelectMany(c => c.Contactos.Where(x => x.Habilitado && canales.ContainsKey(x.Id)).OrderBy(x => x.Nombre)
             .Select(x => new DestinatarioDto(x.Id, x.Nombre, x.Cargo, c.Id, c.Nombre, c.ZonaId, c.Zona?.Nombre,
-                x.Canales.OrderByDescending(k => k.Preferido).Select(k => new CanalDto(k.Tipo, k.Destino, k.Preferido)).ToList()))).ToList();
+                canales[x.Id].Select(k => new CanalDto(k.Tipo, k.Destino, k.Preferido)).ToList()))).ToList();
         var excluidos = comunidades.SelectMany(c => c.Contactos.Where(x => !x.Habilitado).OrderBy(x => x.Nombre)
             .Select(x => new ContactoExcluidoDto(x.Id, x.Nombre, c.Nombre, x.MotivosNoHabilitado))).ToList();
         var sinCanal = comunidades.Where(c => !c.Contactos.Any(x => x.Habilitado))
@@ -215,6 +224,10 @@ public sealed class ComunidadesController(IAppDbContext db) : ControllerBase
             c.Contactos.Count, habilitados, habilitados == 0,
             incluirContactos ? c.Contactos.OrderBy(x => x.Nombre).Select(ContactoADto).ToList() : null);
     }
+
+    private static ContactoDto VistaADto(ContactoVista c) => new(c.Id, c.ComunidadId, c.Nombre, c.Cargo, c.Activo,
+        c.Canales.Select(x => new CanalDto(x.Tipo, x.Destino, x.Preferido)).ToList(),
+        c.Procedencia, c.Autorizado, c.ReferenciaAutorizacion, c.FechaAutorizacion, c.Habilitado, c.MotivosNoHabilitado, c.DatosOcultos);
 
     private static ContactoDto ContactoADto(Contacto c) => new(c.Id, c.ComunidadId, c.Nombre, c.Cargo, c.Activo,
         c.Canales.Select(x => new CanalDto(x.Tipo, x.Destino, x.Preferido)).ToList(),
