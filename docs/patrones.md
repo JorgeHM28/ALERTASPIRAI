@@ -119,7 +119,7 @@ Sirve para compartir estado entre una enorme cantidad de objetos pequeños y aho
 
 # Patrones de comportamiento en el sistema (Sprint 2)
 
-Mismo criterio: se usan los que resuelven un problema real. Seis se usan y tres se descartan.
+Mismo criterio: se usan los que resuelven un problema real. De los nueve, siete se usan y dos se descartan.
 
 | Patrón | Decisión | Dónde | RF |
 |---|---|---|---|
@@ -129,7 +129,7 @@ Mismo criterio: se usan los que resuelven un problema real. Seis se usan y tres 
 | Observer | Se usa | Eventos del aviso: bitácora, log y paso a "Difundido" | RNF-04, RF-11 |
 | Strategy | Se usa | Redacción del mensaje para radio, altavoz y redes sociales | RF-04 |
 | Template Method | Se usa | Pasos comunes de los importadores CAP en XML y JSON | RF-01 |
-| Iterator | Se descarta (lo da el lenguaje) | — | — |
+| Iterator | Se usa (nativo de C#) | Cola SMS (`ReadAllAsync`), comandos de canal, observadores, `Infos()` de los importadores | RF-04 |
 | Mediator | Se descarta | — | — |
 | Memento | Se descarta | — | — |
 
@@ -143,6 +143,7 @@ Mismo criterio: se usan los que resuelven un problema real. Seis se usan y tres 
 | Observer | `Application/Avisos/Eventos/EventosAviso.cs` (sujeto `PublicadorEventosAvisos`, `IObservadorAvisos`), `Infrastructure/Difusion/ObservadoresAvisos.cs` (`BitacoraAvisosEnMemoria`, `ObservadorLogAvisos`, `MarcarAvisoDifundido`). Endpoint `GET /api/avisos/{id}/eventos`. |
 | Strategy | `Application/Difusion/RedaccionCanales.cs` (`IRedaccionCanal` y una estrategia por canal), elegida por canal en `GestorTareasManualesEnMemoria`. |
 | Template Method | `Application/Avisos/Importacion/ImportadorCapBase.cs`; `ImportadorCapXml` e `ImportadorCapJson` solo implementan los pasos. |
+| Iterator | `Api/Comun/ProcesadorColaSms.cs` (`await foreach` sobre `ReadAllAsync`), `ServicioDifusion` (`foreach` de comandos), `PublicadorEventosAvisos` (`foreach` de observadores). Se usa el de C# (`IEnumerable<T>`, `IAsyncEnumerable<T>`), no una implementación propia. |
 
 Pruebas: `PatronesComportamientoTests` (State, cadena, Observer, Command, Strategy y Template Method), `ServicioDifusionTests` (Facade y Command) e `ImportadoresTests` (Template Method con Adapter). En total 121 pruebas; la colección Postman sigue pasando completa (73 peticiones, 149 aserciones).
 
@@ -179,10 +180,12 @@ Pruebas: `PatronesComportamientoTests` (State, cadena, Observer, Command, Strate
 **Solución:** `ImportadorCapBase<TAlerta, TInfo>.Importar` fija el orden de los pasos y no se puede redefinir. Cada formato implementa solo `Leer`, `LlenarEncabezado`, `Infos` y `LlenarInfo`. `Reconoce` es un gancho con una implementación por defecto.
 **Beneficio:** un formato nuevo (por ejemplo, un feed RSS de SENAMHI) escribe solo lo que cambia y siempre termina en la validación CAP.
 
-## Patrones que se descartan
+### Iterator (nativo de C#)
+**Problema:** la cola SMS, la lista de comandos de canal y la de observadores son colecciones distintas que hay que recorrer sin depender de cómo están guardadas.
+**Solución:** se usa el Iterator que trae el lenguaje: `IEnumerable<T>` y `foreach`, y para la cola `IAsyncEnumerable<T>` con `await foreach` sobre `ReadAllAsync`. No se escribe una implementación propia, igual que el Singleton se usa vía DI y no en su forma clásica.
+**Beneficio:** `ProcesadorColaSms` no sabe que la cola es un `Channel`; cuando pase a una cola persistente en el Sprint 3, el procesador no cambia.
 
-### Iterator
-C# ya lo trae: `IEnumerable<T>`, `foreach`, `yield` y, para la cola SMS, `IAsyncEnumerable<T>` con `ReadAllAsync`. Se usa en todo el sistema, pero implementarlo a mano no agregaría nada; es el mismo caso que el Singleton, que se usa vía DI y no en su forma clásica.
+## Patrones que se descartan
 
 ### Mediator
 Sirve cuando muchos objetos se comunican entre sí y conviene centralizar esa comunicación. Aquí la coordinación ya la resuelven la fachada de difusión (un punto de entrada) y el Observer (avisos desacoplados). Un mediador o una librería como MediatR agregaría una capa más de indirección para un sistema de este tamaño.
@@ -192,7 +195,7 @@ Sirve para guardar y restaurar el estado de un objeto, por ejemplo para "deshace
 
 # Cómo encajan los tres grupos de patrones
 
-Los 14 patrones que se usan (4 creacionales, 4 estructurales y 6 de comportamiento) no están aislados: cada uno resuelve un tramo del recorrido de un aviso, del SENAMHI a la población.
+Los 15 patrones que se usan (4 creacionales, 4 estructurales y 7 de comportamiento) no están aislados: cada uno resuelve un tramo del recorrido de un aviso, del SENAMHI a la población.
 
 | Etapa | Qué pasa | Patrones |
 |---|---|---|
@@ -200,7 +203,7 @@ Los 14 patrones que se usan (4 creacionales, 4 estructurales y 6 de comportamien
 | 2. Se registra | `ServicioAvisos` guarda el aviso en estado Registrado y publica el evento | State, Observer |
 | 3. Se aprueba (RF-11) | El estado actual decide si se puede aprobar; la bitácora lo registra | State, Observer |
 | 4. Se difunde (RF-04) | La fachada pide la versión; la cadena de reglas la verifica; ejecuta los comandos de canal; cada canal manual redacta con su estrategia | Facade, Chain of Responsibility, Command, Strategy |
-| 5. Sale el SMS | El trabajo SMS (comando) se encola; el emisor está decorado con bitácora, modo prueba y reintentos, y adapta Twilio o el simulador | Command, Decorator, Adapter, Factory Method |
+| 5. Sale el SMS | El trabajo SMS (comando) se encola y el procesador lo recorre; el emisor está decorado con bitácora, modo prueba y reintentos, y adapta Twilio o el simulador | Command, Iterator, Decorator, Adapter, Factory Method |
 | 6. Cierre | El evento Difundido pasa el aviso a ese estado y queda en la bitácora | Observer, State |
 | Transversal | Datos de contacto protegidos, objetos de una sola instancia, geometrías a GeoJSON | Proxy, Singleton vía DI, Adapter |
 
