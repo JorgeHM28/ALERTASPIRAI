@@ -116,3 +116,96 @@ Sirve para tratar igual a objetos individuales y a grupos anidados en árbol. La
 
 ### Flyweight
 Sirve para compartir estado entre una enorme cantidad de objetos pequeños y ahorrar memoria. El sistema maneja decenas de zonas y cientos de contactos, no millones de objetos; además .NET ya internaliza cadenas y las enumeraciones CAP son valores. El ahorro sería nulo y complicaría el código.
+
+# Patrones de comportamiento en el sistema (Sprint 2)
+
+Mismo criterio: se usan los que resuelven un problema real. Seis se usan y tres se descartan.
+
+| Patrón | Decisión | Dónde | RF |
+|---|---|---|---|
+| State | Se usa | Ciclo de vida del aviso: Registrado → Aprobado → Difundido, o Descartado | RF-11 |
+| Chain of Responsibility | Se usa | Reglas que el aviso debe pasar antes de difundirse | RF-04, RF-11 |
+| Command | Se usa | Un comando por canal de difusión (web, SMS, tareas manuales) y los trabajos SMS en cola | RF-04 |
+| Observer | Se usa | Eventos del aviso: bitácora, log y paso a "Difundido" | RNF-04, RF-11 |
+| Strategy | Se usa | Redacción del mensaje para radio, altavoz y redes sociales | RF-04 |
+| Template Method | Se usa | Pasos comunes de los importadores CAP en XML y JSON | RF-01 |
+| Iterator | Se descarta (lo da el lenguaje) | — | — |
+| Mediator | Se descarta | — | — |
+| Memento | Se descarta | — | — |
+
+## Dónde está en el código
+
+| Patrón | Archivos |
+|---|---|
+| State | `Domain/Avisos/EstadoAviso.cs` (valor guardado), `Domain/Avisos/EstadosAviso.cs` (`EstadoAvisoBase`, `EstadoRegistrado`, `EstadoAprobado`, `EstadoDifundido`, `EstadoDescartado`), `Aviso.Aprobar/MarcarDifundido/Descartar`. Endpoint `POST /api/avisos/{id}/aprobar` (permiso Aprobación). |
+| Chain of Responsibility | `Application/Difusion/ReglasDifusion.cs` (`ReglaDifusion` y sus eslabones). La usa `Infrastructure/Difusion/FuenteVersionesDesdeAvisos.cs`. |
+| Command | `Application/Difusion/ComandosDifusion.cs` (`IComandoDifusion`, `PublicarEnWeb`, `EncolarSms`, `CrearTareasManuales`, `ContextoDifusion`). El invocador es `ServicioDifusion`. `TrabajoSms` es el comando encolado que ejecuta `ProcesadorColaSms`. |
+| Observer | `Application/Avisos/Eventos/EventosAviso.cs` (sujeto `PublicadorEventosAvisos`, `IObservadorAvisos`), `Infrastructure/Difusion/ObservadoresAvisos.cs` (`BitacoraAvisosEnMemoria`, `ObservadorLogAvisos`, `MarcarAvisoDifundido`). Endpoint `GET /api/avisos/{id}/eventos`. |
+| Strategy | `Application/Difusion/RedaccionCanales.cs` (`IRedaccionCanal` y una estrategia por canal), elegida por canal en `GestorTareasManualesEnMemoria`. |
+| Template Method | `Application/Avisos/Importacion/ImportadorCapBase.cs`; `ImportadorCapXml` e `ImportadorCapJson` solo implementan los pasos. |
+
+Pruebas: `PatronesComportamientoTests` (State, cadena, Observer, Command, Strategy y Template Method), `ServicioDifusionTests` (Facade y Command) e `ImportadoresTests` (Template Method con Adapter). En total 121 pruebas; la colección Postman sigue pasando completa (73 peticiones, 149 aserciones).
+
+## Patrones que se usan
+
+### State
+**Problema:** RF-11 exige que solo se difunda lo aprobado. Con un `enum` y `if` repartidos, cada acción (aprobar, descartar, difundir) tendría que preguntar en qué estado está el aviso, y un estado nuevo obligaría a revisar todos esos `if`.
+**Solución:** cada estado es una clase que decide qué acciones permite y a cuál lleva. `Aviso` delega en su `EstadoActual`. Se guarda solo el `enum` (como texto, sin migración) y de él sale el objeto de estado.
+**Reglas:** se aprueba solo desde Registrado y si el aviso está completo y vigente (uno de prueba también, si está completo). Un aviso difundido no se descarta: se corrige con un CAP Update o Cancel. Descartado es final.
+**Beneficio:** las transiciones válidas están en un solo lugar y las prueba `PatronesComportamientoTests`.
+
+### Chain of Responsibility
+**Problema:** antes de difundir hay varias verificaciones (no descartado, aprobado, no vencido, completo, apto). Estaban escritas en secuencia dentro de la fuente de versiones; agregar una nueva era editar ese método.
+**Solución:** cada verificación es un eslabón con una sola responsabilidad. El primero que encuentra un problema corta la cadena con su motivo. La cadena se arma una vez (`CadenaPorDefecto`) y se registra como Singleton vía DI.
+**Beneficio:** el motivo que ve el operador es preciso ("está Registrado: un aprobador debe aprobarlo") y una regla nueva es una clase más. `ReglaVigente` mira la fecha en el momento de difundir, porque el aviso pudo vencer después de aprobarse.
+
+### Command
+**Problema:** la fachada de difusión tenía los tres canales escritos a mano. Un canal nuevo (WhatsApp, sirenas) obligaba a modificarla.
+**Solución:** cada canal es un comando con `EjecutarAsync(contexto)`. `ServicioDifusion` es el invocador: los ejecuta en el orden registrado, aísla los fallos y registra las incidencias. Los trabajos SMS ya eran comandos encolados que se ejecutan después en segundo plano.
+**Beneficio:** agregar un canal es registrar una clase en `DependencyInjection`; la fachada no cambia.
+
+### Observer
+**Problema:** cuando un aviso se registra, aprueba, descarta, vence o difunde, hay que dejarlo en la bitácora (RNF-04), escribir en el log y, al difundirse, cambiar su estado. Hacerlo dentro de cada caso de uso los acopla a todas esas reacciones.
+**Solución:** los casos de uso publican un `EventoAviso`. `PublicadorEventosAvisos` avisa a cada `IObservadorAvisos` registrado. Si un observador falla, los demás reciben igual el evento y la acción principal no se deshace.
+**Beneficio:** una reacción nueva (por ejemplo, un correo al COED en el Sprint 3) es otro observador. La bitácora es en memoria, como la cola SMS del Sprint 2, y pasará a una tabla en el Sprint 3 detrás de la misma interfaz.
+
+### Strategy
+**Problema:** cada canal manual necesita un texto distinto: la radio lee el texto completo, el altavoz necesita una frase corta y repetible y las redes llevan el enlace. Era un `switch` dentro del gestor de tareas.
+**Solución:** una estrategia de redacción por canal (`IRedaccionCanal`). El gestor elige la estrategia por canal en tiempo de ejecución.
+**Beneficio:** cambiar cómo se redacta un canal no toca al gestor; las pruebas inyectan una estrategia distinta.
+
+### Template Method
+**Problema:** los importadores XML y JSON repetían el mismo algoritmo (leer, llenar el encabezado, llenar cada `info`, construir) y nada impedía que uno nuevo se saltara la validación del Builder.
+**Solución:** `ImportadorCapBase<TAlerta, TInfo>.Importar` fija el orden de los pasos y no se puede redefinir. Cada formato implementa solo `Leer`, `LlenarEncabezado`, `Infos` y `LlenarInfo`. `Reconoce` es un gancho con una implementación por defecto.
+**Beneficio:** un formato nuevo (por ejemplo, un feed RSS de SENAMHI) escribe solo lo que cambia y siempre termina en la validación CAP.
+
+## Patrones que se descartan
+
+### Iterator
+C# ya lo trae: `IEnumerable<T>`, `foreach`, `yield` y, para la cola SMS, `IAsyncEnumerable<T>` con `ReadAllAsync`. Se usa en todo el sistema, pero implementarlo a mano no agregaría nada; es el mismo caso que el Singleton, que se usa vía DI y no en su forma clásica.
+
+### Mediator
+Sirve cuando muchos objetos se comunican entre sí y conviene centralizar esa comunicación. Aquí la coordinación ya la resuelven la fachada de difusión (un punto de entrada) y el Observer (avisos desacoplados). Un mediador o una librería como MediatR agregaría una capa más de indirección para un sistema de este tamaño.
+
+### Memento
+Sirve para guardar y restaurar el estado de un objeto, por ejemplo para "deshacer". Un mensaje aprobado no se deshace: se corrige creando la versión n+1 (Prototype) y el historial queda en la bitácora. Restaurar un estado anterior iría contra la trazabilidad que pide RF-11.
+
+# Cómo encajan los tres grupos de patrones
+
+Los 14 patrones que se usan (4 creacionales, 4 estructurales y 6 de comportamiento) no están aislados: cada uno resuelve un tramo del recorrido de un aviso, del SENAMHI a la población.
+
+| Etapa | Qué pasa | Patrones |
+|---|---|---|
+| 1. Llega el aviso (RF-01) | `ModuloCap` recibe el XML o JSON, la fábrica elige el importador, este sigue los pasos fijos y traduce el formato ajeno, y el Builder valida el CAP 1.2 | Facade → Factory Method → Template Method → Adapter → Builder |
+| 2. Se registra | `ServicioAvisos` guarda el aviso en estado Registrado y publica el evento | State, Observer |
+| 3. Se aprueba (RF-11) | El estado actual decide si se puede aprobar; la bitácora lo registra | State, Observer |
+| 4. Se difunde (RF-04) | La fachada pide la versión; la cadena de reglas la verifica; ejecuta los comandos de canal; cada canal manual redacta con su estrategia | Facade, Chain of Responsibility, Command, Strategy |
+| 5. Sale el SMS | El trabajo SMS (comando) se encola; el emisor está decorado con bitácora, modo prueba y reintentos, y adapta Twilio o el simulador | Command, Decorator, Adapter, Factory Method |
+| 6. Cierre | El evento Difundido pasa el aviso a ese estado y queda en la bitácora | Observer, State |
+| Transversal | Datos de contacto protegidos, objetos de una sola instancia, geometrías a GeoJSON | Proxy, Singleton vía DI, Adapter |
+
+Reglas que mantienen el equilibrio:
+- **Un patrón, un problema.** Ninguna clase combina dos patrones sin necesidad. Donde dos se tocan, uno usa al otro por su interfaz: la cadena consulta al State (`PermiteDifundir`), la fachada invoca comandos y publica al Observer, el Template Method termina en el Builder.
+- **Todo pasa por DI.** Las fábricas, la cadena, las estrategias, los comandos, los decoradores y los observadores se arman en `DependencyInjection.cs` y `RegistroSms.cs`. Cambiar una pieza es cambiar un registro, no el código que la usa.
+- **Prototype queda listo para las versiones.** Cuando RF-11 guarde versiones del mensaje, la versión n+1 se creará con `record` + `with` y la fuente de versiones la entregará a la misma cadena de reglas y a los mismos comandos, sin cambiar la difusión.
+- **Lo que no resuelve nada se descarta y se dice por qué:** Abstract Factory, Singleton clásico, Object Pool, Bridge, Composite, Flyweight, Mediator y Memento.

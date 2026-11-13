@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Difusion;
 using SistemaAlertas.Infrastructure.Difusion;
 using SistemaAlertas.Infrastructure.Geo;
@@ -56,6 +57,13 @@ public static class DependencyInjection
         services.AddSingleton<IColaSms>(sp => sp.GetRequiredService<ColaSmsEnMemoria>());
         services.AddSingleton<IGestorTareasManuales, GestorTareasManualesEnMemoria>();
         services.AddSingleton<IRegistroIncidencias, RegistroIncidenciasEnLog>();
+
+        // Observer: cada observador reacciona a los eventos de aviso por su cuenta.
+        services.AddSingleton<BitacoraAvisosEnMemoria>();
+        services.AddSingleton<IBitacoraAvisos>(sp => sp.GetRequiredService<BitacoraAvisosEnMemoria>());
+        services.AddSingleton<IObservadorAvisos>(sp => sp.GetRequiredService<BitacoraAvisosEnMemoria>());
+        services.AddSingleton<IObservadorAvisos, ObservadorLogAvisos>();
+        services.AddScoped<IObservadorAvisos, MarcarAvisoDifundido>();
         return services;
     }
 }

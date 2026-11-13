@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SistemaAlertas.Application.Avisos;
+using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Avisos.Importacion;
 using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Application.Difusion;
@@ -25,12 +26,23 @@ public static class DependencyInjection
         services.AddScoped<ServicioAvisos>();
         services.AddScoped<ServicioUsuarios>();
 
-        // Facade de RF-04: una llamada difunde por todos los canales.
-        services.AddScoped<IServicioDifusion>(sp => new ServicioDifusion(
-            sp.GetRequiredService<IFuenteVersionesAprobadas>(), sp.GetRequiredService<IPublicadorWeb>(),
-            sp.GetRequiredService<IDestinatariosDifusion>(), sp.GetRequiredService<IColaSms>(),
-            sp.GetRequiredService<IGestorTareasManuales>(), sp.GetRequiredService<IRegistroIncidencias>(),
-            sp.GetService<TimeProvider>()));
+        // Observer: los casos de uso publican eventos de aviso; los observadores se registran aparte (Infrastructure).
+        services.AddScoped<IPublicadorEventosAvisos, PublicadorEventosAvisos>();
+
+        // Chain of Responsibility: reglas que el aviso debe pasar antes de difundirse. Sin estado: una sola instancia.
+        services.AddSingleton(ReglaDifusion.CadenaPorDefecto());
+
+        // Strategy: una redacción por canal manual.
+        foreach (var redaccion in RedaccionesCanal.PorDefecto)
+            services.AddSingleton(typeof(IRedaccionCanal), redaccion);
+
+        // Command: un comando por canal, en el orden en que se ejecutan. Agregar un canal es una línea más.
+        services.AddScoped<IComandoDifusion, PublicarEnWeb>();
+        services.AddScoped<IComandoDifusion, EncolarSms>();
+        services.AddScoped<IComandoDifusion, CrearTareasManuales>();
+
+        // Facade de RF-04 e invocador de los comandos: una llamada difunde por todos los canales.
+        services.AddScoped<IServicioDifusion, ServicioDifusion>();
         return services;
     }
 }

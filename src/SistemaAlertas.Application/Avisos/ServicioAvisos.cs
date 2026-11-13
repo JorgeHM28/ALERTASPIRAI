@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Cap;
@@ -18,9 +19,15 @@ public sealed class OpcionesCap
     public int DesfaseHorasUtc { get; set; } = -4;
 }
 
-/// <summary>Casos de uso de RF-01: registrar un aviso a mano o importarlo desde un mensaje CAP.</summary>
-public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, OpcionesCap opciones)
+/// <summary>
+/// Casos de uso de RF-01 (registrar o importar un aviso) y RF-11 (aprobar o descartar).
+/// Cada cambio se publica como evento (Observer): la bitácora y las demás reacciones no se programan aquí.
+/// </summary>
+public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, OpcionesCap opciones,
+    IPublicadorEventosAvisos eventos, TimeProvider? reloj = null)
 {
+    private readonly TimeProvider _reloj = reloj ?? TimeProvider.System;
+
     public async Task<Aviso> ImportarAsync(string contenido, FormatoAviso? formato, Guid usuarioId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(contenido)) throw new ExcepcionDominio("El contenido del aviso está vacío.");
@@ -39,6 +46,7 @@ public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, Opcio
         var aviso = new Aviso(mensaje, formatoLeido, xml, area, usuarioId, contenidoOriginal: contenido);
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
+        await Publicar(aviso, TipoEventoAviso.Registrado, usuarioId, $"Importado desde {formatoLeido}.", ct);
         return aviso;
     }
 
@@ -85,6 +93,28 @@ public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, Opcio
         var aviso = new Aviso(mensaje, FormatoAviso.Manual, moduloCap.Generar(mensaje), area, usuarioId);
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
+        await Publicar(aviso, TipoEventoAviso.Registrado, usuarioId, "Registrado a mano.", ct);
+        return aviso;
+    }
+
+    /// <summary>RF-11: el aprobador da el visto bueno. El estado actual (State) decide si se puede.</summary>
+    public async Task<Aviso> AprobarAsync(Guid avisoId, Guid usuarioId, CancellationToken ct)
+    {
+        var aviso = await Buscar(avisoId, ct);
+        aviso.EvaluarAptitud(_reloj.GetUtcNow());
+        aviso.Aprobar();
+        await db.SaveChangesAsync(ct);
+        await Publicar(aviso, TipoEventoAviso.Aprobado, usuarioId, aviso.EsPrueba ? "Aprobado como aviso de prueba." : "Aprobado para difusión.", ct);
+        return aviso;
+    }
+
+    public async Task<Aviso> DescartarAsync(Guid avisoId, Guid usuarioId, CancellationToken ct)
+    {
+        var aviso = await Buscar(avisoId, ct);
+        var anterior = aviso.Estado;
+        aviso.Descartar();
+        await db.SaveChangesAsync(ct);
+        await Publicar(aviso, TipoEventoAviso.Descartado, usuarioId, $"Descartado (estaba {anterior}).", ct);
         return aviso;
     }
 
@@ -94,15 +124,25 @@ public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, Opcio
     /// </summary>
     public async Task<int> RevisarVigenciaAsync(CancellationToken ct)
     {
-        var ahora = DateTimeOffset.UtcNow;
+        var ahora = _reloj.GetUtcNow();
         var sinEvaluar = Aviso.SinEvaluar;
         var vencidos = await db.Avisos
             .Where(a => (!a.Vencido && a.Expira != null && a.Expira <= ahora) || a.AptitudEvaluadaEn <= sinEvaluar)
             .ToListAsync(ct);
+        var yaVencidos = vencidos.Where(a => a.Vencido).Select(a => a.Id).ToHashSet();
         var cambiados = vencidos.Count(a => a.EvaluarAptitud(ahora));
-        if (cambiados > 0) await db.SaveChangesAsync(ct);
+        if (cambiados == 0) return 0;
+        await db.SaveChangesAsync(ct);
+        foreach (var a in vencidos.Where(a => a.Vencido && !yaVencidos.Contains(a.Id)))
+            await Publicar(a, TipoEventoAviso.Vencido, null, $"Expiró el {a.Expira:yyyy-MM-dd HH:mm} UTC.", ct);
         return cambiados;
     }
+
+    private async Task<Aviso> Buscar(Guid avisoId, CancellationToken ct) =>
+        await db.Avisos.FirstOrDefaultAsync(a => a.Id == avisoId, ct) ?? throw new KeyNotFoundException("Aviso no encontrado.");
+
+    private Task Publicar(Aviso aviso, TipoEventoAviso tipo, Guid? usuarioId, string detalle, CancellationToken ct) =>
+        eventos.PublicarAsync(new EventoAviso(aviso.Id, tipo, usuarioId, detalle, _reloj.GetUtcNow()), ct);
 
     private static Geometry? AreaDe(MensajeCap mensaje)
     {

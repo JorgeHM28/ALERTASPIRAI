@@ -89,10 +89,20 @@ public class Aviso : Entidad
         EvaluarAptitud(DateTimeOffset.UtcNow);
     }
 
+    /// <summary>Objeto del patrón State que corresponde al estado guardado.</summary>
+    public EstadoAvisoBase EstadoActual => EstadoAvisoBase.De(Estado);
+
+    /// <summary>Aviso de prueba o simulacro: el CAP tiene un status distinto de Actual.</summary>
+    public bool EsPrueba => EstadoCap != EstadoCap.Actual;
+
+    // State: cada acción la decide el estado actual, que devuelve el estado siguiente o rechaza la acción.
+    public void Aprobar() => Estado = EstadoActual.Aprobar(this);
+
+    public void MarcarDifundido() => Estado = EstadoActual.Difundir(this);
+
     public void Descartar()
     {
-        if (Estado == EstadoAviso.Descartado) throw new ExcepcionDominio("El aviso ya está descartado.");
-        Estado = EstadoAviso.Descartado;
+        Estado = EstadoActual.Descartar(this);
         EvaluarAptitud(DateTimeOffset.UtcNow);
     }
 

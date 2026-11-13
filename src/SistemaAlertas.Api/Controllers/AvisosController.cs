@@ -6,6 +6,7 @@ using SistemaAlertas.Api.Comun;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Application.Avisos;
+using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Avisos.Importacion;
 using SistemaAlertas.Domain.Avisos;
 
@@ -14,12 +15,12 @@ namespace SistemaAlertas.Api.Controllers;
 public sealed record AvisoDetalleDto(AvisoResumen Resumen, string? Descripcion, string? Instruccion, DateTimeOffset? Vigente,
     JsonElement? Area, string XmlCap, string? ContenidoOriginal, string? TipoContenidoOriginal, string? HashOriginal);
 
-/// <summary>RF-01: registro de avisos e importación de mensajes CAP 1.2.</summary>
+/// <summary>RF-01: registro de avisos e importación de mensajes CAP 1.2. RF-11: aprobación.</summary>
 [ApiController]
 [Route("api/avisos")]
 [Authorize(Politicas.Lectura)]
 public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, IModuloCap moduloCap,
-    IConversorGeoJson geoJson) : ControllerBase
+    IConversorGeoJson geoJson, IBitacoraAvisos bitacora) : ControllerBase
 {
     private const int TamanoMaximo = 1_000_000;
 
@@ -115,13 +116,18 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
         return moduloCap.Validar(new string(buffer, 0, leidos));
     }
 
+    /// <summary>RF-11: aprueba el aviso para difundirlo. Solo desde Registrado y si está completo y vigente (State).</summary>
+    [HttpPost("{id:guid}/aprobar")]
+    [Authorize(Politicas.Aprobacion)]
+    public async Task<AvisoResumen> Aprobar(Guid id, CancellationToken ct) =>
+        AvisoMapeo.ResumenDe(await servicio.AprobarAsync(id, User.Id(), ct));
+
     [HttpPost("{id:guid}/descartar")]
     [Authorize(Politicas.Edicion)]
-    public async Task<AvisoResumen> Descartar(Guid id, CancellationToken ct)
-    {
-        var a = await db.Avisos.FindAsync([id], ct) ?? throw new KeyNotFoundException("Aviso no encontrado.");
-        a.Descartar();
-        await db.SaveChangesAsync(ct);
-        return AvisoMapeo.ResumenDe(a);
-    }
+    public async Task<AvisoResumen> Descartar(Guid id, CancellationToken ct) =>
+        AvisoMapeo.ResumenDe(await servicio.DescartarAsync(id, User.Id(), ct));
+
+    /// <summary>Bitácora del aviso: registrado, aprobado, descartado, vencido, difundido (Observer). Se reinicia con la API.</summary>
+    [HttpGet("{id:guid}/eventos")]
+    public IReadOnlyList<EventoAviso> Eventos(Guid id) => bitacora.De(id);
 }

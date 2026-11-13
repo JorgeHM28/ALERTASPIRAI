@@ -3,7 +3,7 @@ using SistemaAlertas.Infrastructure.Difusion;
 
 namespace SistemaAlertas.Tests;
 
-/// <summary>Facade: ServicioDifusion coordina web, SMS y tareas manuales; un canal caído no frena a los demás.</summary>
+/// <summary>Facade + Command: ServicioDifusion coordina web, SMS y tareas manuales; un canal caído no frena a los demás.</summary>
 public class ServicioDifusionTests
 {
     private static readonly Guid Zona = Guid.NewGuid();
@@ -51,8 +51,13 @@ public class ServicioDifusionTests
         var cola = new ColaFalsa();
         var tareas = new GestorTareasManualesEnMemoria(TimeProvider.System);
         var incidencias = new IncidenciasFalsas();
-        var servicio = new ServicioDifusion(new FuenteFalsa(version), web ?? new PublicadorWebEnMemoria(TimeProvider.System),
-            destinatarios ?? new DestinatariosFalsos(DosContactos), cola, tareas, incidencias);
+        IComandoDifusion[] comandos =
+        [
+            new PublicarEnWeb(web ?? new PublicadorWebEnMemoria(TimeProvider.System)),
+            new EncolarSms(destinatarios ?? new DestinatariosFalsos(DosContactos), cola),
+            new CrearTareasManuales(tareas)
+        ];
+        var servicio = new ServicioDifusion(new FuenteFalsa(version), comandos, incidencias);
         return (servicio, cola, tareas, incidencias);
     }
 

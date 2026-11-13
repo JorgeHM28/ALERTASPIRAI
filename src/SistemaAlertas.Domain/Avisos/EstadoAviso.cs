@@ -1,4 +1,8 @@
 namespace SistemaAlertas.Domain.Avisos;
 
-/// <summary>Ciclo de vida del aviso. En el Sprint 1 solo se registra; la aprobación llega en el Sprint 2 (RF-11).</summary>
-public enum EstadoAviso { Registrado, Descartado }
+/// <summary>
+/// Ciclo de vida del aviso (RF-11). Es el valor que se guarda en la base; el comportamiento de cada estado
+/// vive en <see cref="EstadoAvisoBase"/> (patrón State).
+/// Registrado → Aprobado → Difundido. Registrado o Aprobado → Descartado.
+/// </summary>
+public enum EstadoAviso { Registrado, Aprobado, Difundido, Descartado }

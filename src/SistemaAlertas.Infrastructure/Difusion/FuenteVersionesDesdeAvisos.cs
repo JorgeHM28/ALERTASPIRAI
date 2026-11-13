@@ -1,18 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Difusion;
-using SistemaAlertas.Domain.Avisos;
-using SistemaAlertas.Domain.Cap;
-using SistemaAlertas.Domain.Comun;
 
 namespace SistemaAlertas.Infrastructure.Difusion;
 
 /// <summary>
-/// Mientras no exista el flujo de aprobación con versiones (RF-11), la "versión aprobada" es el propio aviso:
-/// el identificador de versión es el del aviso. Solo se difunde un aviso apto; uno de prueba o simulacro
-/// (CAP status distinto de Actual) se acepta si está completo, y viaja marcado como prueba.
+/// Mientras no existan las versiones del mensaje (RF-11 con Prototype), la "versión aprobada" es el propio aviso
+/// aprobado: el identificador de versión es el del aviso. Antes de entregarlo, el aviso recorre la cadena de reglas
+/// de difusión (Chain of Responsibility): no descartado, aprobado, vigente, completo y apto (o de prueba).
+/// Un aviso de prueba o simulacro (CAP status distinto de Actual) viaja marcado como prueba.
 /// </summary>
-public sealed class FuenteVersionesDesdeAvisos(IAppDbContext db) : IFuenteVersionesAprobadas
+public sealed class FuenteVersionesDesdeAvisos(IAppDbContext db, ReglaDifusion reglas, TimeProvider reloj) : IFuenteVersionesAprobadas
 {
     public const int LargoMaximoSms = 320;
 
@@ -21,12 +19,8 @@ public sealed class FuenteVersionesDesdeAvisos(IAppDbContext db) : IFuenteVersio
         var aviso = await db.Avisos.AsNoTracking().FirstOrDefaultAsync(a => a.Id == versionAprobadaId, ct);
         if (aviso is null) return null;
 
-        var esPrueba = aviso.EstadoCap != EstadoCap.Actual;
-        if (aviso.Estado == EstadoAviso.Descartado) throw new ExcepcionDominio("El aviso fue descartado: no se difunde.");
-        if (!esPrueba && !aviso.AptoParaDifusion)
-            throw new ExcepcionDominio("El aviso no es apto para difusión: " + string.Join(" ", aviso.MotivosNoApto));
-        if (esPrueba && (aviso.Incompleto || aviso.Vencido))
-            throw new ExcepcionDominio("El aviso de prueba está incompleto o vencido: " + string.Join(" ", aviso.MotivosNoApto));
+        reglas.Verificar(aviso, reloj.GetUtcNow());
+        var esPrueba = aviso.EsPrueba;
 
         var zonas = aviso.Area is null ? []
             : await db.Zonas.AsNoTracking().Where(z => z.Area.Intersects(aviso.Area)).Select(z => z.Id).ToListAsync(ct);

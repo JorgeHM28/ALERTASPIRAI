@@ -17,14 +17,15 @@ namespace SistemaAlertas.Application.Avisos.Importacion;
 /// <see cref="Aviso"/> de RF-01. Traduce nombres de elementos, enumeraciones, fechas y polígonos CAP al modelo interno,
 /// y los errores de XML a <see cref="ExcepcionDominio"/>, así que nadie más en el sistema conoce el XML de OASIS.
 /// </para>
+/// <para>Los pasos los fija <see cref="ImportadorCapBase{TAlerta, TInfo}"/> (Template Method); aquí solo está lo propio del XML.</para>
 /// </summary>
-public sealed class ImportadorCapXml : IImportadorAviso
+public sealed class ImportadorCapXml : ImportadorCapBase<XElement, XElement>
 {
-    public FormatoAviso Formato => FormatoAviso.CapXml;
+    public override FormatoAviso Formato => FormatoAviso.CapXml;
 
-    public bool Reconoce(string contenido) => contenido.TrimStart().StartsWith('<');
+    protected override char PrimerCaracter => '<';
 
-    public MensajeCap Importar(string contenido)
+    protected override XElement Leer(string contenido)
     {
         XDocument doc;
         try
@@ -42,46 +43,44 @@ public sealed class ImportadorCapXml : IImportadorAviso
         var alert = doc.Root;
         if (alert is null || alert.Name != CapXml.Ns + "alert")
             throw new ExcepcionDominio("El documento no es un mensaje CAP 1.2: falta <alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">.");
-
-        string? Texto(XElement padre, string nombre) => padre.Element(CapXml.Ns + nombre)?.Value.Trim();
-
-        var builder = new MensajeCapBuilder()
-            .ConIdentificador(Texto(alert, "identifier") ?? string.Empty)
-            .DeRemitente(Texto(alert, "sender") ?? string.Empty)
-            .EnviadoEn(Fecha(Texto(alert, "sent"), "sent") ?? DateTimeOffset.UtcNow)
-            .ConEstado(Enum<EstadoCap>(Texto(alert, "status"), "status"))
-            .ConTipo(Enum<TipoMensajeCap>(Texto(alert, "msgType"), "msgType"))
-            .ConAlcance(Enum<AlcanceCap>(Texto(alert, "scope"), "scope"), Texto(alert, "restriction"))
-            .ConNota(Texto(alert, "note"))
-            .ConReferencias(Texto(alert, "references"));
-
-        foreach (var info in alert.Elements(CapXml.Ns + "info"))
-        {
-            builder.AgregarInfo(i =>
-            {
-                i.EnIdioma(Texto(info, "language") ?? "en-US")
-                 .ConEvento(Texto(info, "event") ?? string.Empty)
-                 .ConUrgencia(Enum<UrgenciaCap>(Texto(info, "urgency"), "urgency"))
-                 .ConSeveridad(Enum<SeveridadCap>(Texto(info, "severity"), "severity"))
-                 .ConCerteza(Enum<CertezaCap>(Texto(info, "certainty"), "certainty"))
-                 .ConNombreRemitente(Texto(info, "senderName"))
-                 .ConTitular(Texto(info, "headline"))
-                 .ConDescripcion(Texto(info, "description"))
-                 .ConInstruccion(Texto(info, "instruction"))
-                 .VigenteDesde(Fecha(Texto(info, "effective"), "effective"))
-                 .ExpiraEn(Fecha(Texto(info, "expires"), "expires"));
-
-                foreach (var categoria in info.Elements(CapXml.Ns + "category"))
-                    i.ConCategoria(Enum<CategoriaCap>(categoria.Value.Trim(), "category"));
-
-                foreach (var area in info.Elements(CapXml.Ns + "area"))
-                    i.AgregarArea(Texto(area, "areaDesc") ?? string.Empty,
-                        area.Elements(CapXml.Ns + "polygon").Select(p => p.Value).ToArray());
-            });
-        }
-
-        return builder.Build();
+        return alert;
     }
+
+    protected override void LlenarEncabezado(XElement alert, MensajeCapBuilder builder) => builder
+        .ConIdentificador(Texto(alert, "identifier") ?? string.Empty)
+        .DeRemitente(Texto(alert, "sender") ?? string.Empty)
+        .EnviadoEn(Fecha(Texto(alert, "sent"), "sent") ?? DateTimeOffset.UtcNow)
+        .ConEstado(Enum<EstadoCap>(Texto(alert, "status"), "status"))
+        .ConTipo(Enum<TipoMensajeCap>(Texto(alert, "msgType"), "msgType"))
+        .ConAlcance(Enum<AlcanceCap>(Texto(alert, "scope"), "scope"), Texto(alert, "restriction"))
+        .ConNota(Texto(alert, "note"))
+        .ConReferencias(Texto(alert, "references"));
+
+    protected override IEnumerable<XElement> Infos(XElement alert) => alert.Elements(CapXml.Ns + "info");
+
+    protected override void LlenarInfo(XElement info, InfoCapBuilder i)
+    {
+        i.EnIdioma(Texto(info, "language") ?? "en-US")
+         .ConEvento(Texto(info, "event") ?? string.Empty)
+         .ConUrgencia(Enum<UrgenciaCap>(Texto(info, "urgency"), "urgency"))
+         .ConSeveridad(Enum<SeveridadCap>(Texto(info, "severity"), "severity"))
+         .ConCerteza(Enum<CertezaCap>(Texto(info, "certainty"), "certainty"))
+         .ConNombreRemitente(Texto(info, "senderName"))
+         .ConTitular(Texto(info, "headline"))
+         .ConDescripcion(Texto(info, "description"))
+         .ConInstruccion(Texto(info, "instruction"))
+         .VigenteDesde(Fecha(Texto(info, "effective"), "effective"))
+         .ExpiraEn(Fecha(Texto(info, "expires"), "expires"));
+
+        foreach (var categoria in info.Elements(CapXml.Ns + "category"))
+            i.ConCategoria(Enum<CategoriaCap>(categoria.Value.Trim(), "category"));
+
+        foreach (var area in info.Elements(CapXml.Ns + "area"))
+            i.AgregarArea(Texto(area, "areaDesc") ?? string.Empty,
+                area.Elements(CapXml.Ns + "polygon").Select(p => p.Value).ToArray());
+    }
+
+    private static string? Texto(XElement padre, string nombre) => padre.Element(CapXml.Ns + nombre)?.Value.Trim();
 
     private static T Enum<T>(string? valor, string campo) where T : struct, System.Enum =>
         System.Enum.TryParse<T>(valor, ignoreCase: false, out var r) && System.Enum.IsDefined(r)

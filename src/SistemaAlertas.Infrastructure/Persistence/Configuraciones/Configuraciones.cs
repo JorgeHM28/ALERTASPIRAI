@@ -115,6 +115,9 @@ public class AvisoConfig : IEntityTypeConfiguration<Aviso>
     public void Configure(EntityTypeBuilder<Aviso> b)
     {
         b.ToTable("avisos");
+        // Calculadas: el objeto State sale del estado guardado y EsPrueba del status CAP.
+        b.Ignore(a => a.EstadoActual);
+        b.Ignore(a => a.EsPrueba);
         b.Property(a => a.IdentificadorCap).HasMaxLength(200).IsRequired();
         b.Property(a => a.Remitente).HasMaxLength(200).IsRequired();
         b.Property(a => a.Evento).HasMaxLength(200).IsRequired();

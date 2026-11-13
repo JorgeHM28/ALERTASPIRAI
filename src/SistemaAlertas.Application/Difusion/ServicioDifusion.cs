@@ -1,4 +1,4 @@
-using SistemaAlertas.Application.Difusion.Sms;
+using SistemaAlertas.Application.Avisos.Eventos;
 
 namespace SistemaAlertas.Application.Difusion;
 
@@ -12,71 +12,51 @@ public interface IServicioDifusion
 }
 
 /// <summary>
-/// Patrón Facade (RF-04). Una sola llamada, <see cref="DifundirAsync"/>, coordina todo el subsistema de difusión:
-/// publicar en la web, crear los trabajos SMS y crear las tareas manuales de radio, altavoz y redes sociales.
-/// Cada canal es independiente: si uno falla (por ejemplo, la web), se registra la incidencia y los demás siguen.
+/// Patrón Facade (RF-04). Una sola llamada, <see cref="DifundirAsync"/>, coordina todo el subsistema de difusión.
+/// Por dentro es el invocador del patrón Command: ejecuta los comandos de canal registrados (web, SMS, tareas manuales)
+/// en orden. Cada canal es independiente: si uno falla, se registra la incidencia y los demás siguen.
+/// Al terminar publica el evento Difundido (Observer), que pasa el aviso a ese estado (State) y queda en la bitácora.
+/// La validación previa (Chain of Responsibility) la hace la fuente de versiones al entregar la versión.
 /// </summary>
 public sealed class ServicioDifusion(
     IFuenteVersionesAprobadas fuente,
-    IPublicadorWeb publicadorWeb,
-    IDestinatariosDifusion destinatarios,
-    IColaSms colaSms,
-    IGestorTareasManuales tareasManuales,
+    IEnumerable<IComandoDifusion> comandos,
     IRegistroIncidencias incidencias,
+    IPublicadorEventosAvisos? eventos = null,
     TimeProvider? reloj = null) : IServicioDifusion
 {
-    public static readonly IReadOnlyList<CanalManual> CanalesManuales = [CanalManual.Radio, CanalManual.Altavoz, CanalManual.RedesSociales];
-
     private readonly TimeProvider _reloj = reloj ?? TimeProvider.System;
 
     public async Task<ResultadoDifusion> DifundirAsync(Guid versionAprobadaId, CancellationToken ct = default)
     {
         var version = await fuente.ObtenerAsync(versionAprobadaId, ct)
             ?? throw new KeyNotFoundException("No existe la versión aprobada indicada.");
+        var contexto = new ContextoDifusion(version);
         var problemas = new List<IncidenciaDifusion>();
 
-        // 1. Web pública.
-        PublicacionWeb? publicacion = null;
-        await Canal("Web", version, problemas, ct, async () => publicacion = await publicadorWeb.PublicarAsync(version, ct));
-
-        // 2. SMS: un trabajo por destinatario; el envío (con reintentos y bitácora) lo hace la cola.
-        var trabajos = 0;
-        await Canal("SMS", version, problemas, ct, async () =>
+        foreach (var comando in comandos)
         {
-            if (version.ZonaIds.Count == 0)
+            try
             {
-                await Incidencia(version, "SMS", "El aviso no cubre ninguna zona: no se crearon trabajos SMS.", problemas, ct);
-                return;
+                await comando.EjecutarAsync(contexto, ct);
             }
-            var lista = await destinatarios.ObtenerSmsAsync(version.ZonaIds, ct);
-            if (lista.Count == 0)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                await Incidencia(version, "SMS", "No hay contactos habilitados con SMS en las zonas del aviso.", problemas, ct);
-                return;
+                await Incidencia(version, comando.Canal, $"Falló: {ex.Message}", problemas, ct);
             }
-            trabajos = await colaSms.EncolarAsync(lista.Select(d => new TrabajoSms(Guid.NewGuid(), version.VersionId, d.ContactoId,
-                new MensajeSms(d.Telefono, version.TextoSms, version.AvisoId, version.EsPrueba))).ToList(), ct);
-        });
-
-        // 3. Canales manuales.
-        IReadOnlyList<TareaManual> tareas = [];
-        await Canal("Tareas manuales", version, problemas, ct,
-            async () => tareas = await tareasManuales.CrearAsync(version, CanalesManuales, ct));
-
-        return new ResultadoDifusion(version.VersionId, version.EsPrueba, publicacion is not null, publicacion?.Url, trabajos, tareas, problemas);
-    }
-
-    /// <summary>Ejecuta un canal; si falla, registra la incidencia y deja seguir a los demás.</summary>
-    private async Task Canal(string canal, VersionAprobada version, List<IncidenciaDifusion> problemas, CancellationToken ct, Func<Task> accion)
-    {
-        try
-        {
-            await accion();
+            foreach (var detalle in contexto.TomarAnotaciones())
+                await Incidencia(version, comando.Canal, detalle, problemas, ct);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            await Incidencia(version, canal, $"Falló: {ex.Message}", problemas, ct);
-        }
+
+        var resultado = new ResultadoDifusion(version.VersionId, version.EsPrueba, contexto.Publicacion is not null,
+            contexto.Publicacion?.Url, contexto.TrabajosSms, contexto.Tareas, problemas);
+
+        var llego = resultado.PublicadoEnWeb || resultado.TrabajosSms > 0 || resultado.TareasManuales.Count > 0;
+        if (llego && eventos is not null)
+            await eventos.PublicarAsync(new EventoAviso(version.AvisoId, TipoEventoAviso.Difundido, null,
+                $"Web: {(resultado.PublicadoEnWeb ? "sí" : "no")}, SMS: {resultado.TrabajosSms}, tareas: {resultado.TareasManuales.Count}, incidencias: {problemas.Count}.",
+                _reloj.GetUtcNow()), ct);
+        return resultado;
     }
 
     private async Task Incidencia(VersionAprobada version, string canal, string detalle, List<IncidenciaDifusion> problemas, CancellationToken ct)
