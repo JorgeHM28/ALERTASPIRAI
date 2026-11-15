@@ -4,6 +4,7 @@ using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Avisos.Importacion;
 using SistemaAlertas.Application.Cap;
 using SistemaAlertas.Application.Difusion;
+using SistemaAlertas.Application.Mensajes;
 using SistemaAlertas.Application.Usuarios;
 
 namespace SistemaAlertas.Application;
@@ -25,11 +26,13 @@ public static class DependencyInjection
         // Scoped: dependen del DbContext, que es una instancia por petición.
         services.AddScoped<ServicioAvisos>();
         services.AddScoped<ServicioUsuarios>();
+        services.AddScoped<ServicioVersiones>();
+        services.AddScoped<ServicioDestinos>();
 
         // Observer: los casos de uso publican eventos de aviso; los observadores se registran aparte (Infrastructure).
         services.AddScoped<IPublicadorEventosAvisos, PublicadorEventosAvisos>();
 
-        // Chain of Responsibility: reglas que el aviso debe pasar antes de difundirse. Sin estado: una sola instancia.
+        // Chain of Responsibility: reglas que la versión aprobada debe pasar antes de difundirse. Sin estado: una sola instancia.
         services.AddSingleton(ReglaDifusion.CadenaPorDefecto());
 
         // Strategy: una redacción por canal manual.

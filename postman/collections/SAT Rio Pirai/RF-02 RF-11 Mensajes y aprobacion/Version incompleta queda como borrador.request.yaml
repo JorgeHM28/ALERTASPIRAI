@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'Version incompleta queda como borrador'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionId}}/enviar-revision'
+order: 300
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica que queda como borrador', () => pm.expect(pm.response.json().detail).to.include('borrador'));

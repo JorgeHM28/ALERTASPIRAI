@@ -5,17 +5,17 @@ using SistemaAlertas.Application.Difusion;
 
 namespace SistemaAlertas.Infrastructure.Difusion;
 
-// Implementaciones simples de los canales de RF-04 para el Sprint 2. La web pública, la cola persistente
+// Implementaciones simples de los canales de RF-04 para el Sprint 2. La cola persistente
 // y la gestión de tareas con su propia tabla llegan en el Sprint 3 detrás de estas mismas interfaces.
 
-/// <summary>Guarda las publicaciones en memoria; la web pública las leerá en el Sprint 3.</summary>
+/// <summary>Registra la publicación: la web pública (/api/publico) muestra las versiones aprobadas vigentes directamente.</summary>
 public sealed class PublicadorWebEnMemoria(TimeProvider reloj) : IPublicadorWeb
 {
     private readonly ConcurrentDictionary<Guid, (VersionAprobada Version, PublicacionWeb Publicacion)> _publicadas = new();
 
     public Task<PublicacionWeb> PublicarAsync(VersionAprobada version, CancellationToken ct = default)
     {
-        var publicacion = new PublicacionWeb(version.VersionId, $"/avisos/{version.VersionId}", reloj.GetUtcNow());
+        var publicacion = new PublicacionWeb(version.VersionId, $"/?aviso={version.VersionId}", reloj.GetUtcNow());
         _publicadas[version.VersionId] = (version, publicacion);
         return Task.FromResult(publicacion);
     }

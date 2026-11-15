@@ -55,7 +55,7 @@ public sealed class ServicioDifusion(
         if (llego && eventos is not null)
             await eventos.PublicarAsync(new EventoAviso(version.AvisoId, TipoEventoAviso.Difundido, null,
                 $"Web: {(resultado.PublicadoEnWeb ? "sí" : "no")}, SMS: {resultado.TrabajosSms}, tareas: {resultado.TareasManuales.Count}, incidencias: {problemas.Count}.",
-                _reloj.GetUtcNow()), ct);
+                _reloj.GetUtcNow(), version.VersionId), ct);
         return resultado;
     }
 

@@ -1,0 +1,28 @@
+$kind: http-request
+name: 'Avisos publicos sin sesion'
+method: GET
+url: '{{baseUrl}}/api/publico/avisos'
+order: 100
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200 sin token', () => pm.response.to.have.status(200));
+      const lista = pm.response.json();
+      const a = lista.find(x => x.id === pm.collectionVariables.get('versionUpdateId'));
+      pm.test('muestra la versión vigente aprobada', () => pm.expect(a).to.exist);
+      pm.test('no muestra la versión reemplazada', () => pm.expect(lista.map(x => x.id)).to.not.include(pm.collectionVariables.get('versionAprobadaId')));
+      pm.test('texto, nivel en palabras, instrucciones y mapa', () => {
+        pm.expect(a.nivel.texto).to.eql('Alerta roja');
+        pm.expect(a.instruccion).to.include('colegio');
+        pm.expect(a.area.type).to.be.oneOf(['Polygon', 'MultiPolygon']);
+        pm.expect(a.textoLectura).to.include('Alerta roja');
+      });
+      pm.test('no expone contactos privados', () => {
+        const texto = pm.response.text();
+        pm.expect(texto).to.not.match(/\+591\d+/);
+        pm.expect(texto).to.not.include('contacto');
+        pm.expect(texto).to.not.include('preparadoPorId');
+      });

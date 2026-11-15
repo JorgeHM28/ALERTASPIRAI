@@ -1,0 +1,12 @@
+$kind: http-request
+name: 'Un borrador o rechazada no es publico'
+method: GET
+url: '{{baseUrl}}/api/publico/avisos/{{versionRechazadaId}}'
+order: 200
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 404', () => pm.response.to.have.status(404));

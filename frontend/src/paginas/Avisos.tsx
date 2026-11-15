@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, descargarTexto, fecha, puedeEditar, type AvisoDetalle, type AvisoResumen, type Rol, type Zona } from '../api'
+import { api, descargarTexto, fecha, puedeEditar, type AvisoDetalle, type AvisoResumen, type Rol, type VersionDetalle, type Zona } from '../api'
 import Mapa from './Mapa'
 import { Ban, Bell, Clock3, FileText, Plus, RefreshCw, Search, ShieldAlert, Upload } from 'lucide-react'
 import { Alert } from '../components/ui/Alert'
@@ -14,7 +14,7 @@ const NOMBRE_SEVERIDAD: Record<string, string> = { Extreme: 'Extrema', Severe: '
 type Modo = 'lista' | 'importar' | 'manual'
 
 /** RF-01: registro de avisos e importación CAP. */
-export default function Avisos({ roles }: { roles: Rol[] }) {
+export default function Avisos({ roles, alPreparar }: { roles: Rol[]; alPreparar: (versionId: string) => void }) {
   const [avisos, setAvisos] = useState<AvisoResumen[]>([])
   const [detalle, setDetalle] = useState<AvisoDetalle | null>(null)
   const [modo, setModo] = useState<Modo>('lista')
@@ -55,6 +55,12 @@ export default function Avisos({ roles }: { roles: Rol[] }) {
     if (!confirm('¿Descartar este aviso?')) return
     try { await api(`/api/avisos/${id}/descartar`, { method: 'POST' }); cargar(); setDetalle(null) }
     catch (e) { setError(e instanceof Error ? e.message : 'No se pudo descartar el aviso.') }
+  }
+
+  /** RF-02: prepara la versión del mensaje (Alert, Update o Cancel según el aviso) y la abre en Mensajes. */
+  async function preparar(id: string) {
+    try { const v = await api<VersionDetalle>(`/api/avisos/${id}/versiones`, { method: 'POST', json: {} }); alPreparar(v.detalle.resumen.id) }
+    catch (e) { setError(e instanceof Error ? e.message : 'No se pudo preparar el mensaje.') }
   }
 
   return (
@@ -117,6 +123,8 @@ export default function Avisos({ roles }: { roles: Rol[] }) {
             {detalle.resumen.aptoParaDifusion
               ? <Alert tone="success">Apto para difusión.</Alert>
               : <Alert tone="danger"><b>No apto para difusión</b> (registrado el {fecha(detalle.resumen.aptitudEvaluadaEn)}):<ul>{detalle.resumen.motivosNoApto.map(m => <li key={m}>{m}</li>)}</ul></Alert>}
+            {detalle.resumen.tipoMensaje !== 'Alert' && <Alert tone="info">Mensaje oficial <b>{detalle.resumen.tipoMensaje}</b>{detalle.resumen.referencias ? <> que referencia a <code>{detalle.resumen.referencias}</code></> : null}.</Alert>}
+            {!detalle.resumen.preparable && detalle.resumen.estado !== 'Descartado' && <Alert tone="warning"><b>No se puede preparar un mensaje:</b><ul>{detalle.resumen.motivosNoPreparable.map(m => <li key={m}>{m}</li>)}</ul></Alert>}
             <dl>
               <dt>Urgencia / severidad / certeza</dt><dd>{detalle.resumen.urgencia} · {detalle.resumen.severidad} · {detalle.resumen.certeza}</dd>
               <dt>Vigencia</dt><dd>{fecha(detalle.vigente)} → {fecha(detalle.resumen.expira)}</dd>
@@ -136,6 +144,7 @@ export default function Avisos({ roles }: { roles: Rol[] }) {
               <button onClick={() => descargarTexto(detalle.xmlCap, 'application/xml', `${detalle.resumen.identificadorCap}.xml`)}>Descargar CAP</button>
               {detalle.contenidoOriginal && <button onClick={() => descargarTexto(detalle.contenidoOriginal!, detalle.tipoContenidoOriginal ?? 'text/plain',
                 `${detalle.resumen.identificadorCap}.original.${detalle.tipoContenidoOriginal === 'application/json' ? 'json' : 'xml'}`)}>Descargar original</button>}
+              {editar && detalle.resumen.preparable && <button className="primario" onClick={() => preparar(detalle.resumen.id)}>Preparar mensaje</button>}
               {editar && detalle.resumen.estado !== 'Descartado' && <button className="peligro" onClick={() => descartar(detalle.resumen.id)}>Descartar</button>}
             </div>
           </div>

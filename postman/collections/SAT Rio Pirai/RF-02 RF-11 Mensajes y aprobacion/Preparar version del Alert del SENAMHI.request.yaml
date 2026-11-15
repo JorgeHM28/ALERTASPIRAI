@@ -1,0 +1,20 @@
+$kind: http-request
+name: 'Preparar version del Alert del SENAMHI'
+method: POST
+url: '{{baseUrl}}/api/avisos/{{senamhiAlertId}}/versiones'
+order: 2100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const r = pm.response.json().detalle.resumen;
+      pm.test('toma las instrucciones del aviso oficial y ya está completa', () => pm.expect(r.faltantes).to.be.empty);
+      pm.collectionVariables.set('versionSenamhiId', r.id);

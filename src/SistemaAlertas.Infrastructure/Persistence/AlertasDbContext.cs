@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Comunidades;
+using SistemaAlertas.Domain.Mensajes;
 using SistemaAlertas.Domain.Usuarios;
 using SistemaAlertas.Domain.Zonas;
 
@@ -16,6 +17,8 @@ public class AlertasDbContext(DbContextOptions<AlertasDbContext> options) : DbCo
     public DbSet<Aviso> Avisos => Set<Aviso>();
     public DbSet<RegistroBitacoraUsuario> BitacoraUsuarios => Set<RegistroBitacoraUsuario>();
     public DbSet<HistorialContacto> HistorialContactos => Set<HistorialContacto>();
+    public DbSet<VersionMensaje> VersionesMensaje => Set<VersionMensaje>();
+    public DbSet<ListaDestinos> ListasDestinos => Set<ListaDestinos>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -7,6 +7,7 @@ using SistemaAlertas.Api.Comun;
 using SistemaAlertas.Application;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Avisos;
+using SistemaAlertas.Application.Mensajes;
 using SistemaAlertas.Application.Usuarios;
 using SistemaAlertas.Infrastructure;
 using SistemaAlertas.Infrastructure.Persistence;
@@ -25,6 +26,7 @@ builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton(builder.Configuration.GetSection(OpcionesCap.Seccion).Get<OpcionesCap>() ?? new OpcionesCap());
+builder.Services.AddSingleton(builder.Configuration.GetSection(OpcionesDestinos.Seccion).Get<OpcionesDestinos>() ?? new OpcionesDestinos());
 
 // RF-13: autenticación con JWT y autorización por rol.
 var jwt = builder.Configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()!;

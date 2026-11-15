@@ -15,7 +15,7 @@ namespace SistemaAlertas.Api.Controllers;
 public sealed record AvisoDetalleDto(AvisoResumen Resumen, string? Descripcion, string? Instruccion, DateTimeOffset? Vigente,
     JsonElement? Area, string XmlCap, string? ContenidoOriginal, string? TipoContenidoOriginal, string? HashOriginal);
 
-/// <summary>RF-01: registro de avisos e importación de mensajes CAP 1.2. RF-11: aprobación.</summary>
+/// <summary>RF-01: registro de avisos e importación de mensajes CAP 1.2. Lo que se aprueba (RF-11) son sus versiones: ver VersionesController.</summary>
 [ApiController]
 [Route("api/avisos")]
 [Authorize(Politicas.Lectura)]
@@ -115,12 +115,6 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
         if (leidos > TamanoMaximo) return Problem(statusCode: 413, title: "Mensaje demasiado grande", detail: "El límite es 1 MB.");
         return moduloCap.Validar(new string(buffer, 0, leidos));
     }
-
-    /// <summary>RF-11: aprueba el aviso para difundirlo. Solo desde Registrado y si está completo y vigente (State).</summary>
-    [HttpPost("{id:guid}/aprobar")]
-    [Authorize(Politicas.Aprobacion)]
-    public async Task<AvisoResumen> Aprobar(Guid id, CancellationToken ct) =>
-        AvisoMapeo.ResumenDe(await servicio.AprobarAsync(id, User.Id(), ct));
 
     [HttpPost("{id:guid}/descartar")]
     [Authorize(Politicas.Edicion)]

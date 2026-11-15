@@ -20,11 +20,13 @@ public sealed record AvisoResumen(
     EstadoAviso Estado, string Evento, UrgenciaCap Urgencia, SeveridadCap Severidad, CertezaCap Certeza,
     string? Titular, string? DescripcionArea, DateTimeOffset? Expira, DateTimeOffset RegistradoEn,
     EstadoCap EstadoCap, bool Incompleto, bool Vencido, bool AptoParaDifusion, IReadOnlyList<string> MotivosNoApto,
-    DateTimeOffset AptitudEvaluadaEn, bool TieneOriginal);
+    DateTimeOffset AptitudEvaluadaEn, bool TieneOriginal, TipoMensajeCap TipoMensaje, string? Referencias, Guid? CadenaId,
+    bool Preparable, IReadOnlyList<string> MotivosNoPreparable);
 
 public static class AvisoMapeo
 {
     public static AvisoResumen ResumenDe(Aviso a) => new(a.Id, a.IdentificadorCap, a.Remitente, a.Enviado, a.Formato,
         a.Estado, a.Evento, a.Urgencia, a.Severidad, a.Certeza, a.Titular, a.DescripcionArea, a.Expira, a.CreadoEn,
-        a.EstadoCap, a.Incompleto, a.Vencido, a.AptoParaDifusion, a.MotivosNoApto, a.AptitudEvaluadaEn, a.ContenidoOriginal is not null);
+        a.EstadoCap, a.Incompleto, a.Vencido, a.AptoParaDifusion, a.MotivosNoApto, a.AptitudEvaluadaEn, a.ContenidoOriginal is not null,
+        a.TipoMensaje, a.Referencias, a.CadenaId, a.MotivosNoPreparable(DateTimeOffset.UtcNow).Count == 0, a.MotivosNoPreparable(DateTimeOffset.UtcNow));
 }

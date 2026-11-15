@@ -32,27 +32,23 @@ public abstract class EstadoAvisoBase
     };
 }
 
-/// <summary>Recién registrado o importado. Se puede aprobar (si está completo y vigente) o descartar.</summary>
+/// <summary>Recién registrado o importado. De él se preparan versiones; se puede descartar.</summary>
 public sealed class EstadoRegistrado : EstadoAvisoBase
 {
     public static readonly EstadoRegistrado Instancia = new();
     private EstadoRegistrado() { }
     public override EstadoAviso Valor => EstadoAviso.Registrado;
 
-    public override EstadoAviso Aprobar(Aviso aviso)
-    {
-        // Un aviso real debe ser apto. Uno de prueba o simulacro (CAP status distinto de Actual) nunca es "apto",
-        // pero se puede aprobar si está completo y vigente: viaja marcado como prueba y el SMS real se bloquea.
-        var aprobable = aviso.EsPrueba ? !aviso.Incompleto && !aviso.Vencido : aviso.AptoParaDifusion;
-        if (!aprobable)
-            throw new ExcepcionDominio("El aviso no se puede aprobar: " + string.Join(" ", aviso.MotivosNoApto));
-        return EstadoAviso.Aprobado;
-    }
+    /// <summary>
+    /// Desde el Sprint 2 lo que se aprueba es una versión del mensaje (RF-11), que ya pasó sus propias reglas.
+    /// El aviso pasa a Aprobado cuando se aprueba la primera versión que sale de él.
+    /// </summary>
+    public override EstadoAviso Aprobar(Aviso aviso) => EstadoAviso.Aprobado;
 
     public override EstadoAviso Descartar(Aviso aviso) => EstadoAviso.Descartado;
 }
 
-/// <summary>Aprobado por un aprobador. Ya se puede difundir; todavía se puede descartar.</summary>
+/// <summary>Tiene una versión aprobada por un aprobador. Ya se puede difundir; todavía se puede descartar.</summary>
 public sealed class EstadoAprobado : EstadoAvisoBase
 {
     public static readonly EstadoAprobado Instancia = new();

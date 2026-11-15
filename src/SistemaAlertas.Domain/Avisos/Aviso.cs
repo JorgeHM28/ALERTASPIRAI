@@ -28,6 +28,14 @@ public class Aviso : Entidad
     public DateTimeOffset? Vigente { get; private set; }
     public DateTimeOffset? Expira { get; private set; }
 
+    /// <summary>&lt;references&gt; del CAP oficial (Update o Cancel del SENAMHI): "sender,identifier,sent" separados por espacio.</summary>
+    public string? Referencias { get; private set; }
+    /// <summary>
+    /// Aviso original del evento: el propio aviso si es un Alert, o el que referencia un Update/Cancel oficial.
+    /// Null si el Update/Cancel referencia un aviso que no está registrado (referencia inexistente).
+    /// </summary>
+    public Guid? CadenaId { get; private set; }
+
     public string? DescripcionArea { get; private set; }
     public Geometry? Area { get; private set; }
 
@@ -80,6 +88,8 @@ public class Aviso : Entidad
         XmlCap = xmlCap;
         RegistradoPorId = registradoPorId;
         EstadoCap = mensaje.Status;
+        Referencias = string.IsNullOrWhiteSpace(mensaje.References) ? null : mensaje.References.Trim();
+        if (TipoMensaje == TipoMensajeCap.Alert) CadenaId = Id;
         if (contenidoOriginal is not null)
         {
             ContenidoOriginal = contenidoOriginal;
@@ -104,6 +114,45 @@ public class Aviso : Entidad
     {
         Estado = EstadoActual.Descartar(this);
         EvaluarAptitud(DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>Un Update o Cancel oficial se engancha a la cadena del aviso que referencia.</summary>
+    public void EnlazarCadena(Aviso referenciado)
+    {
+        if (TipoMensaje == TipoMensajeCap.Alert) throw new ExcepcionDominio("Un Alert inicia su propia cadena.");
+        if (referenciado.Remitente != Remitente)
+            throw new ExcepcionDominio("Referencia incoherente: el aviso referenciado es de otro remitente.");
+        CadenaId = referenciado.CadenaId ?? referenciado.Id;
+    }
+
+    /// <summary>
+    /// Pares (sender, identifier) de &lt;references&gt;. Cada referencia es "sender,identifier,sent".
+    /// </summary>
+    public IReadOnlyList<(string Remitente, string Identificador)> ReferenciasCap() =>
+        (Referencias ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(r => r.Split(','))
+            .Where(p => p.Length >= 2)
+            .Select(p => (p[0], p[1]))
+            .ToList();
+
+    /// <summary>
+    /// RF-02: motivos por los que no se puede preparar un mensaje para la población desde este aviso.
+    /// Las instrucciones y la redacción las completa el operador en la versión; aquí se exigen los hechos oficiales.
+    /// </summary>
+    public IReadOnlyList<string> MotivosNoPreparable(DateTimeOffset ahora)
+    {
+        var motivos = new List<string>();
+        if (Estado == EstadoAviso.Descartado) motivos.Add("El aviso fue descartado.");
+        if (TipoMensaje is TipoMensajeCap.Ack or TipoMensajeCap.Error) motivos.Add($"Un mensaje {TipoMensaje} no se comunica a la población.");
+        if (TipoMensaje is TipoMensajeCap.Update or TipoMensajeCap.Cancel && CadenaId is null)
+            motivos.Add($"Referencia inexistente: el aviso referenciado ({Referencias ?? "sin <references>"}) no está registrado.");
+        if (TipoMensaje != TipoMensajeCap.Cancel)
+        {
+            if (Area is null || Area.IsEmpty) motivos.Add("Falta el área afectada (polígono).");
+            if (Expira is null) motivos.Add("Falta la fecha de expiración.");
+            else if (Expira <= ahora) motivos.Add($"Vencido: expiró el {Expira.Value.ToUniversalTime():yyyy-MM-dd HH:mm} UTC.");
+        }
+        return motivos;
     }
 
     /// <summary>

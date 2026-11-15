@@ -3,6 +3,7 @@ using SistemaAlertas.Application.Difusion.Sms;
 namespace SistemaAlertas.Application.Difusion;
 
 /// <summary>Lo que se difunde: una versión aprobada del mensaje (RF-11) lista para los canales.</summary>
+/// <param name="ZonaIds">Zonas que toca el área de la versión (informativo; los destinos salen de RF-07).</param>
 /// <param name="EsPrueba">Aviso de prueba o simulacro: los canales lo marcan y el SMS real se bloquea.</param>
 public sealed record VersionAprobada(Guid VersionId, Guid AvisoId, string Titular, string TextoCompleto, string TextoSms,
     IReadOnlyList<Guid> ZonaIds, bool EsPrueba);
@@ -35,10 +36,13 @@ public interface IPublicadorWeb
     Task<PublicacionWeb> PublicarAsync(VersionAprobada version, CancellationToken ct = default);
 }
 
-/// <summary>Destinatarios con teléfono para SMS. Uso interno del sistema: devuelve los números completos.</summary>
+/// <summary>
+/// Destinatarios con teléfono para SMS, tomados de la lista de destinos de la versión (RF-07).
+/// Uso interno del sistema: devuelve los números completos.
+/// </summary>
 public interface IDestinatariosDifusion
 {
-    Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(IReadOnlyCollection<Guid> zonaIds, CancellationToken ct = default);
+    Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(VersionAprobada version, CancellationToken ct = default);
 }
 
 /// <summary>Cola de trabajos SMS: la difusión los crea y un proceso en segundo plano los envía.</summary>

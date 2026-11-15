@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'La version difundida cambia de estado'
+method: GET
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}'
+order: 450
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('la versión queda Difundida', () => pm.expect(pm.response.json().detalle.resumen.estado).to.eql('Difundida'));

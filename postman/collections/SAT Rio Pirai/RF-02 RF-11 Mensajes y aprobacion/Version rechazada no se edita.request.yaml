@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Version rechazada no se edita'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionId}}'
+order: 800
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "instruccion": "otra" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('la corrección es otra versión', () => pm.expect(pm.response.json().detail).to.include('versión nueva'));

@@ -44,7 +44,10 @@ public sealed class PublicarEnWeb(IPublicadorWeb publicador) : IComandoDifusion
         c.Publicacion = await publicador.PublicarAsync(c.Version, ct);
 }
 
-/// <summary>Crea un trabajo SMS por destinatario; el envío (con reintentos y bitácora) lo hace la cola.</summary>
+/// <summary>
+/// Crea un trabajo SMS por destinatario de la lista de destinos de la versión (RF-07);
+/// el envío (con reintentos y bitácora) lo hace la cola.
+/// </summary>
 public sealed class EncolarSms(IDestinatariosDifusion destinatarios, IColaSms cola) : IComandoDifusion
 {
     public string Canal => "SMS";
@@ -52,15 +55,10 @@ public sealed class EncolarSms(IDestinatariosDifusion destinatarios, IColaSms co
     public async Task EjecutarAsync(ContextoDifusion c, CancellationToken ct = default)
     {
         var v = c.Version;
-        if (v.ZonaIds.Count == 0)
-        {
-            c.Anotar("El aviso no cubre ninguna zona: no se crearon trabajos SMS.");
-            return;
-        }
-        var lista = await destinatarios.ObtenerSmsAsync(v.ZonaIds, ct);
+        var lista = await destinatarios.ObtenerSmsAsync(v, ct);
         if (lista.Count == 0)
         {
-            c.Anotar("No hay contactos habilitados con SMS en las zonas del aviso.");
+            c.Anotar("La lista de destinos de la versión no tiene ningún SMS (comunidades sin contactos con SMS o canal no elegido).");
             return;
         }
         c.TrabajosSms = await cola.EncolarAsync(lista.Select(d => new TrabajoSms(Guid.NewGuid(), v.VersionId, d.ContactoId,

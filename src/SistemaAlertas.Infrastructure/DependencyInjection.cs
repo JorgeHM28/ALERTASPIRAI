@@ -50,8 +50,8 @@ public static class DependencyInjection
         // Subsistema de difusión (RF-04) que coordina la fachada ServicioDifusion.
         // La difusión usa el repositorio real (sin proxy): es un proceso del sistema y necesita los números completos.
         services.TryAddSingleton(TimeProvider.System);
-        services.AddScoped<IDestinatariosDifusion>(sp => sp.GetRequiredService<RepositorioContactos>());
-        services.AddScoped<IFuenteVersionesAprobadas, FuenteVersionesDesdeAvisos>();
+        services.AddScoped<IDestinatariosDifusion, DestinatariosDesdeLista>();
+        services.AddScoped<IFuenteVersionesAprobadas, FuenteVersionesAprobadas>();
         services.AddSingleton<IPublicadorWeb, PublicadorWebEnMemoria>();
         services.AddSingleton<ColaSmsEnMemoria>();
         services.AddSingleton<IColaSms>(sp => sp.GetRequiredService<ColaSmsEnMemoria>());

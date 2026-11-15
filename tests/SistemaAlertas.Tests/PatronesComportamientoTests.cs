@@ -6,6 +6,7 @@ using SistemaAlertas.Application.Difusion;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Cap;
 using SistemaAlertas.Domain.Comun;
+using SistemaAlertas.Domain.Mensajes;
 using SistemaAlertas.Infrastructure.Difusion;
 
 namespace SistemaAlertas.Tests;
@@ -44,15 +45,6 @@ public class PatronesComportamientoTests
     }
 
     [Fact]
-    public void State_no_aprueba_un_aviso_incompleto_y_dice_por_que()
-    {
-        var aviso = NuevoAviso(instruccion: null);
-        var ex = Assert.Throws<ExcepcionDominio>(aviso.Aprobar);
-        Assert.Contains("instrucción", ex.Message);
-        Assert.Equal(EstadoAviso.Registrado, aviso.Estado);
-    }
-
-    [Fact]
     public void State_aprueba_un_aviso_de_prueba_completo()
     {
         var aviso = NuevoAviso(estado: EstadoCap.Exercise);
@@ -81,49 +73,62 @@ public class PatronesComportamientoTests
 
     // ---------- Chain of Responsibility ----------
 
+    private static VersionMensaje VersionAprobadaDe(Aviso aviso)
+    {
+        var contenido = new ContenidoMensaje(aviso.Evento, aviso.Urgencia, aviso.Severidad, aviso.Certeza, aviso.Titular,
+            aviso.Descripcion, aviso.Instruccion, aviso.Vigente, aviso.Expira, "Zona");
+        var v = new VersionMensaje(aviso.Id, aviso.Id, 1, TipoMensajeCap.Alert, contenido, Area, EstadoCap.Actual, "sat", Guid.NewGuid());
+        v.EnviarARevision("<alert/>", Ahora, Ahora);
+        v.Aprobar(Guid.NewGuid(), Ahora, null);
+        return v;
+    }
+
     [Fact]
-    public void Cadena_deja_pasar_un_aviso_aprobado_vigente_y_completo()
+    public void Cadena_deja_pasar_una_version_aprobada_vigente_y_completa()
     {
         var aviso = NuevoAviso();
-        aviso.Aprobar();
-        ReglaDifusion.CadenaPorDefecto().Verificar(aviso, Ahora);
+        ReglaDifusion.CadenaPorDefecto().Verificar(VersionAprobadaDe(aviso), aviso, Ahora);
     }
 
     [Fact]
     public void Cadena_corta_en_el_primer_eslabon_que_rechaza()
     {
-        var sinAprobar = NuevoAviso();
-        var ex = Assert.Throws<ExcepcionDominio>(() => ReglaDifusion.CadenaPorDefecto().Verificar(sinAprobar, Ahora));
+        var aviso = NuevoAviso();
+        var borrador = new VersionMensaje(aviso.Id, aviso.Id, 1, TipoMensajeCap.Alert,
+            new ContenidoMensaje("Crecida", UrgenciaCap.Immediate, SeveridadCap.Severe, CertezaCap.Observed, "T", null, "Evacuar",
+                null, Ahora.AddHours(6), "Zona"), Area, EstadoCap.Actual, "sat", Guid.NewGuid());
+        var ex = Assert.Throws<ExcepcionDominio>(() => ReglaDifusion.CadenaPorDefecto().Verificar(borrador, aviso, Ahora));
         Assert.Contains("aprobador", ex.Message);
 
         var descartado = NuevoAviso();
+        var version = VersionAprobadaDe(descartado);
         descartado.Descartar();
-        ex = Assert.Throws<ExcepcionDominio>(() => ReglaDifusion.CadenaPorDefecto().Verificar(descartado, Ahora));
-        Assert.Contains("descartado", ex.Message); // el primer eslabón responde antes que el de aprobación
+        ex = Assert.Throws<ExcepcionDominio>(() => ReglaDifusion.CadenaPorDefecto().Verificar(version, descartado, Ahora));
+        Assert.Contains("descartado", ex.Message); // el primer eslabón responde antes que los demás
     }
 
     [Fact]
-    public void Cadena_detecta_un_aviso_que_vencio_despues_de_aprobarse()
+    public void Cadena_detecta_una_version_que_vencio_despues_de_aprobarse()
     {
         var aviso = NuevoAviso(expira: DateTimeOffset.UtcNow.AddMinutes(30));
-        aviso.Aprobar();
-        var ex = Assert.Throws<ExcepcionDominio>(() => ReglaDifusion.CadenaPorDefecto().Verificar(aviso, Ahora.AddHours(1)));
+        var version = VersionAprobadaDe(aviso);
+        var ex = Assert.Throws<ExcepcionDominio>(() => ReglaDifusion.CadenaPorDefecto().Verificar(version, aviso, Ahora.AddHours(1)));
         Assert.Contains("venció", ex.Message);
     }
 
     private sealed class ReglaHorario : ReglaDifusion
     {
-        protected override string? Revisar(Aviso aviso, DateTimeOffset ahora) => "Fuera de horario.";
+        protected override string? Revisar(VersionMensaje version, Aviso aviso, DateTimeOffset ahora) => "Fuera de horario.";
     }
 
     [Fact]
     public void Cadena_admite_un_eslabon_nuevo_sin_tocar_los_demas()
     {
         var aviso = NuevoAviso();
-        aviso.Aprobar();
+        var version = VersionAprobadaDe(aviso);
         var cadena = new ReglaNoDescartado();
         cadena.Luego(new ReglaAprobado()).Luego(new ReglaHorario());
-        Assert.Equal("Fuera de horario.", Assert.Throws<ExcepcionDominio>(() => cadena.Verificar(aviso, Ahora)).Message);
+        Assert.Equal("Fuera de horario.", Assert.Throws<ExcepcionDominio>(() => cadena.Verificar(version, aviso, Ahora)).Message);
     }
 
     // ---------- Observer ----------
@@ -208,7 +213,7 @@ public class PatronesComportamientoTests
             .CrearAsync(v, CrearTareasManuales.Canales);
         Assert.Contains("dos veces", porDefecto.Single(t => t.Canal == CanalManual.Radio).Instrucciones);
         Assert.Contains("cada 10 minutos", porDefecto.Single(t => t.Canal == CanalManual.Altavoz).Instrucciones);
-        Assert.Contains($"/avisos/{v.VersionId}", porDefecto.Single(t => t.Canal == CanalManual.RedesSociales).Instrucciones);
+        Assert.Contains($"/?aviso={v.VersionId}", porDefecto.Single(t => t.Canal == CanalManual.RedesSociales).Instrucciones);
 
         var otra = await new GestorTareasManualesEnMemoria(TimeProvider.System, [new RedaccionRadioCorta()])
             .CrearAsync(v, [CanalManual.Radio]);

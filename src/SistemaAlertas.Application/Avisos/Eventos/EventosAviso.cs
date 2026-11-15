@@ -2,10 +2,17 @@ using Microsoft.Extensions.Logging;
 
 namespace SistemaAlertas.Application.Avisos.Eventos;
 
-public enum TipoEventoAviso { Registrado, Aprobado, Descartado, Vencido, Difundido }
+public enum TipoEventoAviso
+{
+    Registrado, Aprobado, Descartado, Vencido, Difundido,
+    // Sprint 2: versiones del mensaje (RF-02, RF-11) y destinos (RF-07).
+    VersionPreparada, VersionEnviadaARevision, VersionRechazada, VersionCorregida, DestinosSeleccionados
+}
 
 /// <summary>Algo que le pasó a un aviso. Quien lo causó puede ser null si fue un proceso del sistema (vencimiento).</summary>
-public sealed record EventoAviso(Guid AvisoId, TipoEventoAviso Tipo, Guid? UsuarioId, string Detalle, DateTimeOffset Fecha);
+/// <param name="VersionId">Versión del mensaje involucrada, si el evento es de una versión (Sprint 2).</param>
+public sealed record EventoAviso(Guid AvisoId, TipoEventoAviso Tipo, Guid? UsuarioId, string Detalle, DateTimeOffset Fecha,
+    Guid? VersionId = null);
 
 /// <summary>Observador del patrón Observer: reacciona a los eventos de los avisos sin que el emisor lo conozca.</summary>
 public interface IObservadorAvisos

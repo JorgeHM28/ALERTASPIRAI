@@ -2,16 +2,14 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Comunidades;
-using SistemaAlertas.Application.Difusion;
 using SistemaAlertas.Domain.Comunidades;
 
 namespace SistemaAlertas.Infrastructure.Persistence.Repositorios;
 
 /// <summary>
 /// Sujeto real del Proxy: lee los contactos de la base de datos con todos sus datos.
-/// También da a la difusión (uso interno, sin proxy) los teléfonos SMS de los destinatarios.
 /// </summary>
-public sealed class RepositorioContactos(IAppDbContext db) : IRepositorioContactos, IDestinatariosDifusion
+public sealed class RepositorioContactos(IAppDbContext db) : IRepositorioContactos
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -36,15 +34,6 @@ public sealed class RepositorioContactos(IAppDbContext db) : IRepositorioContact
         .Select(h => new HistorialContactoVista(h.Id, h.CreadoEn, h.Accion, h.UsuarioId, h.Cambios,
             JsonSerializer.Deserialize<InstantaneaContacto>(h.Instantanea, Json)!))
         .ToList();
-
-    public async Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(IReadOnlyCollection<Guid> zonaIds, CancellationToken ct = default)
-    {
-        if (zonaIds.Count == 0) return [];
-        return (await ListarHabilitadosAsync(zonaIds, ct))
-            .SelectMany(c => c.Canales.Where(k => k.Tipo == TipoCanal.Sms).Take(1).Select(k => new DestinatarioSms(c.Id, c.Nombre, k.Destino)))
-            .DistinctBy(d => d.Telefono)
-            .ToList();
-    }
 
     public static ContactoVista AVista(Contacto c) => new(c.Id, c.ComunidadId, c.Nombre, c.Cargo, c.Activo,
         c.Canales.OrderByDescending(k => k.Preferido).Select(k => new CanalVista(k.Tipo, k.Destino, k.Preferido)).ToList(),

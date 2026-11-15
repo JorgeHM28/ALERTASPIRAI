@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Rechaza referencia inexistente'
+method: POST
+url: '{{baseUrl}}/api/versiones/00000000-0000-0000-0000-000000000001/update'
+order: 1300
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('la referencia no existe', () => pm.expect(pm.response.json().detail).to.include('inexistente'));

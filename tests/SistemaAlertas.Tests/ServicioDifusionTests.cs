@@ -25,7 +25,7 @@ public class ServicioDifusionTests
 
     private sealed class DestinatariosFalsos(params DestinatarioSms[] lista) : IDestinatariosDifusion
     {
-        public Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(IReadOnlyCollection<Guid> zonaIds, CancellationToken ct = default) =>
+        public Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(VersionAprobada version, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<DestinatarioSms>>(lista);
     }
 
@@ -70,7 +70,7 @@ public class ServicioDifusionTests
         var r = await servicio.DifundirAsync(version.VersionId);
 
         Assert.True(r.PublicadoEnWeb);
-        Assert.Equal($"/avisos/{version.VersionId}", r.UrlWeb);
+        Assert.Equal($"/?aviso={version.VersionId}", r.UrlWeb);
         Assert.Equal(2, r.TrabajosSms);
         Assert.All(cola.Trabajos, t => Assert.Equal(version.TextoSms, t.Mensaje.Texto));
         Assert.Equal([CanalManual.Radio, CanalManual.Altavoz, CanalManual.RedesSociales], r.TareasManuales.Select(t => t.Canal));
@@ -121,18 +121,6 @@ public class ServicioDifusionTests
         Assert.Equal("SMS", Assert.Single(r.Incidencias).Canal);
         Assert.Equal(3, r.TareasManuales.Count);
         Assert.True(r.PublicadoEnWeb);
-    }
-
-    [Fact]
-    public async Task Un_aviso_sin_zonas_no_manda_sms_a_todos()
-    {
-        var version = Version() with { ZonaIds = [] };
-        var (servicio, cola, _, _) = Armar(version);
-
-        var r = await servicio.DifundirAsync(version.VersionId);
-
-        Assert.Equal(0, r.TrabajosSms);
-        Assert.Empty(cola.Trabajos);
     }
 
     [Fact]

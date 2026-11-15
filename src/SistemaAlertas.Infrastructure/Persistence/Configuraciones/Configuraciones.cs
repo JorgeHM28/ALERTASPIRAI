@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Comunidades;
+using SistemaAlertas.Domain.Mensajes;
 using SistemaAlertas.Domain.Usuarios;
 using SistemaAlertas.Domain.Zonas;
 
@@ -126,10 +127,83 @@ public class AvisoConfig : IEntityTypeConfiguration<Aviso>
         b.Property(a => a.XmlCap).IsRequired();
         b.Property(a => a.TipoContenidoOriginal).HasMaxLength(64);
         b.Property(a => a.HashOriginal).HasMaxLength(64);
+        b.Property(a => a.Referencias).HasMaxLength(1000);
+        b.HasIndex(a => a.CadenaId);
         b.HasIndex(a => a.AptoParaDifusion);
         b.HasIndex(a => new { a.Remitente, a.IdentificadorCap }).IsUnique();
         b.HasIndex(a => a.Enviado);
         b.HasIndex(a => a.Area).HasMethod("gist");
         b.HasOne<Usuario>().WithMany().HasForeignKey(a => a.RegistradoPorId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class VersionMensajeConfig : IEntityTypeConfiguration<VersionMensaje>
+{
+    public void Configure(EntityTypeBuilder<VersionMensaje> b)
+    {
+        b.ToTable("versiones_mensaje");
+        b.Ignore(v => v.EstadoActual);
+        b.Ignore(v => v.Nivel);
+        b.Ignore(v => v.EsPrueba);
+        b.Ignore(v => v.EsVigenteEnCadena);
+        b.Ignore(v => v.ReferenciaCap);
+        // El contenido (record, Prototype) se guarda en columnas de la misma tabla.
+        b.ComplexProperty(v => v.Contenido, c =>
+        {
+            c.Ignore(x => x.Nivel);
+            c.Property(x => x.Evento).HasMaxLength(200).IsRequired();
+            c.Property(x => x.Titular).HasMaxLength(300);
+            c.Property(x => x.Descripcion).HasMaxLength(4000);
+            c.Property(x => x.Instruccion).HasMaxLength(4000);
+            c.Property(x => x.DescripcionArea).HasMaxLength(1000);
+        });
+        b.Property(v => v.Area).HasColumnType("geometry(Geometry, 4326)");
+        b.Property(v => v.IdentificadorCap).HasMaxLength(200).IsRequired();
+        b.Property(v => v.Remitente).HasMaxLength(200).IsRequired();
+        b.Property(v => v.Referencias).HasMaxLength(1000);
+        b.Property(v => v.MotivoRechazo).HasMaxLength(1000);
+        b.Property(v => v.MotivoDevolucion).HasMaxLength(1000);
+        b.HasIndex(v => v.IdentificadorCap).IsUnique();
+        b.HasIndex(v => new { v.CadenaId, v.Numero }).IsUnique();
+        b.HasIndex(v => v.Estado);
+        b.HasIndex(v => v.Area).HasMethod("gist");
+        b.HasOne<Aviso>().WithMany().HasForeignKey(v => v.AvisoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Aviso>().WithMany().HasForeignKey(v => v.CadenaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<VersionMensaje>().WithMany().HasForeignKey(v => v.ReferenciaVersionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<VersionMensaje>().WithMany().HasForeignKey(v => v.VersionAnteriorId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<VersionMensaje>().WithMany().HasForeignKey(v => v.ReemplazadaPorId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Usuario>().WithMany().HasForeignKey(v => v.PreparadoPorId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Usuario>().WithMany().HasForeignKey(v => v.RevisadoPorId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class ListaDestinosConfig : IEntityTypeConfiguration<ListaDestinos>
+{
+    public void Configure(EntityTypeBuilder<ListaDestinos> b)
+    {
+        b.ToTable("listas_destinos");
+        // Una lista por versión: regenerarla la reemplaza.
+        b.HasIndex(l => l.VersionId).IsUnique();
+        b.HasOne<VersionMensaje>().WithMany().HasForeignKey(l => l.VersionId).OnDelete(DeleteBehavior.Cascade);
+        b.PrimitiveCollection(l => l.Canales);
+        // RF-07: la clave (lista, canal, dirección) impide duplicar un destino en el mismo envío y versión.
+        b.OwnsMany(l => l.Destinos, d =>
+        {
+            d.ToTable("destinos_envio");
+            d.WithOwner().HasForeignKey("ListaDestinosId");
+            d.HasKey("ListaDestinosId", nameof(DestinoEnvio.Canal), nameof(DestinoEnvio.Direccion));
+            d.Property(x => x.Direccion).HasMaxLength(150).IsRequired();
+            d.HasIndex(x => x.ContactoId);
+        });
+        b.OwnsMany(l => l.Pendientes, p =>
+        {
+            p.ToTable("comunidades_pendientes");
+            p.WithOwner().HasForeignKey("ListaDestinosId");
+            p.HasKey("ListaDestinosId", nameof(ComunidadPendiente.ComunidadId));
+            p.Property(x => x.Comunidad).HasMaxLength(150).IsRequired();
+            p.Property(x => x.Motivo).HasMaxLength(300).IsRequired();
+        });
+        b.Navigation(l => l.Destinos).UsePropertyAccessMode(PropertyAccessMode.Field);
+        b.Navigation(l => l.Pendientes).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

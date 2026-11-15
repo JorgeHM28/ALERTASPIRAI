@@ -1,7 +1,7 @@
 $kind: collection
 name: SAT Río Piraí - Sprint 1
 description: |-
-  Pruebas de la API del Sistema de Alertas Tempranas del río Piraí (Sprint 1).
+  Pruebas de la API del Sistema de Alertas Tempranas del río Piraí (Sprints 1 y 2).
   Ejecuta la colección completa en orden con el entorno "Local":
   el login guarda el token y cada carpeta usa los ids creados por la anterior.
   Requisitos: API corriendo (docker compose up) y usuario semilla admin.

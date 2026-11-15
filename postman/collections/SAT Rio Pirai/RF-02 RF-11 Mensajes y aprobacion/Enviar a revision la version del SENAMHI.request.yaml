@@ -1,0 +1,10 @@
+$kind: http-request
+name: 'Enviar a revision la version del SENAMHI'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionSenamhiId}}/enviar-revision'
+order: 2150
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));

@@ -44,6 +44,7 @@ public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, Opcio
 
         // El original se guarda tal cual llegó (XML oficial o JSON exacto), con su hash SHA-256.
         var aviso = new Aviso(mensaje, formatoLeido, xml, area, usuarioId, contenidoOriginal: contenido);
+        await EnlazarCadenaAsync(aviso, ct);
         db.Avisos.Add(aviso);
         await db.SaveChangesAsync(ct);
         await Publicar(aviso, TipoEventoAviso.Registrado, usuarioId, $"Importado desde {formatoLeido}.", ct);
@@ -97,15 +98,21 @@ public sealed class ServicioAvisos(IAppDbContext db, IModuloCap moduloCap, Opcio
         return aviso;
     }
 
-    /// <summary>RF-11: el aprobador da el visto bueno. El estado actual (State) decide si se puede.</summary>
-    public async Task<Aviso> AprobarAsync(Guid avisoId, Guid usuarioId, CancellationToken ct)
+    /// <summary>
+    /// Un Update o Cancel oficial (por ejemplo del SENAMHI) se engancha a la cadena del aviso que referencia.
+    /// Si no se encuentra el aviso referenciado se registra igual (es el documento oficial), pero sin cadena:
+    /// no se podrá preparar un mensaje desde él hasta que se registre el aviso original (referencia inexistente).
+    /// </summary>
+    private async Task EnlazarCadenaAsync(Aviso aviso, CancellationToken ct)
     {
-        var aviso = await Buscar(avisoId, ct);
-        aviso.EvaluarAptitud(_reloj.GetUtcNow());
-        aviso.Aprobar();
-        await db.SaveChangesAsync(ct);
-        await Publicar(aviso, TipoEventoAviso.Aprobado, usuarioId, aviso.EsPrueba ? "Aprobado como aviso de prueba." : "Aprobado para difusión.", ct);
-        return aviso;
+        if (aviso.TipoMensaje is not (TipoMensajeCap.Update or TipoMensajeCap.Cancel)) return;
+        foreach (var (remitente, identificador) in aviso.ReferenciasCap().Reverse())
+        {
+            var referenciado = await db.Avisos.FirstOrDefaultAsync(a => a.Remitente == remitente && a.IdentificadorCap == identificador, ct);
+            if (referenciado is null) continue;
+            aviso.EnlazarCadena(referenciado);
+            return;
+        }
     }
 
     public async Task<Aviso> DescartarAsync(Guid avisoId, Guid usuarioId, CancellationToken ct)

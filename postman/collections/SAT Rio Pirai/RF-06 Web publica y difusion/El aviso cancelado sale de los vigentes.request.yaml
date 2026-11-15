@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'El aviso cancelado sale de los vigentes'
+method: GET
+url: '{{baseUrl}}/api/publico/avisos?cancelados=true'
+order: 700
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const lista = pm.response.json();
+      pm.test('ya no está como vigente', () => pm.expect(lista.filter(x => x.vigente).map(x => x.id)).to.not.include(pm.collectionVariables.get('versionUpdateId')));
+      pm.test('aparece la cancelación', () => pm.expect(lista.find(x => x.id === pm.collectionVariables.get('versionCancelId')).tipo).to.eql('Cancel'));

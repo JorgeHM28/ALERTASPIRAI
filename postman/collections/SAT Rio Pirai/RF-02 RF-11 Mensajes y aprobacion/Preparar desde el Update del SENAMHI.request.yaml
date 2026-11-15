@@ -1,0 +1,24 @@
+$kind: http-request
+name: 'Preparar desde el Update del SENAMHI'
+method: POST
+url: '{{baseUrl}}/api/avisos/{{senamhiUpdateId}}/versiones'
+order: 2300
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const d = pm.response.json().detalle;
+      pm.test('es un Update que referencia a la versión aprobada', () => {
+        pm.expect(d.resumen.tipo).to.eql('Update');
+        pm.expect(d.referenciaVersionId).to.eql(pm.collectionVariables.get('versionSenamhiId'));
+      });
+      pm.test('toma los hechos nuevos: alerta roja', () => pm.expect(d.resumen.nivel.texto).to.eql('Alerta roja'));
+      pm.test('la fuente es el Update oficial', () => pm.expect(d.fuenteTipo).to.eql('Update'));

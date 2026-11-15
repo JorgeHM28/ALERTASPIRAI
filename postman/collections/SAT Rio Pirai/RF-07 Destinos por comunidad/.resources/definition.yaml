@@ -1,0 +1,3 @@
+$kind: collection
+description: 'Sprint 2. Selección de contactos activos de las comunidades del área del aviso, por canales aprobados, sin duplicados; las comunidades sin canal quedan pendientes.'
+order: 6000

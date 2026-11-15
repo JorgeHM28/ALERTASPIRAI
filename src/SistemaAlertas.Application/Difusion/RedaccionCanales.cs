@@ -29,7 +29,7 @@ public sealed class RedaccionRedesSociales : IRedaccionCanal
 {
     public CanalManual Canal => CanalManual.RedesSociales;
     public string Redactar(VersionAprobada v) =>
-        $"Publicar en las redes oficiales con el enlace al aviso (/avisos/{v.VersionId}): {v.TextoSms}";
+        $"Publicar en las redes oficiales con el enlace al aviso (/?aviso={v.VersionId}): {v.TextoSms}";
 }
 
 public static class RedaccionesCanal

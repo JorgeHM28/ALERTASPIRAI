@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { ArrowRight, Bell, Eye, EyeOff, LogOut, Map, MapPin, ShieldCheck, Users, Waves } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bell, Eye, EyeOff, LogOut, Map, MapPin, MessageSquareText, ShieldCheck, Users, Waves } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 import { api, esAdministrador, guardarSesion, leerSesion, type Sesion } from './api'
@@ -8,10 +8,13 @@ const Zonas = lazy(() => import('./paginas/Zonas'))
 const Comunidades = lazy(() => import('./paginas/Comunidades'))
 const Avisos = lazy(() => import('./paginas/Avisos'))
 const Usuarios = lazy(() => import('./paginas/Usuarios'))
+const Mensajes = lazy(() => import('./paginas/Mensajes'))
+const Landing = lazy(() => import('./paginas/Landing'))
 
-type Pagina = 'avisos' | 'zonas' | 'comunidades' | 'usuarios'
+type Pagina = 'avisos' | 'mensajes' | 'zonas' | 'comunidades' | 'usuarios'
 const paginas: { id: Pagina; nombre: string; Icon: typeof Bell }[] = [
   { id: 'avisos', nombre: 'Avisos', Icon: Bell },
+  { id: 'mensajes', nombre: 'Mensajes', Icon: MessageSquareText },
   { id: 'zonas', nombre: 'Zonas de riesgo', Icon: Map },
   { id: 'comunidades', nombre: 'Comunidades', Icon: MapPin },
   { id: 'usuarios', nombre: 'Usuarios', Icon: Users },
@@ -20,7 +23,12 @@ const paginas: { id: Pagina; nombre: string; Icon: typeof Bell }[] = [
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion)
   const [pagina, setPagina] = useState<Pagina>('avisos')
-  if (!sesion) return <Login alEntrar={(s) => { guardarSesion(s); setSesion(s) }} />
+  const [versionAbierta, setVersionAbierta] = useState<string | null>(null)
+  const [verLogin, setVerLogin] = useState(false)
+  // Sin sesión se ve la página de inicio pública; el panel privado pide iniciar sesión.
+  if (!sesion) return verLogin
+    ? <Login alEntrar={(s) => { guardarSesion(s); setSesion(s) }} alVolver={() => setVerLogin(false)} />
+    : <Suspense fallback={<p role="status" className="tenue">Cargando…</p>}><Landing alIngresar={() => setVerLogin(true)} /></Suspense>
   const { usuario } = sesion
   return <div className="app dashboard">
     <a className="saltar" href="#contenido">Saltar al contenido</a>
@@ -29,7 +37,7 @@ export default function App() {
         <div><h1>SAT Río Piraí</h1><span className="marca-descripcion">ALERTAS TEMPRANAS</span></div></div>
       <span className="nav-label">CENTRO DE GESTIÓN</span>
       <nav aria-label="Navegación principal">{paginas.filter(p => p.id !== 'usuarios' || esAdministrador(usuario.roles)).map(({ id, nombre, Icon }) =>
-        <button key={id} aria-current={pagina === id ? 'page' : undefined} className={pagina === id ? 'activo' : ''} onClick={() => setPagina(id)}>
+        <button key={id} aria-current={pagina === id ? 'page' : undefined} className={pagina === id ? 'activo' : ''} onClick={() => { setPagina(id); setVersionAbierta(null) }}>
           <Icon size={19} aria-hidden="true" />{nombre}{pagina === id && <span className="nav-dot" />}
         </button>)}</nav>
       <div className="sidebar-region"><MapPin size={18} aria-hidden="true" /><div>Cuenca del río Piraí<small>Santa Cruz · Bolivia</small></div></div>
@@ -44,7 +52,8 @@ export default function App() {
       <main id="contenido" tabIndex={-1}>
         <div className="contexto"><span>SISTEMA DE ALERTAS TEMPRANAS</span><span>Río Piraí · Santa Cruz</span></div>
         <Suspense fallback={<p role="status" className="tenue">Cargando sección…</p>}>
-        {pagina === 'avisos' && <Avisos roles={usuario.roles} />}
+        {pagina === 'avisos' && <Avisos roles={usuario.roles} alPreparar={(id) => { setVersionAbierta(id); setPagina('mensajes') }} />}
+        {pagina === 'mensajes' && <Mensajes roles={usuario.roles} versionInicial={versionAbierta} />}
         {pagina === 'zonas' && <Zonas roles={usuario.roles} />}
         {pagina === 'comunidades' && <Comunidades roles={usuario.roles} />}
         {pagina === 'usuarios' && esAdministrador(usuario.roles) && <Usuarios usuarioActualId={usuario.id} />}
@@ -55,7 +64,7 @@ export default function App() {
   </div>
 }
 
-function Login({ alEntrar }: { alEntrar: (s: Sesion) => void }) {
+function Login({ alEntrar, alVolver }: { alEntrar: (s: Sesion) => void; alVolver: () => void }) {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [mostrar, setMostrar] = useState(false)
@@ -86,6 +95,6 @@ function Login({ alEntrar }: { alEntrar: (s: Sesion) => void }) {
       {error && <Alert key={error} tone="danger">{error}</Alert>}
       <button className="primario login-submit" disabled={cargando}>{cargando ? 'Entrando…' : 'Entrar al sistema'}<ArrowRight size={18} aria-hidden="true" /></button>
       <p className="login-note"><ShieldCheck size={14} aria-hidden="true" />Acceso reservado a personal autorizado.</p>
-    </form><p className="login-credit">Sistema de alertas tempranas · Río Piraí</p></div>
+    </form><p className="login-credit"><button type="button" className="row-link" onClick={alVolver}><ArrowLeft size={14} aria-hidden="true" />Volver a los avisos públicos</button></p></div>
   </div>
 }

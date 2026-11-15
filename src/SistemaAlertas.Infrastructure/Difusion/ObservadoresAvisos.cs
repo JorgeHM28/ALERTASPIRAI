@@ -33,15 +33,21 @@ public sealed class ObservadorLogAvisos(ILogger<ObservadorLogAvisos> logger) : I
     }
 }
 
-/// <summary>Cuando la difusión termina, pasa el aviso al estado Difundido (la transición la valida su State).</summary>
-public sealed class MarcarAvisoDifundido(IAppDbContext db) : IObservadorAvisos
+/// <summary>
+/// Cuando la difusión termina, pasa la versión a Difundida y el aviso a Difundido (cada transición la valida su State).
+/// </summary>
+public sealed class MarcarAvisoDifundido(IAppDbContext db, TimeProvider reloj) : IObservadorAvisos
 {
     public async Task AlOcurrirAsync(EventoAviso e, CancellationToken ct = default)
     {
         if (e.Tipo != TipoEventoAviso.Difundido) return;
+        if (e.VersionId is { } versionId)
+        {
+            var version = await db.VersionesMensaje.FirstOrDefaultAsync(v => v.Id == versionId, ct);
+            if (version is not null && version.EstadoActual.PermiteDifundir) version.MarcarDifundida(reloj.GetUtcNow());
+        }
         var aviso = await db.Avisos.FirstOrDefaultAsync(a => a.Id == e.AvisoId, ct);
-        if (aviso is null || !aviso.EstadoActual.PermiteDifundir) return;
-        aviso.MarcarDifundido();
+        if (aviso is not null && aviso.EstadoActual.PermiteDifundir) aviso.MarcarDifundido();
         await db.SaveChangesAsync(ct);
     }
 }

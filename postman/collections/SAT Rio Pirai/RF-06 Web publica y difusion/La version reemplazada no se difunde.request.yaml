@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'La version reemplazada no se difunde'
+method: POST
+url: '{{baseUrl}}/api/difusion/{{versionAprobadaId}}'
+order: 300
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('indica que fue reemplazada', () => pm.expect(pm.response.json().detail).to.include('reemplazada'));

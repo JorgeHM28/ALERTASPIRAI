@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Una sola version en curso por aviso'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionAprobadaId}}/cancel'
+order: 1600
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('pide terminar la versión en curso', () => pm.expect(pm.response.json().detail).to.include('en curso'));

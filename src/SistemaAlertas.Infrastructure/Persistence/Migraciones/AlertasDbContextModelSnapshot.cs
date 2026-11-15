@@ -44,6 +44,10 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasColumnType("geometry(Geometry, 4326)")
                         .HasColumnName("area");
 
+                    b.Property<Guid?>("CadenaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cadena_id");
+
                     b.Property<string>("Certeza")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -122,6 +126,11 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasColumnType("text[]")
                         .HasColumnName("motivos_no_apto");
 
+                    b.Property<string>("Referencias")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("referencias");
+
                     b.Property<Guid>("RegistradoPorId")
                         .HasColumnType("uuid")
                         .HasColumnName("registrado_por_id");
@@ -183,6 +192,9 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasDatabaseName("ix_avisos_area");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Area"), "gist");
+
+                    b.HasIndex("CadenaId")
+                        .HasDatabaseName("ix_avisos_cadena_id");
 
                     b.HasIndex("Enviado")
                         .HasDatabaseName("ix_avisos_enviado");
@@ -351,6 +363,249 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasDatabaseName("ix_contacto_historial_contacto_id_creado_en");
 
                     b.ToTable("contacto_historial", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.ListaDestinos", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<int[]>("Canales")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("canales");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<Guid>("GeneradaPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("generada_por_id");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_listas_destinos");
+
+                    b.HasIndex("VersionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_listas_destinos_version_id");
+
+                    b.ToTable("listas_destinos", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.VersionMensaje", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Geometry>("Area")
+                        .HasColumnType("geometry(Geometry, 4326)")
+                        .HasColumnName("area");
+
+                    b.Property<Guid>("AvisoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("aviso_id");
+
+                    b.Property<Guid>("CadenaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cadena_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateTimeOffset?>("DifundidaEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("difundida_en");
+
+                    b.Property<DateTimeOffset?>("EnviadaARevisionEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviada_a_revision_en");
+
+                    b.Property<DateTimeOffset?>("EnviadoCap")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviado_cap");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("estado");
+
+                    b.Property<string>("EstadoCap")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("estado_cap");
+
+                    b.Property<string>("IdentificadorCap")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("identificador_cap");
+
+                    b.Property<string>("MotivoDevolucion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("motivo_devolucion");
+
+                    b.Property<string>("MotivoRechazo")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("motivo_rechazo");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero");
+
+                    b.Property<Guid>("PreparadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("preparado_por_id");
+
+                    b.Property<Guid?>("ReemplazadaPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reemplazada_por_id");
+
+                    b.Property<Guid?>("ReferenciaVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referencia_version_id");
+
+                    b.Property<string>("Referencias")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("referencias");
+
+                    b.Property<string>("Remitente")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("remitente");
+
+                    b.Property<DateTimeOffset?>("RevisadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revisado_en");
+
+                    b.Property<Guid?>("RevisadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revisado_por_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("VersionAnteriorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_anterior_id");
+
+                    b.Property<string>("XmlCap")
+                        .HasColumnType("text")
+                        .HasColumnName("xml_cap");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Contenido", "SistemaAlertas.Domain.Mensajes.VersionMensaje.Contenido#ContenidoMensaje", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("Certeza")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("contenido_certeza");
+
+                            b1.Property<string>("Descripcion")
+                                .HasMaxLength(4000)
+                                .HasColumnType("character varying(4000)")
+                                .HasColumnName("contenido_descripcion");
+
+                            b1.Property<string>("DescripcionArea")
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("contenido_descripcion_area");
+
+                            b1.Property<string>("Evento")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("contenido_evento");
+
+                            b1.Property<DateTimeOffset?>("Expira")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("contenido_expira");
+
+                            b1.Property<string>("Instruccion")
+                                .HasMaxLength(4000)
+                                .HasColumnType("character varying(4000)")
+                                .HasColumnName("contenido_instruccion");
+
+                            b1.Property<string>("Severidad")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("contenido_severidad");
+
+                            b1.Property<string>("Titular")
+                                .HasMaxLength(300)
+                                .HasColumnType("character varying(300)")
+                                .HasColumnName("contenido_titular");
+
+                            b1.Property<string>("Urgencia")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("contenido_urgencia");
+
+                            b1.Property<DateTimeOffset?>("Vigente")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("contenido_vigente");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_versiones_mensaje");
+
+                    b.HasIndex("Area")
+                        .HasDatabaseName("ix_versiones_mensaje_area");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Area"), "gist");
+
+                    b.HasIndex("AvisoId")
+                        .HasDatabaseName("ix_versiones_mensaje_aviso_id");
+
+                    b.HasIndex("Estado")
+                        .HasDatabaseName("ix_versiones_mensaje_estado");
+
+                    b.HasIndex("IdentificadorCap")
+                        .IsUnique()
+                        .HasDatabaseName("ix_versiones_mensaje_identificador_cap");
+
+                    b.HasIndex("PreparadoPorId")
+                        .HasDatabaseName("ix_versiones_mensaje_preparado_por_id");
+
+                    b.HasIndex("ReemplazadaPorId")
+                        .HasDatabaseName("ix_versiones_mensaje_reemplazada_por_id");
+
+                    b.HasIndex("ReferenciaVersionId")
+                        .HasDatabaseName("ix_versiones_mensaje_referencia_version_id");
+
+                    b.HasIndex("RevisadoPorId")
+                        .HasDatabaseName("ix_versiones_mensaje_revisado_por_id");
+
+                    b.HasIndex("VersionAnteriorId")
+                        .HasDatabaseName("ix_versiones_mensaje_version_anterior_id");
+
+                    b.HasIndex("CadenaId", "Numero")
+                        .IsUnique()
+                        .HasDatabaseName("ix_versiones_mensaje_cadena_id_numero");
+
+                    b.ToTable("versiones_mensaje", (string)null);
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Usuarios.RegistroBitacoraUsuario", b =>
@@ -602,6 +857,138 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_contacto_historial_usuarios_usuario_id");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.ListaDestinos", b =>
+                {
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_listas_destinos_versiones_mensaje_version_id");
+
+                    b.OwnsMany("SistemaAlertas.Domain.Mensajes.ComunidadPendiente", "Pendientes", b1 =>
+                        {
+                            b1.Property<Guid>("ListaDestinosId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("lista_destinos_id");
+
+                            b1.Property<Guid>("ComunidadId")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid")
+                                .HasColumnName("comunidad_id");
+
+                            b1.Property<string>("Comunidad")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("comunidad");
+
+                            b1.Property<string>("Motivo")
+                                .IsRequired()
+                                .HasMaxLength(300)
+                                .HasColumnType("character varying(300)")
+                                .HasColumnName("motivo");
+
+                            b1.HasKey("ListaDestinosId", "ComunidadId")
+                                .HasName("pk_comunidades_pendientes");
+
+                            b1.ToTable("comunidades_pendientes", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ListaDestinosId")
+                                .HasConstraintName("fk_comunidades_pendientes_listas_destinos_lista_destinos_id");
+                        });
+
+                    b.OwnsMany("SistemaAlertas.Domain.Mensajes.DestinoEnvio", "Destinos", b1 =>
+                        {
+                            b1.Property<Guid>("ListaDestinosId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("lista_destinos_id");
+
+                            b1.Property<string>("Canal")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("canal");
+
+                            b1.Property<string>("Direccion")
+                                .HasMaxLength(150)
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("direccion");
+
+                            b1.Property<Guid>("ComunidadId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("comunidad_id");
+
+                            b1.Property<Guid>("ContactoId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("contacto_id");
+
+                            b1.HasKey("ListaDestinosId", "Canal", "Direccion")
+                                .HasName("pk_destinos_envio");
+
+                            b1.HasIndex("ContactoId")
+                                .HasDatabaseName("ix_destinos_envio_contacto_id");
+
+                            b1.ToTable("destinos_envio", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ListaDestinosId")
+                                .HasConstraintName("fk_destinos_envio_listas_destinos_lista_destinos_id");
+                        });
+
+                    b.Navigation("Destinos");
+
+                    b.Navigation("Pendientes");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.VersionMensaje", b =>
+                {
+                    b.HasOne("SistemaAlertas.Domain.Avisos.Aviso", null)
+                        .WithMany()
+                        .HasForeignKey("AvisoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_versiones_mensaje_avisos_aviso_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Avisos.Aviso", null)
+                        .WithMany()
+                        .HasForeignKey("CadenaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_versiones_mensaje_avisos_cadena_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("PreparadoPorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_versiones_mensaje_usuarios_preparado_por_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
+                        .WithMany()
+                        .HasForeignKey("ReemplazadaPorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_versiones_mensaje_versiones_mensaje_reemplazada_por_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
+                        .WithMany()
+                        .HasForeignKey("ReferenciaVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_versiones_mensaje_versiones_mensaje_referencia_version_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("RevisadoPorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_versiones_mensaje_usuarios_revisado_por_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
+                        .WithMany()
+                        .HasForeignKey("VersionAnteriorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_versiones_mensaje_versiones_mensaje_version_anterior_id");
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Usuarios.RegistroBitacoraUsuario", b =>

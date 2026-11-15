@@ -1,0 +1,3 @@
+$kind: collection
+description: 'Sprint 2. Página de inicio pública sin sesión: avisos aprobados con texto, nivel en palabras, instrucciones y área, sin contactos. Difusión de la versión aprobada, y Cancel.'
+order: 7000

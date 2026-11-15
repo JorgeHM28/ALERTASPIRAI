@@ -1,0 +1,21 @@
+$kind: http-request
+name: 'Corregir el borrador'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionId}}'
+order: 400
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "instruccion": "Evacuar a la zona alta. Punto de reunión: colegio de Porongo." }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json().detalle;
+      pm.test('guardó las instrucciones', () => pm.expect(d.instruccion).to.include('colegio'));
+      pm.test('ya no le falta nada', () => pm.expect(d.resumen.faltantes).to.be.empty);
+      pm.test('los hechos oficiales no cambian', () => pm.expect(d.severidad).to.eql('Extreme'));

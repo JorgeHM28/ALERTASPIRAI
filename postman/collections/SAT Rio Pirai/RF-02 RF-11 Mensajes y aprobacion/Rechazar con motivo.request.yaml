@@ -1,0 +1,26 @@
+$kind: http-request
+name: 'Rechazar con motivo'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionId}}/rechazar'
+order: 700
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "motivo": "Falta indicar el horario del punto de reunión." }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json().detalle;
+      pm.test('queda rechazada con su motivo', () => {
+        pm.expect(d.resumen.estado).to.eql('Rechazada');
+        pm.expect(d.resumen.motivoRechazo).to.include('punto de reunión');
+      });
+      pm.test('guarda quién y cuándo', () => {
+        pm.expect(d.revisadoPorId).to.be.a('string');
+        pm.expect(d.resumen.revisadoEn).to.be.a('string');
+      });

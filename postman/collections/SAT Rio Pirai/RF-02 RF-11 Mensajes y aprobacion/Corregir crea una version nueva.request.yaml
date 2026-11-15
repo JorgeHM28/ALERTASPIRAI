@@ -1,0 +1,19 @@
+$kind: http-request
+name: 'Corregir crea una version nueva'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionId}}/corregir'
+order: 900
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const d = pm.response.json().detalle;
+      pm.test('es la versión 2, en borrador', () => {
+        pm.expect(d.resumen.numero).to.eql(2);
+        pm.expect(d.resumen.estado).to.eql('Borrador');
+      });
+      pm.test('vuelve con el motivo del rechazo', () => pm.expect(d.motivoDevolucion).to.include('horario'));
+      pm.test('apunta a la versión rechazada', () => pm.expect(d.versionAnteriorId).to.eql(pm.collectionVariables.get('versionId')));
+      pm.collectionVariables.set('versionRechazadaId', pm.collectionVariables.get('versionId'));
+      pm.collectionVariables.set('versionId', d.resumen.id);

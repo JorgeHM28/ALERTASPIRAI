@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Rechaza referencia incoherente'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionRechazadaId}}/update'
+order: 1400
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('una versión rechazada no se referencia', () => pm.expect(pm.response.json().detail).to.include('incoherente'));

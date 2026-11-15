@@ -41,11 +41,57 @@ export interface AvisoResumen {
   descripcionArea: string | null; expira: string | null; registradoEn: string
   estadoCap: string; incompleto: boolean; vencido: boolean; aptoParaDifusion: boolean; motivosNoApto: string[]
   aptitudEvaluadaEn: string; tieneOriginal: boolean
+  tipoMensaje: TipoMensaje; referencias: string | null; cadenaId: string | null
+  preparable: boolean; motivosNoPreparable: string[]
 }
 export interface AvisoDetalle {
   resumen: AvisoResumen; descripcion: string | null; instruccion: string | null; vigente: string | null
   area: GeoJSON.Geometry | null; xmlCap: string
   contenidoOriginal: string | null; tipoContenidoOriginal: string | null; hashOriginal: string | null
+}
+
+// ---------- Sprint 2: versiones del mensaje (RF-02, RF-11), destinos (RF-07) y web pública (RF-06) ----------
+export type TipoMensaje = 'Alert' | 'Update' | 'Cancel' | 'Ack' | 'Error'
+export type EstadoVersion = 'Borrador' | 'EnRevision' | 'Aprobada' | 'Rechazada' | 'Difundida'
+export interface Nivel { codigo: string; texto: string; orden: number; color: string }
+export interface VersionResumen {
+  id: string; avisoId: string; cadenaId: string; numero: number; tipo: TipoMensaje; estado: EstadoVersion; esPrueba: boolean
+  nivel: Nivel; evento: string; titular: string | null; descripcionArea: string | null; expira: string | null
+  creadoEn: string; preparadoPorId: string; revisadoEn: string | null; motivoRechazo: string | null
+  reemplazadaPorId: string | null; faltantes: string[]
+}
+export interface VersionDetalle {
+  detalle: {
+    resumen: VersionResumen; urgencia: string; severidad: string; certeza: string
+    descripcion: string | null; instruccion: string | null; vigente: string | null
+    identificadorCap: string; remitente: string; enviadoCap: string | null; referencias: string | null; referenciaVersionId: string | null
+    versionAnteriorId: string | null; motivoDevolucion: string | null; enviadaARevisionEn: string | null; revisadoPorId: string | null
+    difundidaEn: string | null; xmlCap: string | null
+    fuenteRemitente: string; fuenteIdentificador: string; fuenteEnviado: string; fuenteTipo: TipoMensaje
+  }
+  area: GeoJSON.Geometry | null; textoSms: string; textoLectura: string
+}
+export interface DestinoVista { comunidadId: string; comunidad: string; contactoId: string; contacto: string; canal: TipoCanal; direccion: string }
+export interface ListaDestinos {
+  versionId: string; guardada: boolean; generadaEn: string | null; canales: TipoCanal[]; comunidades: number
+  destinos: DestinoVista[]; pendientes: { comunidadId: string; comunidad: string; motivo: string }[]
+}
+export interface ResultadoDifusion {
+  versionId: string; esPrueba: boolean; publicadoEnWeb: boolean; urlWeb: string | null; trabajosSms: number
+  tareasManuales: { canal: string }[]; incidencias: { canal: string; detalle: string }[]
+}
+export interface AvisoPublico {
+  id: string; numero: number; tipo: TipoMensaje; nivel: Nivel; evento: string; titular: string | null
+  descripcion: string | null; instruccion: string | null; descripcionArea: string | null
+  desde: string | null; hasta: string | null; aprobadoEn: string | null; vigente: boolean; reemplazadoPor: string | null
+  area: GeoJSON.Geometry | null; textoLectura: string
+}
+
+export const NOMBRE_ESTADO_VERSION: Record<EstadoVersion, string> = {
+  Borrador: 'Borrador', EnRevision: 'En revisión', Aprobada: 'Aprobada', Rechazada: 'Rechazada', Difundida: 'Difundida',
+}
+export const NOMBRE_TIPO: Record<TipoMensaje, string> = {
+  Alert: 'Alerta', Update: 'Actualización', Cancel: 'Cancelación', Ack: 'Acuse', Error: 'Error',
 }
 
 export class ErrorApi extends Error {
@@ -89,6 +135,7 @@ export async function api<T>(ruta: string, opciones: RequestInit & { json?: unkn
 }
 
 export const puedeEditar = (roles: Rol[]) => roles.includes('Administrador') || roles.includes('Operador')
+export const puedeAprobar = (roles: Rol[]) => roles.includes('Administrador') || roles.includes('Aprobador')
 export const esAdministrador = (roles: Rol[]) => roles.includes('Administrador')
 
 export const fecha = (iso: string | null) =>

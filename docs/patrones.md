@@ -19,7 +19,7 @@ Criterio: un patrón se usa solo si resuelve un problema real del sistema. Se ev
 | Factory Method | `src/SistemaAlertas.Application/Avisos/Importacion/IImportadorAviso.cs` (producto), `ImportadorCapXml.cs` y `ImportadorCapJson.cs` (productos concretos), `IFabricaImportadores.cs` y `FabricaImportadores.cs` (creador). Lo usa `ServicioAvisos.ImportarAsync`. |
 | Builder | `src/SistemaAlertas.Application/Cap/MensajeCapBuilder.cs` (`MensajeCapBuilder` e `InfoCapBuilder`), que produce el `record MensajeCap` de `src/SistemaAlertas.Domain/Cap/MensajeCap.cs`. Lo usan los dos importadores y `ServicioAvisos.RegistrarManualAsync`. |
 | Singleton vía DI | `src/SistemaAlertas.Application/DependencyInjection.cs` (importadores y fábrica) y `src/SistemaAlertas.Infrastructure/DependencyInjection.cs` (hasher, generador JWT, opciones). |
-| Prototype | Sprint 2. `MensajeCap` ya es un `record` inmutable, así que `with` funcionará sin cambios. |
+| Prototype | `Domain/Mensajes/ContenidoMensaje.cs` (`record` que se clona con `with`) y `VersionMensaje.Corregir` (constructor de copia: la versión n+1 de una rechazada). `ServicioVersiones.DerivarAsync` clona el contenido aprobado para preparar un Update o Cancel. |
 
 Las pruebas que demuestran cada patrón están en `tests/SistemaAlertas.Tests/MensajeCapBuilderTests.cs` e `ImportadoresTests.cs`.
 
@@ -43,7 +43,7 @@ Las pruebas que demuestran cada patrón están en `tests/SistemaAlertas.Tests/Me
 
 ### Prototype (RF-11, Sprint 2)
 **Problema:** un mensaje aprobado es inmutable, porque forma parte del registro de auditoría. Si hay que corregirlo, no se modifica: se crea la versión n+1.
-**Solución:** el mensaje se modela como un `record` de C#. La expresión `with` clona el mensaje aprobado y cambia solo los campos necesarios, por ejemplo `var v2 = aprobado with { Version = aprobado.Version + 1, Estado = Borrador };`. Es el Prototype nativo del lenguaje.
+**Solución:** el contenido de cada versión es el `record ContenidoMensaje`. Corregir una versión rechazada crea la versión n+1 clonándola (`Contenido with { }`, misma referencia, mismo tipo, mismo área) en borrador y con el motivo del rechazo a la vista; preparar un Update o Cancel clona el contenido aprobado y cambia solo la redacción (`Contenido.Redactar(...)`, que también usa `with`). Es el Prototype nativo del lenguaje.
 **Beneficio:** la nueva versión hereda todos los campos sin copiarlos a mano, y la original queda intacta.
 
 ## Patrones que se descartan
@@ -123,8 +123,8 @@ Mismo criterio: se usan los que resuelven un problema real. De los nueve, siete 
 
 | Patrón | Decisión | Dónde | RF |
 |---|---|---|---|
-| State | Se usa | Ciclo de vida del aviso: Registrado → Aprobado → Difundido, o Descartado | RF-11 |
-| Chain of Responsibility | Se usa | Reglas que el aviso debe pasar antes de difundirse | RF-04, RF-11 |
+| State | Se usa | Ciclo de vida de la versión del mensaje (Borrador → En revisión → Aprobada → Difundida, o Rechazada) y del aviso | RF-02, RF-11 |
+| Chain of Responsibility | Se usa | Reglas que la versión aprobada debe pasar antes de difundirse | RF-04, RF-11 |
 | Command | Se usa | Un comando por canal de difusión (web, SMS, tareas manuales) y los trabajos SMS en cola | RF-04 |
 | Observer | Se usa | Eventos del aviso: bitácora, log y paso a "Difundido" | RNF-04, RF-11 |
 | Strategy | Se usa | Redacción del mensaje para radio, altavoz y redes sociales | RF-04 |
@@ -137,26 +137,26 @@ Mismo criterio: se usan los que resuelven un problema real. De los nueve, siete 
 
 | Patrón | Archivos |
 |---|---|
-| State | `Domain/Avisos/EstadoAviso.cs` (valor guardado), `Domain/Avisos/EstadosAviso.cs` (`EstadoAvisoBase`, `EstadoRegistrado`, `EstadoAprobado`, `EstadoDifundido`, `EstadoDescartado`), `Aviso.Aprobar/MarcarDifundido/Descartar`. Endpoint `POST /api/avisos/{id}/aprobar` (permiso Aprobación). |
-| Chain of Responsibility | `Application/Difusion/ReglasDifusion.cs` (`ReglaDifusion` y sus eslabones). La usa `Infrastructure/Difusion/FuenteVersionesDesdeAvisos.cs`. |
+| State | `Domain/Mensajes/EstadosVersion.cs` (`EstadoVersionBase`, `EstadoVersionBorrador`, `EstadoVersionEnRevision`, `EstadoVersionAprobada`, `EstadoVersionRechazada`, `EstadoVersionDifundida`) y `VersionMensaje.Redactar/EnviarARevision/Aprobar/Rechazar/Corregir`. El aviso conserva su propio State (`Domain/Avisos/EstadosAviso.cs`): pasa a Aprobado cuando se aprueba su primera versión. Endpoints `POST /api/versiones/{id}/aprobar` y `/rechazar` (permiso Aprobación). |
+| Chain of Responsibility | `Application/Difusion/ReglasDifusion.cs` (`ReglaDifusion` y sus eslabones). La usa `Infrastructure/Difusion/FuenteVersionesAprobadas.cs`. |
 | Command | `Application/Difusion/ComandosDifusion.cs` (`IComandoDifusion`, `PublicarEnWeb`, `EncolarSms`, `CrearTareasManuales`, `ContextoDifusion`). El invocador es `ServicioDifusion`. `TrabajoSms` es el comando encolado que ejecuta `ProcesadorColaSms`. |
 | Observer | `Application/Avisos/Eventos/EventosAviso.cs` (sujeto `PublicadorEventosAvisos`, `IObservadorAvisos`), `Infrastructure/Difusion/ObservadoresAvisos.cs` (`BitacoraAvisosEnMemoria`, `ObservadorLogAvisos`, `MarcarAvisoDifundido`). Endpoint `GET /api/avisos/{id}/eventos`. |
 | Strategy | `Application/Difusion/RedaccionCanales.cs` (`IRedaccionCanal` y una estrategia por canal), elegida por canal en `GestorTareasManualesEnMemoria`. |
 | Template Method | `Application/Avisos/Importacion/ImportadorCapBase.cs`; `ImportadorCapXml` e `ImportadorCapJson` solo implementan los pasos. |
 | Iterator | `Api/Comun/ProcesadorColaSms.cs` (`await foreach` sobre `ReadAllAsync`), `ServicioDifusion` (`foreach` de comandos), `PublicadorEventosAvisos` (`foreach` de observadores). Se usa el de C# (`IEnumerable<T>`, `IAsyncEnumerable<T>`), no una implementación propia. |
 
-Pruebas: `PatronesComportamientoTests` (State, cadena, Observer, Command, Strategy y Template Method), `ServicioDifusionTests` (Facade y Command) e `ImportadoresTests` (Template Method con Adapter). En total 121 pruebas; la colección Postman sigue pasando completa (73 peticiones, 149 aserciones).
+Pruebas: `PatronesComportamientoTests` (State, cadena, Observer, Command, Strategy y Template Method), `ServicioDifusionTests` (Facade y Command) e `ImportadoresTests` (Template Method con Adapter). `VersionesMensajeTests` cubre las versiones (State y Prototype), las referencias, los destinos y el nivel en texto. En total 144 pruebas; la colección Postman pasa completa (119 peticiones, 260 aserciones).
 
 ## Patrones que se usan
 
 ### State
-**Problema:** RF-11 exige que solo se difunda lo aprobado. Con un `enum` y `if` repartidos, cada acción (aprobar, descartar, difundir) tendría que preguntar en qué estado está el aviso, y un estado nuevo obligaría a revisar todos esos `if`.
-**Solución:** cada estado es una clase que decide qué acciones permite y a cuál lleva. `Aviso` delega en su `EstadoActual`. Se guarda solo el `enum` (como texto, sin migración) y de él sale el objeto de estado.
-**Reglas:** se aprueba solo desde Registrado y si el aviso está completo y vigente (uno de prueba también, si está completo). Un aviso difundido no se descarta: se corrige con un CAP Update o Cancel. Descartado es final.
+**Problema:** RF-11 exige que solo se difunda lo aprobado y que una versión aprobada no se edite. Con un `enum` y `if` repartidos, cada acción (editar, enviar a revisión, aprobar, rechazar, corregir, difundir) tendría que preguntar en qué estado está la versión, y un estado nuevo obligaría a revisar todos esos `if`.
+**Solución:** cada estado es una clase que decide qué acciones permite y a cuál lleva. `VersionMensaje` delega en su `EstadoActual`. Se guarda solo el `enum` (como texto) y de él sale el objeto de estado.
+**Reglas:** solo el borrador se edita; pasa a revisión solo si está completo (titular o descripción, instrucciones, área, expiración vigente), si no queda como borrador. Solo una versión en revisión se aprueba o se rechaza, y el rechazo exige motivo. Una rechazada no se edita: se corrige creando la versión siguiente (Prototype). Una aprobada es inmutable: se corrige con un Update o se cancela con un Cancel que la referencia.
 **Beneficio:** las transiciones válidas están en un solo lugar y las prueba `PatronesComportamientoTests`.
 
 ### Chain of Responsibility
-**Problema:** antes de difundir hay varias verificaciones (no descartado, aprobado, no vencido, completo, apto). Estaban escritas en secuencia dentro de la fuente de versiones; agregar una nueva era editar ese método.
+**Problema:** antes de difundir hay varias verificaciones (aviso no descartado, versión aprobada, no reemplazada por un Update o Cancel, no vencida, completa). Estaban escritas en secuencia dentro de la fuente de versiones; agregar una nueva era editar ese método.
 **Solución:** cada verificación es un eslabón con una sola responsabilidad. El primero que encuentra un problema corta la cadena con su motivo. La cadena se arma una vez (`CadenaPorDefecto`) y se registra como Singleton vía DI.
 **Beneficio:** el motivo que ve el operador es preciso ("está Registrado: un aprobador debe aprobarlo") y una regla nueva es una clase más. `ReglaVigente` mira la fecha en el momento de difundir, porque el aviso pudo vencer después de aprobarse.
 
@@ -201,14 +201,15 @@ Los 15 patrones que se usan (4 creacionales, 4 estructurales y 7 de comportamien
 |---|---|---|
 | 1. Llega el aviso (RF-01) | `ModuloCap` recibe el XML o JSON, la fábrica elige el importador, este sigue los pasos fijos y traduce el formato ajeno, y el Builder valida el CAP 1.2 | Facade → Factory Method → Template Method → Adapter → Builder |
 | 2. Se registra | `ServicioAvisos` guarda el aviso en estado Registrado y publica el evento | State, Observer |
-| 3. Se aprueba (RF-11) | El estado actual decide si se puede aprobar; la bitácora lo registra | State, Observer |
-| 4. Se difunde (RF-04) | La fachada pide la versión; la cadena de reglas la verifica; ejecuta los comandos de canal; cada canal manual redacta con su estrategia | Facade, Chain of Responsibility, Command, Strategy |
-| 5. Sale el SMS | El trabajo SMS (comando) se encola y el procesador lo recorre; el emisor está decorado con bitácora, modo prueba y reintentos, y adapta Twilio o el simulador | Command, Iterator, Decorator, Adapter, Factory Method |
-| 6. Cierre | El evento Difundido pasa el aviso a ese estado y queda en la bitácora | Observer, State |
+| 3. Se prepara (RF-02) | `ServicioVersiones` crea la versión Alert, Update o Cancel desde el aviso; el Builder arma el XML CAP 1.2 y el módulo CAP lo valida al enviar a revisión; corregir clona la versión | State, Prototype, Builder, Facade |
+| 4. Se aprueba (RF-11) | El estado de la versión decide si se puede aprobar o rechazar; la bitácora lo registra | State, Observer |
+| 5. Se difunde (RF-04) | La fachada pide la versión; la cadena de reglas la verifica; ejecuta los comandos de canal; cada canal manual redacta con su estrategia | Facade, Chain of Responsibility, Command, Strategy |
+| 6. Sale el SMS | El trabajo SMS (comando) se encola y el procesador lo recorre; el emisor está decorado con bitácora, modo prueba y reintentos, y adapta Twilio o el simulador | Command, Iterator, Decorator, Adapter, Factory Method |
+| 7. Cierre | El evento Difundido pasa la versión y el aviso a ese estado y queda en la bitácora | Observer, State |
 | Transversal | Datos de contacto protegidos, objetos de una sola instancia, geometrías a GeoJSON | Proxy, Singleton vía DI, Adapter |
 
 Reglas que mantienen el equilibrio:
 - **Un patrón, un problema.** Ninguna clase combina dos patrones sin necesidad. Donde dos se tocan, uno usa al otro por su interfaz: la cadena consulta al State (`PermiteDifundir`), la fachada invoca comandos y publica al Observer, el Template Method termina en el Builder.
 - **Todo pasa por DI.** Las fábricas, la cadena, las estrategias, los comandos, los decoradores y los observadores se arman en `DependencyInjection.cs` y `RegistroSms.cs`. Cambiar una pieza es cambiar un registro, no el código que la usa.
-- **Prototype queda listo para las versiones.** Cuando RF-11 guarde versiones del mensaje, la versión n+1 se creará con `record` + `with` y la fuente de versiones la entregará a la misma cadena de reglas y a los mismos comandos, sin cambiar la difusión.
+- **Las versiones no cambiaron la difusión.** Al llegar las versiones del mensaje (Sprint 2), solo se reemplazó la fuente de versiones (`FuenteVersionesAprobadas`) y los destinos (`DestinatariosDesdeLista`, RF-07): la fachada, los comandos y las estrategias quedaron igual.
 - **Lo que no resuelve nada se descarta y se dice por qué:** Abstract Factory, Singleton clásico, Object Pool, Bridge, Composite, Flyweight, Mediator y Memento.
