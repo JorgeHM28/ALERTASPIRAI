@@ -1,9 +1,11 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, Bell, Eye, EyeOff, LogOut, Map, MapPin, MessageSquareText, ShieldCheck, Users, Waves } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
-import { api, esAdministrador, guardarSesion, leerSesion, type Sesion } from './api'
+import { api, esAdministrador, guardarSesion, leerSesion, marcarSesionVencida, sesionVencidaPendiente, type Sesion } from './api'
 import { Alert } from './components/ui/Alert'
+import { Esqueleto } from './components/ui/Esqueleto'
+import { EstadoPublico } from './components/EstadoPublico'
 const Zonas = lazy(() => import('./paginas/Zonas'))
 const Comunidades = lazy(() => import('./paginas/Comunidades'))
 const Avisos = lazy(() => import('./paginas/Avisos'))
@@ -24,11 +26,30 @@ export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion)
   const [pagina, setPagina] = useState<Pagina>('avisos')
   const [versionAbierta, setVersionAbierta] = useState<string | null>(null)
-  const [verLogin, setVerLogin] = useState(false)
+  // Si la sesión terminó sola (venció o el servidor la rechazó), se vuelve al login con un aviso, no a la landing sin explicación.
+  const [vencida] = useState(sesionVencidaPendiente)
+  const [verLogin, setVerLogin] = useState(vencida)
+  // Cierra la sesión justo cuando caduca el token, aunque el panel siga abierto, en vez de esperar a que una petición falle con 401.
+  useEffect(() => {
+    if (!sesion) return
+    const ms = new Date(sesion.expira).getTime() - Date.now()
+    const cerrar = () => { marcarSesionVencida(); guardarSesion(null); setSesion(null) }
+    if (ms <= 0) { cerrar(); return }
+    const t = window.setTimeout(cerrar, Math.min(ms, 2 ** 31 - 1))
+    return () => window.clearTimeout(t)
+  }, [sesion])
+  // En el celular la navegación se desplaza: la sección activa siempre debe quedar a la vista.
+  useEffect(() => {
+    document.querySelector('.sidebar nav [aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  }, [pagina, sesion])
+  // La página pública también se puede ver con la sesión abierta (/?publico=1), para comprobar lo que ve la población.
+  if (new URLSearchParams(window.location.search).has('publico')) {
+    return <Suspense fallback={<div className="publico"><Esqueleto etiqueta="Cargando avisos" /></div>}><Landing alIngresar={() => { window.location.href = '/' }} /></Suspense>
+  }
   // Sin sesión se ve la página de inicio pública; el panel privado pide iniciar sesión.
   if (!sesion) return verLogin
-    ? <Login alEntrar={(s) => { guardarSesion(s); setSesion(s) }} alVolver={() => setVerLogin(false)} />
-    : <Suspense fallback={<p role="status" className="tenue">Cargando…</p>}><Landing alIngresar={() => setVerLogin(true)} /></Suspense>
+    ? <Login vencida={vencida} alEntrar={(s) => { guardarSesion(s); setSesion(s) }} alVolver={() => setVerLogin(false)} />
+    : <Suspense fallback={<div className="publico"><Esqueleto etiqueta="Cargando avisos" /></div>}><Landing alIngresar={() => setVerLogin(true)} /></Suspense>
   const { usuario } = sesion
   return <div className="app dashboard">
     <a className="saltar" href="#contenido">Saltar al contenido</a>
@@ -47,11 +68,13 @@ export default function App() {
       </div>
     </aside>
     <div className="workspace">
-      <header className="topbar"><div><span className="tenue">Centro de gestión</span><span className="breadcrumb-slash">/</span><strong>{paginas.find(p => p.id === pagina)?.nombre}</strong></div>
-        <span className="access-badge"><ShieldCheck size={15} aria-hidden="true" />Acceso {usuario.roles.join(' + ').toLowerCase()}</span></header>
+      <div className="cabecera-panel">
+        <header className="topbar"><div><span className="tenue">Centro de gestión</span><span className="breadcrumb-slash">/</span><strong>{paginas.find(p => p.id === pagina)?.nombre}</strong></div>
+          <span className="access-badge"><ShieldCheck size={15} aria-hidden="true" />Acceso {usuario.roles.join(' + ').toLowerCase()}</span></header>
+        <EstadoPublico seccion={pagina} />
+      </div>
       <main id="contenido" tabIndex={-1}>
-        <div className="contexto"><span>SISTEMA DE ALERTAS TEMPRANAS</span><span>Río Piraí · Santa Cruz</span></div>
-        <Suspense fallback={<p role="status" className="tenue">Cargando sección…</p>}>
+        <Suspense fallback={<Esqueleto etiqueta="Cargando sección" />}>
         {pagina === 'avisos' && <Avisos roles={usuario.roles} alPreparar={(id) => { setVersionAbierta(id); setPagina('mensajes') }} />}
         {pagina === 'mensajes' && <Mensajes roles={usuario.roles} versionInicial={versionAbierta} />}
         {pagina === 'zonas' && <Zonas roles={usuario.roles} />}
@@ -64,7 +87,7 @@ export default function App() {
   </div>
 }
 
-function Login({ alEntrar, alVolver }: { alEntrar: (s: Sesion) => void; alVolver: () => void }) {
+function Login({ alEntrar, alVolver, vencida }: { alEntrar: (s: Sesion) => void; alVolver: () => void; vencida?: boolean }) {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [mostrar, setMostrar] = useState(false)
@@ -79,19 +102,20 @@ function Login({ alEntrar, alVolver }: { alEntrar: (s: Sesion) => void; alVolver
   return <div className="login">
     <div className="login-presentacion">
       <div className="marca"><span className="marca-simbolo"><Waves size={26} aria-hidden="true" /></span><strong>SAT Río Piraí</strong></div>
-      <div className="login-story"><span className="eyebrow">TERRITORIO CONECTADO. COMUNIDADES PREPARADAS.</span>
-        <h2>Anticiparnos<br />hace la diferencia.</h2>
+      <div className="login-story">
+        <h2>Anticiparnos<br />hace la <span>diferencia.</span></h2>
         <p>Información oportuna para gestionar el riesgo y cuidar a las comunidades de la cuenca del río Piraí.</p>
         <div className="river-art" aria-hidden="true"><svg viewBox="0 0 560 160" fill="none"><path d="M-20 130C110 150 90 30 210 65S320 160 390 80 480 15 580 40" /><path d="M-20 110C100 130 100 10 220 45S330 140 400 60 490 -5 580 20" /><path d="M-20 150C120 170 80 50 200 85S310 180 380 100 470 35 580 60" /><circle cx="212" cy="65" r="7" /><circle cx="390" cy="80" r="7" /></svg><span><MapPin size={14} /> Cuenca del río Piraí</span></div>
       </div>
       <span className="login-region">Santa Cruz · Bolivia <span>Prevención que nos une.</span></span>
     </div>
     <div className="login-access"><form onSubmit={entrar} className="tarjeta" aria-busy={cargando}>
-      <span className="login-lock"><ShieldCheck size={24} aria-hidden="true" /></span><span className="eyebrow">ACCESO AL SISTEMA</span>
+      <span className="login-lock"><ShieldCheck size={24} aria-hidden="true" /></span>
       <div><h1>Bienvenido de nuevo</h1><p className="tenue">Ingresa tus datos para continuar.</p></div>
       <label>Usuario<input autoComplete="username" placeholder="Tu nombre de usuario" value={nombreUsuario} onChange={e => setNombreUsuario(e.target.value)} autoFocus required /></label>
       <label>Contraseña<span className="password-field"><input type={mostrar ? 'text' : 'password'} autoComplete="current-password" placeholder="Tu contraseña" value={contrasena} onChange={e => setContrasena(e.target.value)} required />
         <button type="button" className="icon-button" aria-label={mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={mostrar} onClick={() => setMostrar(!mostrar)}>{mostrar ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>
+      {vencida && !error && <Alert tone="warning">Tu sesión terminó. Vuelve a entrar para seguir.</Alert>}
       {error && <Alert key={error} tone="danger">{error}</Alert>}
       <button className="primario login-submit" disabled={cargando}>{cargando ? 'Entrando…' : 'Entrar al sistema'}<ArrowRight size={18} aria-hidden="true" /></button>
       <p className="login-note"><ShieldCheck size={14} aria-hidden="true" />Acceso reservado a personal autorizado.</p>

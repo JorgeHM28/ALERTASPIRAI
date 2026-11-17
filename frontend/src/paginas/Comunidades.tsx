@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { api, fecha, puedeEditar, soloFecha, type Canal, type Comunidad, type Contacto, type HistorialContacto, type Rol, type TipoCanal, type Zona } from '../api'
 import Mapa, { COLOR_RIESGO } from './Mapa'
+import { useConfirmar } from '../components/ui/useConfirmar'
+import { Alert } from '../components/ui/Alert'
+import { useEnfocarAlAbrir } from '../components/ui/useEnfocarAlAbrir'
 
 const TIPOS: TipoCanal[] = ['Sms', 'WhatsApp', 'Llamada', 'Email', 'Radio']
 const PROCEDENCIAS = ['Asamblea comunal', 'Padrón municipal', 'Dirigente de la OTB', 'Registro en campaña de prevención', 'Solicitud propia']
@@ -19,11 +22,14 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
   const [zonas, setZonas] = useState<Zona[]>([])
   const [comunidades, setComunidades] = useState<Comunidad[]>([])
   const [filtroZona, setFiltroZona] = useState('')
+  const { confirmar, dialogo } = useConfirmar()
+  const [aviso, setAviso] = useState('')
   const [detalle, setDetalle] = useState<Comunidad | null>(null)
   const [form, setForm] = useState<typeof vacia | null>(null)
   const [error, setError] = useState('')
   const [destinatarios, setDestinatarios] = useState<Destinatarios | null>(null)
   const editar = puedeEditar(roles)
+  const { panel, titulo } = useEnfocarAlAbrir<HTMLDivElement>(detalle?.id)
 
   const verDestinatarios = () => api<Destinatarios>(`/api/destinatarios${filtroZona ? `?zonaIds=${filtroZona}` : ''}`)
     .then(setDestinatarios).catch((e) => setError((e as Error).message))
@@ -50,8 +56,8 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
   }
 
   async function eliminarComunidad(c: Comunidad) {
-    if (!confirm(`¿Eliminar "${c.nombre}" y sus contactos?`)) return
-    await api(`/api/comunidades/${c.id}`, { method: 'DELETE' }); setDetalle(null); cargar()
+    if (!await confirmar({ titulo: `¿Eliminar la comunidad «${c.nombre}»?`, texto: 'Se borran también todos sus contactos y su historial. No se puede deshacer.', etiqueta: 'Eliminar comunidad', peligro: true })) return
+    await api(`/api/comunidades/${c.id}`, { method: 'DELETE' }); setDetalle(null); setAviso(`Comunidad «${c.nombre}» eliminada.`); cargar()
   }
 
   const zonaSel = zonas.filter((z) => !filtroZona || z.id === filtroZona)
@@ -61,7 +67,7 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
       <div className="barra">
         <h2>Comunidades y contactos</h2>
         <div className="acciones">
-          <select value={filtroZona} onChange={(e) => setFiltroZona(e.target.value)}>
+          <select aria-label="Filtrar por zona" value={filtroZona} onChange={(e) => setFiltroZona(e.target.value)}>
             <option value="">Todas las zonas</option>
             {zonas.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
           </select>
@@ -69,7 +75,8 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
           {editar && <button className="primario" onClick={() => { setDetalle(null); setForm({ ...vacia, zonaId: filtroZona }) }}>Nueva comunidad</button>}
         </div>
       </div>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="status">{error}</p>}
+      {aviso && <Alert key={aviso} tone="success" dismissible>{aviso}</Alert>}
 
       {destinatarios && (
         <div className="tarjeta">
@@ -77,7 +84,7 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
           <p className="tenue">Solo reciben alertas los contactos activos, autorizados y con al menos un canal.</p>
           <p><b>{destinatarios.destinatarios.length}</b> contacto(s) habilitado(s) · <b>{destinatarios.excluidos.length}</b> excluido(s) · <b>{destinatarios.comunidadesSinCanal.length}</b> comunidad(es) sin canal</p>
           {destinatarios.comunidadesSinCanal.length > 0 && (
-            <p className="error">Sin canal: {destinatarios.comunidadesSinCanal.map((c) => `${c.nombre} (${c.motivo})`).join(' · ')}</p>
+            <p className="error" role="status">Sin canal: {destinatarios.comunidadesSinCanal.map((c) => `${c.nombre} (${c.motivo})`).join(' · ')}</p>
           )}
           {destinatarios.excluidos.length > 0 && (
             <p className="tenue">Excluidos: {destinatarios.excluidos.map((x) => `${x.nombre}, ${x.comunidad}: ${x.motivos.join(', ')}`).join(' · ')}</p>
@@ -90,21 +97,21 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
           <Mapa alto={300}
             capas={zonaSel.map((z) => ({ clave: z.id, geometria: z.geometria, color: COLOR_RIESGO[z.nivelRiesgo], etiqueta: z.nombre }))}
             puntos={comunidades.filter((c) => c.latitud != null).map((c) => ({ clave: c.id, lat: c.latitud!, lon: c.longitud!, etiqueta: c.nombre }))} />
-          <table>
+          <div className="table-scroll"><table>
             <thead><tr><th>Comunidad</th><th>Zona</th><th>Población</th><th>Contactos habilitados</th></tr></thead>
             <tbody>
               {comunidades.map((c) => (
                 <tr key={c.id} className="clicable" onClick={() => { setForm(null); abrir(c.id) }}>
-                  <td>{c.nombre}</td><td>{c.zona}</td><td>{c.poblacion ?? '—'}</td>
+                  <td><button className="row-link" onClick={(e) => { e.stopPropagation(); setForm(null); abrir(c.id) }}>{c.nombre}</button></td><td>{c.zona}</td><td>{c.poblacion ?? '—'}</td>
                   <td>{c.contactosHabilitados} de {c.totalContactos}{c.sinCanal && <span className="etiqueta" style={{ background: '#c62828', marginLeft: 6 }}>sin canal</span>}</td>
                 </tr>
               ))}
               {comunidades.length === 0 && <tr><td colSpan={4} className="tenue">No hay comunidades.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         </div>
 
-        <div>
+        <div ref={panel}>
           {form && (
             <form className="tarjeta" onSubmit={guardarComunidad}>
               <h3>{detalle ? `Editar ${detalle.nombre}` : 'Nueva comunidad'}</h3>
@@ -129,7 +136,7 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
           )}
           {!form && detalle && (
             <div className="tarjeta">
-              <h3>{detalle.nombre}</h3>
+              <h3 ref={titulo} tabIndex={-1}>{detalle.nombre}</h3>
               <p className="tenue">{detalle.zona} · {detalle.municipio ?? 'sin municipio'} · {detalle.poblacion ?? '?'} habitantes</p>
               {editar && (
                 <div className="acciones">
@@ -140,10 +147,10 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
                   <button className="peligro" onClick={() => eliminarComunidad(detalle)}>Eliminar</button>
                 </div>
               )}
-              {detalle.sinCanal && <p className="error">Esta comunidad no tiene ningún contacto activo, autorizado y con canal: no recibirá alertas.</p>}
+              {detalle.sinCanal && <p className="error" role="status">Esta comunidad no tiene ningún contacto activo, autorizado y con canal: no recibirá alertas.</p>}
               <h4>Contactos</h4>
               {(detalle.contactos ?? []).map((ct) => (
-                <EditorContacto key={ct.id} contacto={ct} editar={editar} alCambiar={() => abrir(detalle.id)} />
+                <EditorContacto key={ct.id} contacto={ct} editar={editar} alCambiar={(m) => { abrir(detalle.id); if (m) setAviso(m) }} />
               ))}
               {editar && <EditorContacto comunidadId={detalle.id} editar alCambiar={() => { abrir(detalle.id); cargar() }} />}
             </div>
@@ -151,12 +158,13 @@ export default function Comunidades({ roles }: { roles: Rol[] }) {
           {!form && !detalle && <p className="tenue">Elige una comunidad para ver sus contactos.</p>}
         </div>
       </div>
+      {dialogo}
     </section>
   )
 }
 
 function EditorContacto({ contacto, comunidadId, editar, alCambiar }: {
-  contacto?: Contacto; comunidadId?: string; editar: boolean; alCambiar: () => void
+  contacto?: Contacto; comunidadId?: string; editar: boolean; alCambiar: (mensaje?: string) => void
 }) {
   const [abierto, setAbierto] = useState(false)
   const [nombre, setNombre] = useState(contacto?.nombre ?? '')
@@ -169,6 +177,7 @@ function EditorContacto({ contacto, comunidadId, editar, alCambiar }: {
   const [historial, setHistorial] = useState<HistorialContacto[] | null>(null)
   const [canales, setCanales] = useState<Canal[]>(contacto?.canales ?? [{ tipo: 'Sms', destino: '+591', preferido: true }])
   const [error, setError] = useState('')
+  const { confirmar, dialogo } = useConfirmar()
 
   async function guardar() {
     setError('')
@@ -189,7 +198,7 @@ function EditorContacto({ contacto, comunidadId, editar, alCambiar }: {
   }
 
   async function eliminar() {
-    if (contacto && confirm(`¿Eliminar a ${contacto.nombre}?`)) { await api(`/api/contactos/${contacto.id}`, { method: 'DELETE' }); alCambiar() }
+    if (contacto && await confirmar({ titulo: `¿Eliminar a ${contacto.nombre}?`, texto: 'Se borra el contacto y sus canales. No se puede deshacer.', etiqueta: 'Eliminar contacto', peligro: true })) { await api(`/api/contactos/${contacto.id}`, { method: 'DELETE' }); alCambiar(`Contacto «${contacto.nombre}» eliminado.`) }
   }
 
   async function verHistorial() {
@@ -202,26 +211,31 @@ function EditorContacto({ contacto, comunidadId, editar, alCambiar }: {
   if (!abierto) {
     return contacto ? (
       <div className="contacto">
-        <div>
-          <b>{contacto.nombre}</b>{contacto.cargo && <span className="tenue"> · {contacto.cargo}</span>}
-          {contacto.habilitado
-            ? <span className="etiqueta" style={{ background: '#2e7d32' }}>recibe alertas</span>
-            : <span className="etiqueta gris" title="No está entre los destinatarios disponibles">excluido: {contacto.motivosNoHabilitado.join(', ')}</span>}
-          <div className="tenue">{contacto.canales.map((c) => `${c.preferido ? '★ ' : ''}${c.tipo}: ${c.destino}`).join(' · ')}</div>
-          <div className="tenue">Procedencia: {contacto.procedencia} · {contacto.autorizado
-            ? `Autorizado (${contacto.referenciaAutorizacion}${contacto.fechaAutorizacion ? `, ${soloFecha(contacto.fechaAutorizacion)}` : ''})`
-            : 'Sin autorización'}</div>
+        <div className="contacto-datos">
+          <div className="contacto-cabecera">
+            <b>{contacto.nombre}</b>{contacto.cargo && <span className="tenue">{contacto.cargo}</span>}
+            {contacto.habilitado
+              ? <span className="etiqueta" style={{ background: '#2e7d32' }}>Recibe alertas</span>
+              : <span className="etiqueta gris" title="No está entre los destinatarios disponibles">Excluido: {contacto.motivosNoHabilitado.join(', ')}</span>}
+          </div>
+          <dl className="contacto-lista">
+            <dt>Canales</dt><dd>{contacto.canales.map((c) => `${c.tipo}: ${c.destino}${c.preferido ? ' (preferido)' : ''}`).join(' · ')}</dd>
+            <dt>Procedencia</dt><dd>{contacto.procedencia}</dd>
+            <dt>Autorización</dt><dd>{contacto.autorizado
+              ? `Autorizó (${contacto.referenciaAutorizacion}${contacto.fechaAutorizacion ? `, ${soloFecha(contacto.fechaAutorizacion)}` : ''})`
+              : 'Sin autorización'}</dd>
+          </dl>
           {historial && (
             <ul className="tenue">
               {historial.length === 0 && <li>Sin cambios registrados desde que existe el historial.</li>}
               {historial.map((h) => <li key={h.id}>{fecha(h.fecha)} · {ACCION_CONTACTO[h.accion]} por {h.usuario ?? '?'}{h.cambios ? `: ${h.cambios}` : ''}</li>)}
             </ul>
           )}
-          {error && <p className="error">{error}</p>}
+          {error && <p className="error" role="status">{error}</p>}
         </div>
         <div className="acciones">
           <button onClick={verHistorial}>{historial ? 'Ocultar historial' : 'Historial'}</button>
-          {editar && <><button onClick={() => setAbierto(true)}>Editar</button><button className="peligro" onClick={eliminar}>×</button></>}
+          {editar && <><button onClick={() => setAbierto(true)}>Editar</button><button className="peligro" onClick={eliminar}>Eliminar</button></>}
         </div>
       </div>
     ) : <button onClick={() => setAbierto(true)}>+ Agregar contacto</button>
@@ -253,21 +267,22 @@ function EditorContacto({ contacto, comunidadId, editar, alCambiar }: {
       <b>Canales</b>
       {canales.map((c, i) => (
         <div className="fila" key={i}>
-          <select value={c.tipo} onChange={(e) => cambiarCanal(i, { tipo: e.target.value as TipoCanal })}>
+          <select aria-label={`Tipo del canal ${i + 1}`} value={c.tipo} onChange={(e) => cambiarCanal(i, { tipo: e.target.value as TipoCanal })}>
             {TIPOS.map((t) => <option key={t}>{t}</option>)}
           </select>
-          <input value={c.destino} onChange={(e) => cambiarCanal(i, { destino: e.target.value })}
+          <input aria-label={`Destino del canal ${i + 1}`} value={c.destino} onChange={(e) => cambiarCanal(i, { destino: e.target.value })}
             placeholder={c.tipo === 'Email' ? 'correo@ejemplo.com' : c.tipo === 'Radio' ? 'Emisora / frecuencia' : '+59171234567'} />
           <label className="check"><input type="radio" checked={c.preferido} onChange={() => cambiarCanal(i, { preferido: true })} /> preferido</label>
-          <button onClick={() => setCanales(canales.filter((_, j) => j !== i))}>×</button>
+          <button aria-label={`Quitar canal ${i + 1}`} title="Quitar canal" onClick={() => setCanales(canales.filter((_, j) => j !== i))}>×</button>
         </div>
       ))}
       <button onClick={() => setCanales([...canales, { tipo: 'Email', destino: '', preferido: false }])}>+ Canal</button>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="status">{error}</p>}
       <div className="acciones">
         <button className="primario" onClick={guardar}>Guardar contacto</button>
         <button onClick={() => setAbierto(false)}>Cancelar</button>
       </div>
+      {dialogo}
     </div>
   )
 }

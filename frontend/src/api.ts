@@ -3,6 +3,7 @@ const CLAVE_SESION = 'sat-pirai-sesion'
 
 export type Rol = 'Administrador' | 'Operador' | 'Aprobador' | 'Consulta'
 export type NivelRiesgo = 'Bajo' | 'Medio' | 'Alto' | 'MuyAlto'
+export const ETIQUETA_NIVEL_RIESGO: Record<NivelRiesgo, string> = { Bajo: 'Bajo', Medio: 'Medio', Alto: 'Alto', MuyAlto: 'Muy alto' }
 export type TipoCanal = 'Sms' | 'WhatsApp' | 'Llamada' | 'Email' | 'Radio'
 export type Permiso = 'Lectura' | 'Edicion' | 'Aprobacion' | 'Administracion'
 
@@ -106,6 +107,13 @@ export function leerSesion(): Sesion | null {
     return s && Array.isArray(s.usuario?.roles) && new Date(s.expira) > new Date() ? s : null
   } catch { return null }
 }
+const CLAVE_VENCIDA = 'sat-pirai-sesion-vencida'
+const haySesionGuardada = () => { try { return localStorage.getItem(CLAVE_SESION) !== null } catch { return false } }
+/** Deja dicho que la sesión terminó sola, para avisarlo en el login en vez de devolver a la página pública sin explicación. */
+export function marcarSesionVencida() { try { sessionStorage.setItem(CLAVE_VENCIDA, '1') } catch { /* sin almacenamiento */ } }
+export function sesionVencidaPendiente(): boolean {
+  try { const v = sessionStorage.getItem(CLAVE_VENCIDA) === '1'; sessionStorage.removeItem(CLAVE_VENCIDA); return v } catch { return false }
+}
 export function guardarSesion(s: Sesion | null) {
   try {
     if (s) localStorage.setItem(CLAVE_SESION, JSON.stringify(s))
@@ -121,8 +129,12 @@ export async function api<T>(ruta: string, opciones: RequestInit & { json?: unkn
   let body = resto.body
   if (json !== undefined) { h.set('Content-Type', 'application/json'); body = JSON.stringify(json) }
 
-  const r = await fetch(`${BASE}${ruta}`, { ...resto, headers: h, body })
-  if (r.status === 401 && sesion) { guardarSesion(null); window.location.reload() }
+  let r: Response
+  try { r = await fetch(`${BASE}${ruta}`, { ...resto, headers: h, body }) }
+  catch { throw new ErrorApi(0, 'No se pudo conectar con el servidor. Revise su conexión e intente de nuevo.') }
+  // Un 401 fuera del login es una sesión vencida o inválida. Se mira lo guardado y no solo `sesion`: con el panel abierto más de
+  // 8 horas, `leerSesion()` ya devuelve null (caducó) y la petición sale sin credenciales; antes eso dejaba "Error 401" en todo.
+  if (r.status === 401 && ruta !== '/api/auth/login' && (sesion || haySesionGuardada())) { marcarSesionVencida(); guardarSesion(null); window.location.reload() }
   if (!r.ok) {
     let mensaje = `Error ${r.status}`
     try { const p = await r.json(); mensaje = p.detail ?? p.title ?? mensaje } catch { /* sin cuerpo */ }
