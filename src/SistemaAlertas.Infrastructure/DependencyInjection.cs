@@ -1,3 +1,5 @@
+using SistemaAlertas.Domain.Zonas;
+using SistemaAlertas.Domain.Comunidades;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +27,20 @@ public static class DependencyInjection
         // Npgsql ya mantiene su propio pool de conexiones: por eso no se implementa Object Pool.
         services.AddDbContext<AlertasDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite())
-                   .UseSnakeCaseNamingConvention());
+                   .UseSnakeCaseNamingConvention()
+                   .UseAsyncSeeding(async (context, _, ct) =>
+                   {
+                       var db = (AlertasDbContext)context;
+                       if (configuration["Semilla:DatosDemo"] != "true" || await db.Zonas.AnyAsync(ct)) return;
+                       var connection = (Npgsql.NpgsqlConnection)db.Database.GetDbConnection();
+                       await connection.ReloadTypesAsync(ct);
+                       var area = new NetTopologySuite.IO.WKTReader().Read("POLYGON ((-63.2 -17.8, -63.1 -17.8, -63.1 -17.7, -63.2 -17.8))");
+                       var zona = new Zona("Zona de prueba Pirai", "Datos ficticios", NivelRiesgo.Medio, area,
+                           new OrigenInstitucional("Equipo de pruebas", "DEMO-01", new DateOnly(2026, 1, 1)));
+                       db.Zonas.Add(zona);
+                       db.Comunidades.Add(new Comunidad("Comunidad de prueba", "Santa Cruz", 100, null, zona.Id));
+                       await db.SaveChangesAsync(ct);
+                   }));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AlertasDbContext>());
 
         // Proxy de protección (RF-12): quien pide IRepositorioContactos recibe el proxy, que envuelve al repositorio real.
