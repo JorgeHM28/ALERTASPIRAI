@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>@ViewData["Title"] · SAT Río Piraí</title>
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
+<link rel="stylesheet" href="~/lib/leaflet/leaflet.css"/>
+</head>
+<body>
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+<header class="cabecera">
+<a class="marca" href="/">
+<span class="simbolo">≈</span>
+<span>SAT Río Piraí<small>ALERTAS TEMPRANAS</small>
+</span>
+</a>
+<nav aria-label="Navegación principal">
+<a href="/">Avisos públicos</a>
+@if (User.Identity?.IsAuthenticated == true) {
+ foreach (var seccion in new[] { "avisos", "mensajes", "zonas", "comunidades", "destinatarios", "difusion" }) { <a href="/gestion/@seccion">@seccion</a> }
+ if (User.IsInRole("Administrador")) { <a href="/gestion/usuarios">Usuarios</a> }
+ <a href="/gestion/cuenta">Mi cuenta</a>
+<form method="post" action="/cuenta/salir">@Html.AntiForgeryToken()<button class="secundario">Salir</button>
+</form>
+} else { <a class="boton" href="/cuenta/login">Ingresar</a> }
+</nav>
+</header>
+<main id="contenido" tabindex="-1">
+@if (TempData["Exito"] is string mensaje) { <div class="exito" role="status">@mensaje</div> }
+@RenderBody()</main>
+<footer>Cuenca del río Piraí · Santa Cruz, Bolivia <span>Información para actuar a tiempo.</span>
+</footer>
+<script src="~/lib/leaflet/leaflet.js">
+</script>
+<script src="~/js/site.js" asp-append-version="true" defer>
+</script>
+@await RenderSectionAsync("Scripts", required: false)</body>
+</html>

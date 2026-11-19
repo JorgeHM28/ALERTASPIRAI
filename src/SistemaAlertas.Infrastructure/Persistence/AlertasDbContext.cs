@@ -22,7 +22,7 @@ public class AlertasDbContext(DbContextOptions<AlertasDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.HasPostgresExtension("postgis");
+        modelBuilder.UseCollation("Latin1_General_100_CS_AS");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AlertasDbContext).Assembly);
     }
 

@@ -1,3 +1,4 @@
+using SistemaAlertas.Api.Dtos;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,6 @@ using SistemaAlertas.Domain.Mensajes;
 
 namespace SistemaAlertas.Api.Controllers;
 
-/// <param name="Area">Área de la versión en GeoJSON, para el mapa (RF-06).</param>
-/// <param name="TextoSms">Cómo se leerá en SMS y altavoz: el nivel va en palabras.</param>
-/// <param name="TextoLectura">Texto completo para la radio y la web.</param>
-public sealed record VersionDetalleDto(VersionDetalle Detalle, JsonElement? Area, string TextoSms, string TextoLectura);
 
 /// <summary>
 /// RF-02: versiones del mensaje (Alert, Update, Cancel) preparadas desde un aviso oficial.

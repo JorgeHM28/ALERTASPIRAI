@@ -494,3 +494,9 @@ DESIGN.md
 PRODUCT.md
 landing-*.png
 login-*.png
+
+# Traslados privados y artefactos de entrega
+*.transfer.json
+*.dump
+*.bak
+entrega/

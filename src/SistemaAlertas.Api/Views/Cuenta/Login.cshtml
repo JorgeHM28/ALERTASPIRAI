@@ -1,0 +1,18 @@
+@model SistemaAlertas.Api.Controllers.Web.LoginWeb
+@{ ViewData["Title"] = "Ingresar"; }
+<section class="login">
+<div>
+<p class="ceja">CENTRO DE GESTIÓN</p>
+<h1>Anticiparnos hace<br/>la diferencia.</h1>
+<p>Información oportuna para cuidar a las comunidades de la cuenca del río Piraí.</p>
+</div>
+<form method="post" class="tarjeta">@Html.AntiForgeryToken()<h2>Bienvenido de nuevo</h2>
+<div asp-validation-summary="All" role="alert">
+</div>
+<label>Usuario<input asp-for="NombreUsuario" autocomplete="username" required/>
+</label>
+<label>Contraseña<input asp-for="Contrasena" type="password" autocomplete="current-password" required/>
+</label>
+<button>Entrar al sistema</button>
+</form>
+</section>

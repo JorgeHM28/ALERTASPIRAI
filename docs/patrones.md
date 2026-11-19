@@ -55,7 +55,7 @@ Este patrón sirve para crear *familias* de objetos relacionados que deben ser c
 Oculta las dependencias, impide reemplazar la instancia por un mock en las pruebas unitarias y obliga a gestionar a mano la seguridad entre hilos. El contenedor de DI de ASP.NET Core ya da una única instancia sin esos problemas, por eso se usa la variante vía DI.
 
 ### Object Pool
-Sirve para reutilizar objetos caros de crear. El único recurso caro del sistema son las conexiones a PostgreSQL, y Npgsql ya trae su propio pool de conexiones. Implementar otro pool duplicaría esa funcionalidad.
+Sirve para reutilizar objetos caros de crear. El único recurso caro del sistema son las conexiones a SQL Server, y SqlClient ya trae su propio pool de conexiones. Implementar otro pool duplicaría esa funcionalidad.
 
 # Patrones estructurales en el sistema (Sprint 2)
 
@@ -63,7 +63,7 @@ Mismo criterio: se usan los que resuelven un problema real. Cuatro se usan y tre
 
 | Patrón | Decisión | Dónde | RF |
 |---|---|---|---|
-| Adapter | Se usa | Proveedor SMS (Twilio), XML CAP 1.2, geometrías PostGIS a GeoJSON | RF-04, RF-01, RF-09 |
+| Adapter | Se usa | Proveedor SMS (Twilio), XML CAP 1.2, geometrías SQL Server a GeoJSON | RF-04, RF-01, RF-09 |
 | Facade | Se usa | `ServicioDifusion` (difusión multicanal) y `ModuloCap` (importar, generar, validar CAP) | RF-04, RF-01 |
 | Decorator | Se usa | Reintentos, bitácora y modo prueba sobre `IEmisorSms` | RNF-08, RNF-04 |
 | Proxy (protección) | Se usa | `ProxyRepositorioContactos` enmascara los números | RF-12 |
@@ -87,7 +87,7 @@ Pruebas: `ConversorGeoJsonTests`, `ImportadorCapAdapterTests` (en `ImportadoresT
 ## Patrones que se usan
 
 ### Adapter
-**Problema:** el sistema depende de interfaces ajenas que no controla: el SDK de Twilio, el XML CAP 1.2 del SENAMHI y las geometrías de PostGIS/NetTopologySuite, mientras que el mapa Leaflet espera GeoJSON.
+**Problema:** el sistema depende de interfaces ajenas que no controla: el SDK de Twilio, el XML CAP 1.2 del SENAMHI y las geometrías de SQL Server/NetTopologySuite, mientras que el mapa Leaflet espera GeoJSON.
 **Solución:** una interfaz propia por necesidad (`IEmisorSms`, `IImportadorAviso`, `IConversorGeoJson`) y una clase que traduce hacia la interfaz ajena. `TwilioEmisor` convierte `MensajeSms` en `CreateMessageOptions` y los errores HTTP de Twilio (429, 5xx, 4xx) en un `ResultadoEnvioSms` que dice si el fallo es recuperable.
 **Beneficio:** cambiar de proveedor SMS o de formato no toca los casos de uso. El simulador (`Sms:Modo = Simulador`, por defecto) permite la demo sin credenciales; las de Twilio van en user-secrets.
 

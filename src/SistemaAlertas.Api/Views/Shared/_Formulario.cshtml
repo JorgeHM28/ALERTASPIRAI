@@ -1,0 +1,15 @@
+@model Formulario
+<form method="@Model.Metodo" action="@Model.Accion" class="tarjeta" data-confirmar="@(Model.Boton == "Eliminar" ? "¿Eliminar este registro? Esta operación no se puede deshacer desde la página." : "")">
+@if (Model.Metodo == "post") { @Html.AntiForgeryToken() }<h2>@Model.Titulo</h2>
+@foreach (var campo in Model.Campos) {
+ if (campo.Tipo == "hidden") { <input type="hidden" name="@campo.Nombre" value="@campo.Valor"/>; continue; }
+ <label>@campo.Etiqueta
+ @if (campo.Tipo == "textarea") { <textarea name="@campo.Nombre" required="@campo.Obligatorio" rows="5">@campo.Valor</textarea> }
+ else if (campo.Tipo == "select" || campo.Tipo == "multiple") { <select name="@campo.Nombre" multiple="@(campo.Tipo == "multiple")" required="@campo.Obligatorio">
+ @foreach (var opcion in campo.Opciones ?? []) { <option value="@opcion.Valor" selected="@((campo.Valor ?? "").Split(',').Contains(opcion.Valor))">@opcion.Texto</option> }
+ </select> }
+ else { <input name="@campo.Nombre" type="@campo.Tipo" value="@campo.Valor" required="@campo.Obligatorio" step="any" autocomplete="@(campo.Tipo == "password" ? "new-password" : "off")"/> }
+ </label>
+}
+<button class="@(Model.Boton == "Eliminar" ? "peligro" : "")">@Model.Boton</button>
+</form>

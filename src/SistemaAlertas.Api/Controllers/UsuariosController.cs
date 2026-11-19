@@ -1,3 +1,4 @@
+using SistemaAlertas.Api.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaAlertas.Api.Comun;
@@ -6,8 +7,6 @@ using SistemaAlertas.Domain.Usuarios;
 
 namespace SistemaAlertas.Api.Controllers;
 
-public sealed record SolicitudRestablecerContrasena(string ContrasenaNueva);
-public sealed record RolDto(Rol Rol, IReadOnlyList<Permiso> Permisos);
 
 /// <summary>RF-13: gestión de usuarios, sus roles (uno o varios) y la bitácora de cambios. Solo Administrador.</summary>
 [ApiController]

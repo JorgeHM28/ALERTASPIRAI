@@ -1,0 +1,44 @@
+@model IEnumerable<SistemaAlertas.Application.Publico.AvisoPublico>
+@{ ViewData["Title"] = "Avisos públicos"; }
+<section class="hero">
+<p class="ceja">SANTA CRUZ · BOLIVIA</p>
+<h1>Información clara.<br/>
+<em>Comunidades preparadas.</em>
+</h1>
+<p>Consulta los avisos publicados para la cuenca del río Piraí y sigue las instrucciones oficiales.</p>
+<a class="boton" href="#avisos">Ver avisos</a>
+</section>
+<section id="avisos">
+<div class="titulo">
+<h2>Avisos e instrucciones</h2>
+<span>El nivel siempre se expresa con palabras.</span>
+</div>
+@if (!Model.Any()) { <div class="tarjeta">
+<h3>Sin avisos publicados vigentes</h3>
+<p>La ausencia de avisos no garantiza ausencia de riesgo. Mantente atento a las fuentes oficiales.</p>
+</div> }
+<div class="publicaciones">@foreach (var aviso in Model) {
+<article class="tarjeta">
+<span class="nivel">@aviso.Nivel.Texto</span>
+<h2>@aviso.Titular</h2>
+<p>@aviso.Descripcion</p>
+<h3>Qué hacer</h3>
+<p class="instrucciones">@aviso.Instruccion</p>
+<p>@aviso.DescripcionArea</p>
+<p>@(aviso.Vigente ? "Vigente" : "Cancelado, reemplazado o vencido") · Hasta @aviso.Hasta?.ToString("g")</p>
+@if (aviso.ReemplazadoPor is Guid siguiente) { <a href="/?aviso=@siguiente">Consultar la versión que lo reemplaza</a> }
+@if (aviso.Area is not null) { <div class="mapa" data-geojson="@aviso.Area.Value.GetRawText()" aria-label="Área del aviso">
+</div> }
+<details>
+<summary>Texto para lectura en voz alta</summary>
+<p>@aviso.TextoLectura</p>
+</details>
+<a href="/?aviso=@aviso.Id">Enlace a este aviso</a>
+</article>
+}</div>
+</section>
+<section class="tarjeta">
+<h2>Comprende el nivel</h2>
+<p>Alerta roja · severidad extrema. Alerta naranja · severidad severa. Alerta amarilla · severidad moderada. Alerta verde · severidad menor.</p>
+<p>Consulta siempre las instrucciones específicas de cada aviso.</p>
+</section>

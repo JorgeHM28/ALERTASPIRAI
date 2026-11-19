@@ -22,9 +22,9 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Alertas")
             ?? throw new InvalidOperationException("Falta la cadena de conexión 'Alertas'.");
 
-        // Npgsql ya mantiene su propio pool de conexiones: por eso no se implementa Object Pool.
+        // SqlClient administra el pool de conexiones.
         services.AddDbContext<AlertasDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite())
+            options.UseSqlServer(connectionString, sql => sql.UseNetTopologySuite())
                    .UseSnakeCaseNamingConvention());
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AlertasDbContext>());
 
@@ -41,7 +41,7 @@ public static class DependencyInjection
         services.AddSingleton<IHasherContrasena, HasherContrasena>();
         services.AddSingleton<IGeneradorToken, GeneradorTokenJwt>();
 
-        // Adapter: NetTopologySuite/PostGIS a GeoJSON para el mapa (RF-09).
+        // Adapter: NetTopologySuite/SQL Server a GeoJSON para el mapa (RF-09).
         services.AddSingleton<IConversorGeoJson, ConversorGeoJson>();
 
         // Adapter: SimuladorEmisor o TwilioEmisor según Sms:Modo (RF-04).

@@ -6,7 +6,7 @@ namespace SistemaAlertas.Application.Abstracciones;
 
 /// <summary>
 /// Patrón Adapter (objetivo). La API y el mapa Leaflet hablan GeoJSON (RFC 7946); la base de datos guarda
-/// geometrías PostGIS que EF Core entrega como objetos de NetTopologySuite. Esta interfaz es lo único que conocen
+/// geometrías SQL Server que EF Core entrega como objetos de NetTopologySuite. Esta interfaz es lo único que conocen
 /// los controladores: no dependen del serializador concreto ni de sus opciones.
 /// </summary>
 public interface IConversorGeoJson

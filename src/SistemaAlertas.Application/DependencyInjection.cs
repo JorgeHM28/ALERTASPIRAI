@@ -25,6 +25,9 @@ public static class DependencyInjection
 
         // Scoped: dependen del DbContext, que es una instancia por petición.
         services.AddScoped<ServicioAvisos>();
+        services.AddScoped<Zonas.ServicioZonas>();
+        services.AddScoped<Comunidades.ServicioComunidades>();
+        services.AddScoped<Publico.ServicioPublico>();
         services.AddScoped<ServicioUsuarios>();
         services.AddScoped<ServicioVersiones>();
         services.AddScoped<ServicioDestinos>();

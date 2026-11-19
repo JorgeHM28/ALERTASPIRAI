@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using SistemaAlertas.Domain.Comun;
 
 namespace SistemaAlertas.Api.Comun;
@@ -15,9 +15,9 @@ public sealed class ManejadorErrores(ILogger<ManejadorErrores> logger, IProblemD
         {
             ExcepcionDominio => (StatusCodes.Status400BadRequest, "Datos no válidos"),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "No encontrado"),
-            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } }
+            DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } }
                 => (StatusCodes.Status409Conflict, "Registro duplicado"),
-            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } }
+            DbUpdateException { InnerException: SqlException { Number: 547 } }
                 => (StatusCodes.Status409Conflict, "El registro está en uso"),
             _ => (StatusCodes.Status500InternalServerError, "Error interno")
         };
@@ -33,7 +33,7 @@ public sealed class ManejadorErrores(ILogger<ManejadorErrores> logger, IProblemD
             {
                 Status = estado,
                 Title = titulo,
-                Detail = estado == StatusCodes.Status500InternalServerError ? "Ocurrió un error inesperado." : ex.Message
+                Detail = ex is DbUpdateException ? "La operación entra en conflicto con un registro existente o relacionado." : estado == StatusCodes.Status500InternalServerError ? "Ocurrió un error inesperado." : ex.Message
             }
         });
     }

@@ -7,6 +7,8 @@ namespace SistemaAlertas.Api.Comun;
 /// <summary>Usuario de la petición HTTP: sus permisos salen de los roles del token (RF-13).</summary>
 public sealed class UsuarioActualHttp(IHttpContextAccessor accesor) : IUsuarioActual
 {
+    public Guid Id => accesor.HttpContext!.User.Id();
+
     public bool Autenticado => accesor.HttpContext?.User.Identity?.IsAuthenticated == true;
 
     public bool Tiene(Permiso permiso)

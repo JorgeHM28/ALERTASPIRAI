@@ -1,3 +1,4 @@
+using SistemaAlertas.Api.Dtos;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,8 +13,6 @@ using SistemaAlertas.Domain.Avisos;
 
 namespace SistemaAlertas.Api.Controllers;
 
-public sealed record AvisoDetalleDto(AvisoResumen Resumen, string? Descripcion, string? Instruccion, DateTimeOffset? Vigente,
-    JsonElement? Area, string XmlCap, string? ContenidoOriginal, string? TipoContenidoOriginal, string? HashOriginal);
 
 /// <summary>RF-01: registro de avisos e importación de mensajes CAP 1.2. Lo que se aprueba (RF-11) son sus versiones: ver VersionesController.</summary>
 [ApiController]

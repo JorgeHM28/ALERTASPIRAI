@@ -51,11 +51,10 @@ public class ZonaConfig : IEntityTypeConfiguration<Zona>
         b.ToTable("zonas");
         b.Property(z => z.Nombre).HasMaxLength(150).IsRequired();
         b.Property(z => z.Descripcion).HasMaxLength(1000);
-        b.Property(z => z.Area).HasColumnType("geometry(Geometry, 4326)").IsRequired();
+        b.Property(z => z.Area).HasColumnType("geometry").IsRequired();
         b.Property(z => z.FuenteInstitucional).HasMaxLength(150);
         b.Property(z => z.ReferenciaDocumento).HasMaxLength(200);
         b.HasIndex(z => z.Nombre).IsUnique();
-        b.HasIndex(z => z.Area).HasMethod("gist");
     }
 }
 
@@ -66,7 +65,7 @@ public class ComunidadConfig : IEntityTypeConfiguration<Comunidad>
         b.ToTable("comunidades");
         b.Property(c => c.Nombre).HasMaxLength(150).IsRequired();
         b.Property(c => c.Municipio).HasMaxLength(150);
-        b.Property(c => c.Ubicacion).HasColumnType("geometry(Point, 4326)");
+        b.Property(c => c.Ubicacion).HasColumnType("geometry");
         b.HasOne(c => c.Zona).WithMany().HasForeignKey(c => c.ZonaId).OnDelete(DeleteBehavior.Restrict);
         b.HasMany(c => c.Contactos).WithOne().HasForeignKey(c => c.ComunidadId).OnDelete(DeleteBehavior.Cascade);
         b.Navigation(c => c.Contactos).UsePropertyAccessMode(PropertyAccessMode.Field);
@@ -101,9 +100,9 @@ public class HistorialContactoConfig : IEntityTypeConfiguration<HistorialContact
 {
     public void Configure(EntityTypeBuilder<HistorialContacto> b)
     {
-        b.ToTable("contacto_historial");
+        b.ToTable("contacto_historial", t => t.HasCheckConstraint("CK_contacto_historial_json", "ISJSON([instantanea]) = 1"));
         // Sin clave foránea a contactos ni comunidades: el historial sobrevive a la baja del contacto.
-        b.Property(h => h.Instantanea).HasColumnType("jsonb").IsRequired();
+        b.Property(h => h.Instantanea).HasColumnType("nvarchar(max)").IsRequired();
         b.Property(h => h.Cambios).HasMaxLength(500);
         b.HasOne<Usuario>().WithMany().HasForeignKey(h => h.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(h => new { h.ContactoId, h.CreadoEn });
@@ -123,7 +122,7 @@ public class AvisoConfig : IEntityTypeConfiguration<Aviso>
         b.Property(a => a.Remitente).HasMaxLength(200).IsRequired();
         b.Property(a => a.Evento).HasMaxLength(200).IsRequired();
         b.Property(a => a.Titular).HasMaxLength(300);
-        b.Property(a => a.Area).HasColumnType("geometry(Geometry, 4326)");
+        b.Property(a => a.Area).HasColumnType("geometry");
         b.Property(a => a.XmlCap).IsRequired();
         b.Property(a => a.TipoContenidoOriginal).HasMaxLength(64);
         b.Property(a => a.HashOriginal).HasMaxLength(64);
@@ -132,7 +131,6 @@ public class AvisoConfig : IEntityTypeConfiguration<Aviso>
         b.HasIndex(a => a.AptoParaDifusion);
         b.HasIndex(a => new { a.Remitente, a.IdentificadorCap }).IsUnique();
         b.HasIndex(a => a.Enviado);
-        b.HasIndex(a => a.Area).HasMethod("gist");
         b.HasOne<Usuario>().WithMany().HasForeignKey(a => a.RegistradoPorId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -157,7 +155,7 @@ public class VersionMensajeConfig : IEntityTypeConfiguration<VersionMensaje>
             c.Property(x => x.Instruccion).HasMaxLength(4000);
             c.Property(x => x.DescripcionArea).HasMaxLength(1000);
         });
-        b.Property(v => v.Area).HasColumnType("geometry(Geometry, 4326)");
+        b.Property(v => v.Area).HasColumnType("geometry");
         b.Property(v => v.IdentificadorCap).HasMaxLength(200).IsRequired();
         b.Property(v => v.Remitente).HasMaxLength(200).IsRequired();
         b.Property(v => v.Referencias).HasMaxLength(1000);
@@ -166,7 +164,6 @@ public class VersionMensajeConfig : IEntityTypeConfiguration<VersionMensaje>
         b.HasIndex(v => v.IdentificadorCap).IsUnique();
         b.HasIndex(v => new { v.CadenaId, v.Numero }).IsUnique();
         b.HasIndex(v => v.Estado);
-        b.HasIndex(v => v.Area).HasMethod("gist");
         b.HasOne<Aviso>().WithMany().HasForeignKey(v => v.AvisoId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Aviso>().WithMany().HasForeignKey(v => v.CadenaId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<VersionMensaje>().WithMany().HasForeignKey(v => v.ReferenciaVersionId).OnDelete(DeleteBehavior.Restrict);

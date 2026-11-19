@@ -15,9 +15,11 @@ using SistemaAlertas.Infrastructure.Seguridad;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
+builder.Services.AddControllersWithViews()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddOpenApi(o => o.AddDocumentTransformer<DocumentoApi>());
+builder.Services.AddAntiforgery();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();
 
@@ -30,7 +32,9 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(OpcionesDestinos.
 
 // RF-13: autenticación con JWT y autorización por rol.
 var jwt = builder.Configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()!;
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication(o => { o.DefaultScheme = "Seleccion"; o.DefaultChallengeScheme = "Seleccion"; })
+    .AddPolicyScheme("Seleccion", "API o MVC", o => o.ForwardDefaultSelector = c => c.Request.Path.StartsWithSegments("/api") ? JwtBearerDefaults.AuthenticationScheme : "Web")
+    .AddCookie("Web", o => { o.LoginPath = "/cuenta/login"; o.AccessDeniedPath = "/cuenta/denegado"; o.Cookie.HttpOnly = true; o.Cookie.SameSite = SameSiteMode.Lax; o.ExpireTimeSpan = TimeSpan.FromHours(8); o.SlidingExpiration = false; o.Events.OnValidatePrincipal = SesionWeb.Validar; })
     .AddJwtBearer(o =>
     {
         o.MapInboundClaims = false;
@@ -50,14 +54,11 @@ builder.Services.AddAuthorization(o =>
     foreach (var (politica, roles) in Politicas.Todas())
         o.AddPolicy(politica, p => p.RequireAuthenticatedUser().RequireRole(roles.Select(r => r.ToString())));
 });
-builder.Services.AddHostedService<RevisionVigenciaAvisos>();
-builder.Services.AddHostedService<ProcesadorColaSms>();
-
-builder.Services.AddCors(options =>
-    options.AddPolicy("Frontend", policy => policy
-        .WithOrigins(builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() ?? ["http://localhost:5173"])
-        .AllowAnyHeader()
-        .AllowAnyMethod()));
+if (builder.Configuration.GetValue("Procesos:Activos", true))
+{
+    builder.Services.AddHostedService<RevisionVigenciaAvisos>();
+    builder.Services.AddHostedService<ProcesadorColaSms>();
+}
 
 var app = builder.Build();
 
@@ -65,18 +66,21 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(o => { o.SwaggerEndpoint("/openapi/v1.json", "SAT Río Piraí · v1"); o.DocumentTitle = "API SAT Río Piraí"; });
 }
 
-app.UseCors("Frontend");
+app.UseStaticFiles();
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapControllerRoute("mvc", "{controller=Inicio}/{action=Index}/{id?}");
 
 app.MapGet("/api/salud", async (AlertasDbContext db) =>
     Results.Ok(new { estado = "ok", baseDeDatos = await db.Database.CanConnectAsync() ? "ok" : "sin conexión", hora = DateTimeOffset.UtcNow }));
 
 // Aplica las migraciones y crea el primer Administrador.
-if (app.Configuration.GetValue("BaseDeDatos:MigrarAlIniciar", true))
+if (app.Configuration.GetValue("BaseDeDatos:MigrarAlIniciar", false))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AlertasDbContext>();
@@ -86,6 +90,16 @@ if (app.Configuration.GetValue("BaseDeDatos:MigrarAlIniciar", true))
         await scope.ServiceProvider.GetRequiredService<ServicioUsuarios>().SembrarAdministradorAsync(contrasenaAdmin, default);
 }
 
+if (args.Contains("--sembrar") || args.Contains("--sembrar-demo"))
+{
+    using var scope = app.Services.CreateScope();
+    var clave = app.Configuration["Semilla:ContrasenaAdmin"]
+        ?? throw new InvalidOperationException("Configura Semilla:ContrasenaAdmin mediante user-secrets o variable de entorno.");
+    await scope.ServiceProvider.GetRequiredService<ServicioUsuarios>().SembrarAdministradorAsync(clave, default);
+    if (args.Contains("--sembrar-demo"))
+        await DatosDemostracion.Cargar(scope.ServiceProvider);
+    return;
+}
 app.Run();
 
 public partial class Program;

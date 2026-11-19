@@ -1,0 +1,8 @@
+@model string
+@{ ViewData["Title"] = "No se pudo completar la operación"; }
+<section class="tarjeta">
+<h1>No se pudo completar la operación</h1>
+<p role="alert">@Model</p>
+<button type="button" data-volver>Volver al formulario</button>
+<a href="/gestion/avisos">Ir al panel</a>
+</section>

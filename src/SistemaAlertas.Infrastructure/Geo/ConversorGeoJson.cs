@@ -10,7 +10,7 @@ namespace SistemaAlertas.Infrastructure.Geo;
 
 /// <summary>
 /// Patrón Adapter (adaptador). Adapta NetTopologySuite y su serializador GeoJSON (NetTopologySuite.IO.GeoJSON4STJ,
-/// el adaptado) a <see cref="IConversorGeoJson"/>. Traduce las geometrías PostGIS a GeoJSON para el mapa (RF-09)
+/// el adaptado) a <see cref="IConversorGeoJson"/>. Traduce las geometrías SQL Server a GeoJSON para el mapa (RF-09)
 /// y convierte los errores del serializador en <see cref="ExcepcionDominio"/>.
 /// </summary>
 public sealed class ConversorGeoJson : IConversorGeoJson
