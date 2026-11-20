@@ -1,3 +1,4 @@
+using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,7 +18,30 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => { options.AddDocumentTransformer((document, _, _) =>
+{
+    document.Components ??= new OpenApiComponents();
+    document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+    document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT"
+    };
+    return Task.CompletedTask;
+});
+options.AddOperationTransformer((operation, context, _) =>
+{
+    var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+    if (metadata.OfType<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Any()
+        && !metadata.OfType<Microsoft.AspNetCore.Authorization.IAllowAnonymous>().Any())
+    {
+        operation.Security = [new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
+        }];
+    }
+    return Task.CompletedTask;
+});
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();
 
@@ -65,6 +89,7 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(ui => ui.SwaggerEndpoint("/openapi/v1.json", "Alertas Pirai"));
 }
 
 app.UseCors("Frontend");
