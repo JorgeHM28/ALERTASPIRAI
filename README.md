@@ -17,27 +17,36 @@
 
 ## Entrega de la API desde Visual Studio
 
-1. Instala Visual Studio con soporte para .NET 10 y la carga de trabajo ASP.NET. Abre `SistemaAlertas.sln` y establece `SistemaAlertas.Api` como proyecto de inicio.
-2. Para una base compartida, en el proyecto API abre **Administrar secretos de usuario** y configura la conexión que te entregue el equipo. Ejemplo de formato:
+### Demostración con Supabase
 
-   ```json
-   {
-     "ConnectionStrings": {
-       "Alertas": "Host=HOST;Port=5432;Database=BASE;Username=USUARIO;Password=CLAVE;SSL Mode=VerifyFull"
-     }
-   }
+1. Extrae el ZIP en una carpeta permanente. Instala Visual Studio con soporte para .NET 10 y la carga de trabajo **Desarrollo de ASP.NET y web**.
+2. Abre PowerShell en la carpeta que contiene esta solución y ejecuta:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\Configurar-Demo.ps1
    ```
 
-   La base debe admitir PostGIS y el usuario debe poder aplicar las migraciones. En un servicio administrado, habilita PostGIS en el esquema public o comprueba que sus tipos y funciones sean visibles para la conexión. Como alternativa local, abre Docker Desktop y ejecuta `docker compose up -d db` desde la carpeta de la solución. Así se usa la conexión de desarrollo incluida en `appsettings.json`, sin configurar secretos:
+   Ingresa la clave de demostración enviada por el equipo por separado. Haz esto una sola vez por computadora. Si mueves el proyecto, repite la configuración para actualizar la ruta del certificado. El script guarda la conexión en los secretos de usuario del proyecto API y valida el servidor mediante el certificado incluido en `docs/supabase-ca.crt`.
+3. Abre `SistemaAlertas.sln`, establece **SistemaAlertas.Api** como proyecto de inicio, selecciona **http** y pulsa **F5**. Swagger abre en `http://localhost:5080/swagger`.
+4. En **POST /api/auth/login**, pulsa **Try it out**, envía `{"nombreUsuario":"admin","contrasena":"Admin12345"}` y copia el campo `token`. En **Authorize**, pega el token y confirma. Ejecuta **GET /api/zonas**. La cuenta de Swagger es distinta de la cuenta de conexión a PostgreSQL.
+5. Sigue los casos en [pruebas de CRUD](docs/pruebas/swagger.md) y [errores](docs/pruebas/errores.md). El [PDF de evidencias](docs/Evidencias-Swagger.pdf) muestra las respuestas obtenidas.
 
-   ```
-   Host=localhost;Port=5433;Database=sistema_alertas;Username=alertas;Password=alertas_dev
-   ```
+La base compartida ya contiene las tres migraciones y la zona de prueba con su comunidad. La cuenta del docente tiene permisos de lectura y escritura en las tablas de la aplicación. En este modo se omite la migración al iniciar.
 
-3. Elige el perfil **http** y pulsa **F5**. Al iniciar, la API aplica las migraciones pendientes de `src/SistemaAlertas.Infrastructure/Persistence/Migraciones`: `Sprint1Inicial`, `Sprint1CierreRequisitos` y `Sprint2VersionesMensaje`. No hace falta ejecutar `dotnet ef`. Datos iniciales en Development: el usuario `admin` y, cuando la tabla de zonas está vacía, la zona ficticia «Zona de prueba Pirai» (referencia `DEMO-01`) con la «Comunidad de prueba» vinculada. Visual Studio abre `http://localhost:5080/swagger`. Sin Visual Studio: `dotnet run --project src/SistemaAlertas.Api --launch-profile http`.
-4. En Swagger, ejecuta **POST /api/auth/login** con los campos `nombreUsuario` y `contrasena`. Usa la cuenta de prueba suministrada por el equipo (en desarrollo local, `admin` y `Admin12345`). Copia el campo `token`, pulsa **Authorize** y pega solo su valor. Ejecuta **GET /api/zonas** para consultar los datos.
-5. Para comprobar persistencia, crea una zona adicional, anota el ID devuelto, detén la API y vuelve a pulsar F5. Consulta ese ID en Swagger.
+### Reproducir desde una base local vacía
 
+Usa PostgreSQL con PostGIS. Para iniciar solo la base incluida ejecuta `docker compose up -d db`. Si usaste el script de demostración, elimina las dos configuraciones locales antes de probar contra Docker:
+
+```powershell
+dotnet user-secrets remove "ConnectionStrings:Alertas" --project src/SistemaAlertas.Api
+dotnet user-secrets remove "BaseDeDatos:MigrarAlIniciar" --project src/SistemaAlertas.Api
+```
+
+El perfil de desarrollo usa la conexión de Docker incluida y aplica automáticamente `Sprint1Inicial`, `Sprint1CierreRequisitos` y `Sprint2VersionesMensaje`. Crea el administrador inicial y, cuando la tabla de zonas está vacía, una zona y una comunidad de prueba. Para otro servidor configura tu propia cadena. Ejemplo sin credenciales reales:
+
+```text
+Host=HOST;Port=5432;Database=BASE;Username=USUARIO;Password=CLAVE;SSL Mode=VerifyFull;Search Path=public,extensions
+```
 
 Sistema de alertas de inundación basado en CAP 1.2 (OASIS). Proyecto de Sistemas I (Scrum).
 

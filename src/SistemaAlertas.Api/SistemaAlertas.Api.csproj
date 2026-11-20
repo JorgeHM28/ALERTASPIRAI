@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>15945f6d-1ee1-4af0-bd08-7774759e5683</UserSecretsId>
+    <UserSecretsId>AlertasPirai-Entrega-Swagger</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
