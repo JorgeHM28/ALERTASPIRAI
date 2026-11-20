@@ -1,5 +1,44 @@
 # Sistema de Alertas Tempranas · Río Piraí
 
+**Proyecto:** Alertas Piraí, Sistema de Alertas Tempranas de inundación del río Piraí. API ASP.NET Core sobre **.NET 10** con PostgreSQL + PostGIS.
+
+**Rama de la entrega:** [`entrega-api-swagger`](https://github.com/JorgeHM28/ALERTASPIRAI/tree/entrega-api-swagger)
+
+## Equipo
+
+| Integrante | Usuario de GitHub |
+|---|---|
+| César Bayes | [`rodetias123-coder`](https://github.com/rodetias123-coder) |
+| Jorge Herbas | [`JorgeHM28`](https://github.com/JorgeHM28) |
+| Miguel Mendoza | [`mangelomendozac-prog`](https://github.com/mangelomendozac-prog) |
+| Pablo Quiroz | [`pabloquirozxd`](https://github.com/pabloquirozxd) |
+
+**Acceso del docente:** el repositorio es privado. Jorge Herbas (`JorgeHM28`), dueño del repositorio, gestiona el acceso del docente.
+
+## Entrega de la API desde Visual Studio
+
+1. Instala Visual Studio con soporte para .NET 10 y la carga de trabajo ASP.NET. Abre `SistemaAlertas.sln` y establece `SistemaAlertas.Api` como proyecto de inicio.
+2. Para una base compartida, en el proyecto API abre **Administrar secretos de usuario** y configura la conexión que te entregue el equipo. Ejemplo de formato:
+
+   ```json
+   {
+     "ConnectionStrings": {
+       "Alertas": "Host=HOST;Port=5432;Database=BASE;Username=USUARIO;Password=CLAVE;SSL Mode=VerifyFull"
+     }
+   }
+   ```
+
+   La base debe admitir PostGIS y el usuario debe poder aplicar las migraciones. En un servicio administrado, habilita PostGIS en el esquema public o comprueba que sus tipos y funciones sean visibles para la conexión. Como alternativa local, abre Docker Desktop y ejecuta `docker compose up -d db` desde la carpeta de la solución. Así se usa la conexión de desarrollo incluida en `appsettings.json`, sin configurar secretos:
+
+   ```
+   Host=localhost;Port=5433;Database=sistema_alertas;Username=alertas;Password=alertas_dev
+   ```
+
+3. Elige el perfil **http** y pulsa **F5**. Al iniciar, la API aplica las migraciones pendientes de `src/SistemaAlertas.Infrastructure/Persistence/Migraciones`: `Sprint1Inicial`, `Sprint1CierreRequisitos` y `Sprint2VersionesMensaje`. No hace falta ejecutar `dotnet ef`. Datos iniciales en Development: el usuario `admin` y, cuando la tabla de zonas está vacía, la zona ficticia «Zona de prueba Pirai» (referencia `DEMO-01`) con la «Comunidad de prueba» vinculada. Visual Studio abre `http://localhost:5080/swagger`. Sin Visual Studio: `dotnet run --project src/SistemaAlertas.Api --launch-profile http`.
+4. En Swagger, ejecuta **POST /api/auth/login** con los campos `nombreUsuario` y `contrasena`. Usa la cuenta de prueba suministrada por el equipo (en desarrollo local, `admin` y `Admin12345`). Copia el campo `token`, pulsa **Authorize** y pega solo su valor. Ejecuta **GET /api/zonas** para consultar los datos.
+5. Para comprobar persistencia, crea una zona adicional, anota el ID devuelto, detén la API y vuelve a pulsar F5. Consulta ese ID en Swagger.
+
+
 Sistema de alertas de inundación basado en CAP 1.2 (OASIS). Proyecto de Sistemas I (Scrum).
 
 ## Stack
@@ -44,7 +83,7 @@ Para probar rápido en la web:
 
 ## Pruebas
 
-- **Unitarias:** `dotnet test` ejecuta 39 pruebas del Builder, los importadores, la fábrica y las reglas de dominio.
+- **Unitarias:** `dotnet test` ejecuta las pruebas xUnit del dominio, la aplicación y los patrones (144 en esta entrega).
 - **API con Postman:** la colección `postman/collections/SAT Rio Pirai` tiene una carpeta por requisito (RF-13, RF-09, RF-12 y RF-01), con 32 peticiones y 50 tests. Incluye los casos de error y de permisos, por ejemplo "Consulta no puede crear zonas → 403".
   - En la app de Postman, abre esta carpeta del repo (Local View) o impórtala con **Import**, elige el entorno **Local** y ejecuta la colección completa con **Run**. El login guarda el token solo.
   - Por consola: `postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml`
