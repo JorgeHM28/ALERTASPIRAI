@@ -18,11 +18,14 @@ public sealed record ResultadoImportacionZonas(int Creadas, int Actualizadas, IR
 
 /// <summary>RF-09: zonas de riesgo en GeoJSON.</summary>
 [ApiController]
+[ProducesResponseType(401)]
+[ProducesResponseType(403)]
 [Route("api/zonas")]
 [Authorize(Politicas.Lectura)]
 public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ZonaDto>), 200)]
     public async Task<IEnumerable<ZonaDto>> Listar(CancellationToken ct)
     {
         var zonas = await db.Zonas.AsNoTracking().OrderBy(z => z.Nombre).ToListAsync(ct);
@@ -40,6 +43,8 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ZonaDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<ActionResult<ZonaDto>> Obtener(Guid id, CancellationToken ct)
     {
         var zona = await db.Zonas.AsNoTracking().FirstOrDefaultAsync(z => z.Id == id, ct);
@@ -48,6 +53,8 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(ZonaDto), 201)]
+    [ProducesResponseType(400)]
     [Authorize(Politicas.Edicion)]
     public async Task<ActionResult<ZonaDto>> Crear(GuardarZona dto, CancellationToken ct)
     {
@@ -63,6 +70,9 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
     }
 
     [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(ZonaDto), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
     [Authorize(Politicas.Edicion)]
     public async Task<ZonaDto> Actualizar(Guid id, GuardarZona dto, CancellationToken ct)
     {
@@ -75,6 +85,9 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
     }
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
     [Authorize(Politicas.Edicion)]
     public async Task<IActionResult> Eliminar(Guid id, CancellationToken ct)
     {
