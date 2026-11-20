@@ -1,0 +1,51 @@
+$kind: http-request
+name: 'Update oficial con referencia inexistente'
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 2400
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+      <identifier>SENAMHI-S2-{{$timestamp}}-X</identifier>
+      <sender>avisos@senamhi.gob.bo</sender>
+      <sent>{{capEfectivo}}</sent>
+      <status>Actual</status>
+      <msgType>Update</msgType>
+      <scope>Public</scope>
+      <references>avisos@senamhi.gob.bo,NO-EXISTE,{{capEfectivo}}</references>
+      <info>
+        <language>es-BO</language>
+        <category>Met</category>
+        <event>Crecida del río Piraí</event>
+        <urgency>Expected</urgency>
+        <severity>Severe</severity>
+        <certainty>Likely</certainty>
+        <effective>{{capEfectivo}}</effective>
+        <expires>{{capExpiraFutura}}</expires>
+        <senderName>SENAMHI Santa Cruz</senderName>
+        <headline>Crecida del río Piraí</headline>
+        <description>Precipitaciones de 60 a 90 mm en la cuenca alta.</description>
+        <instruction>Alejarse de las riberas y preparar mochila de emergencia.</instruction>
+        <area>
+          <areaDesc>Ribera Piraí - Porongo</areaDesc>
+          <polygon>-17.77,-63.255 -17.77,-63.215 -17.825,-63.215 -17.825,-63.255 -17.77,-63.255</polygon>
+        </area>
+      </info>
+    </alert>
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201: el documento oficial se registra igual', () => pm.response.to.have.status(201));
+      const a = pm.response.json();
+      pm.test('no tiene cadena ni se puede preparar', () => {
+        pm.expect(a.cadenaId).to.be.null;
+        pm.expect(a.preparable).to.be.false;
+        pm.expect(a.motivosNoPreparable.join(' ')).to.include('Referencia inexistente');
+      });
+      pm.collectionVariables.set('senamhiHuerfanoId', a.id);

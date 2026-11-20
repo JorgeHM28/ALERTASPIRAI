@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/avisos?vencido=true&limite=500'
+order: 3500
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const avisos = pm.response.json();
+      pm.test('incluye el vencido y solo vencidos', () => {
+        pm.expect(avisos.map(a => a.id)).to.include(pm.collectionVariables.get('avisoVencidoId'));
+        avisos.forEach(a => pm.expect(a.aptoParaDifusion).to.be.false);
+      });

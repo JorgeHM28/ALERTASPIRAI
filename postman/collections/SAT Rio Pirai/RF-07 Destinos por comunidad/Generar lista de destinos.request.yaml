@@ -1,0 +1,31 @@
+$kind: http-request
+name: 'Generar lista de destinos'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}/destinos'
+order: 600
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "canales": ["Sms", "WhatsApp", "Radio"] }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const l = pm.response.json();
+      pm.test('queda guardada', () => pm.expect(l.guardada).to.be.true);
+      pm.test('ningún destino se repite por canal', () => {
+        const claves = l.destinos.map(d => d.canal + '|' + d.direccion);
+        pm.expect(new Set(claves).size).to.eql(claves.length);
+      });
+      pm.test('solo los canales elegidos', () => l.destinos.forEach(d => pm.expect(['Sms', 'WhatsApp', 'Radio']).to.include(d.canal)));
+      pm.test('la comunidad sin canal figura como pendiente', () => {
+        const p = l.pendientes.find(x => x.comunidadId === pm.collectionVariables.get('comunidadPendienteId'));
+        pm.expect(p).to.exist;
+        pm.expect(p.motivo).to.include('Sin contactos');
+      });
+      pm.test('la comunidad pendiente no aporta destinos', () =>
+        pm.expect(l.destinos.map(d => d.comunidadId)).to.not.include(pm.collectionVariables.get('comunidadPendienteId')));

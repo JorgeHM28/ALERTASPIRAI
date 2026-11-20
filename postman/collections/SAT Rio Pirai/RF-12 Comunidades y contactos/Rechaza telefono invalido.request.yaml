@@ -1,0 +1,24 @@
+$kind: http-request
+name: 'Rechaza teléfono inválido'
+method: PUT
+url: '{{baseUrl}}/api/contactos/{{contactoId}}'
+order: 4000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Juan Pérez",
+      "activo": true,
+      "procedencia": "Asamblea comunal",
+      "autorizado": true,
+      "referenciaAutorizacion": "Acta de asamblea 14/2026",
+      "canales": [ { "tipo": "WhatsApp", "destino": "71234567", "preferido": true } ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));

@@ -1,0 +1,17 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/destinatarios?zonaIds={{zonaId}}'
+order: 5400
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const r = pm.response.json();
+      const sin = r.comunidadesSinCanal.find(x => x.comunidadId === pm.collectionVariables.get('comunidadSinCanalId'));
+      pm.test('la comunidad sin canal se lista con el motivo', () => {
+        pm.expect(sin).to.exist;
+        pm.expect(sin.motivo).to.be.a('string');
+      });
+      pm.test('la comunidad con un contacto habilitado no está en esa lista', () =>
+        pm.expect(r.comunidadesSinCanal.map(x => x.comunidadId)).to.not.include(pm.collectionVariables.get('comunidadId')));

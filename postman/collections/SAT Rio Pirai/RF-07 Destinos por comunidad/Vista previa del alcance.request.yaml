@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'Vista previa del alcance'
+method: GET
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}/destinos/previa'
+order: 500
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('no se guarda', () => pm.expect(pm.response.json().guardada).to.be.false);

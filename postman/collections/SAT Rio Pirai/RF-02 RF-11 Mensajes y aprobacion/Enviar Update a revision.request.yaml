@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'Enviar Update a revision'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}/enviar-revision'
+order: 1700
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const x = pm.response.json().detalle.xmlCap;
+      pm.test('el XML es un Update con references', () => {
+        pm.expect(x).to.include('<msgType>Update</msgType>');
+        pm.expect(x).to.include('<references>');
+      });

@@ -1,0 +1,29 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/zonas/{{zonaPruebaId}}'
+order: 2400
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Zona de prueba editada {{$timestamp}}",
+      "nivelRiesgo": "Alto",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.50,-17.50],[-63.48,-17.50],[-63.48,-17.52],[-63.50,-17.52],[-63.50,-17.50]]]},
+      "fuenteInstitucional": "Gobernación de Santa Cruz",
+      "referenciaDocumento": "Resolución SDGR 12/2026",
+      "fechaDocumento": "2026-10-20"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const z = pm.response.json();
+      pm.test('reemplaza los tres datos institucionales', () => {
+        pm.expect(z.fuenteInstitucional).to.eql('Gobernación de Santa Cruz');
+        pm.expect(z.referenciaDocumento).to.eql('Resolución SDGR 12/2026');
+        pm.expect(z.fechaDocumento).to.eql('2026-10-20');
+      });

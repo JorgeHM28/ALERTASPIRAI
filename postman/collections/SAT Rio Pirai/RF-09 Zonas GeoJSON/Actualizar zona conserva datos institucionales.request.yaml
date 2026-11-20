@@ -1,0 +1,31 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/zonas/{{zonaPruebaId}}'
+order: 2300
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Zona de prueba editada {{$timestamp}}",
+      "nivelRiesgo": "Alto",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.50,-17.50],[-63.48,-17.50],[-63.48,-17.52],[-63.50,-17.52],[-63.50,-17.50]]]}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const z = pm.response.json();
+      pm.test('cambió nombre, nivel y geometría', () => {
+        pm.expect(z.nombre).to.include('editada');
+        pm.expect(z.nivelRiesgo).to.eql('Alto');
+      });
+      pm.test('conserva los datos institucionales aunque no se enviaron', () => {
+        pm.expect(z.fuenteInstitucional).to.eql('SENAMHI Santa Cruz');
+        pm.expect(z.referenciaDocumento).to.eql('Informe técnico IT-031/2026');
+        pm.expect(z.fechaDocumento).to.eql('2026-09-30');
+      });

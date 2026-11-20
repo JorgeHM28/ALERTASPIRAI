@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/zonas'
+order: 12500
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenConsulta}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 401 aunque el token no haya vencido', () => pm.response.to.have.status(401));

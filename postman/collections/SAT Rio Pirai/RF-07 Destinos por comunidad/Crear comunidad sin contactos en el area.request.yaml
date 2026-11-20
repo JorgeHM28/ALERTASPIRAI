@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Crear comunidad sin contactos en el area'
+method: POST
+url: '{{baseUrl}}/api/comunidades'
+order: 100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "nombre": "Comunidad sin canal S2 {{$timestamp}}", "municipio": "Porongo", "zonaId": "{{zonaId}}" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('comunidadPendienteId', pm.response.json().id);

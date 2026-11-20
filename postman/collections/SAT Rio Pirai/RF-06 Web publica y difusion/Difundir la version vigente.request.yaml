@@ -1,0 +1,13 @@
+$kind: http-request
+name: 'Difundir la version vigente'
+method: POST
+url: '{{baseUrl}}/api/difusion/{{versionUpdateId}}'
+order: 400
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const r = pm.response.json();
+      pm.test('se publica en la web con enlace a la versión', () => pm.expect(r.urlWeb).to.include(pm.collectionVariables.get('versionUpdateId')));
+      pm.test('crea las tareas de radio, altavoz y redes', () => pm.expect(r.tareasManuales).to.have.length(3));

@@ -1,0 +1,24 @@
+$kind: http-request
+name: 'Bitácora de asignaciones'
+method: GET
+url: '{{baseUrl}}/api/usuarios/{{usuarioMultiId}}/bitacora'
+order: 11300
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const b = pm.response.json();
+      const hay = (accion, rol) => b.find(r => r.accion === accion && r.rol === rol);
+      pm.test('registra el alta y cada rol asignado', () => {
+        pm.expect(b.find(r => r.accion === 'Alta')).to.exist;
+        pm.expect(hay('RolAsignado', 'Operador')).to.exist;
+        pm.expect(hay('RolAsignado', 'Aprobador')).to.exist;
+      });
+      pm.test('registra la revocación del rol Operador', () => pm.expect(hay('RolRevocado', 'Operador')).to.exist);
+      pm.test('cada registro tiene administrador responsable y fecha', () => b.forEach(r => {
+        pm.expect(r.administradorId).to.eql(pm.collectionVariables.get('adminId'));
+        pm.expect(r.administrador).to.eql(pm.environment.get('adminUsuario'));
+        pm.expect(new Date(r.fecha).getTime()).to.be.above(0);
+      }));

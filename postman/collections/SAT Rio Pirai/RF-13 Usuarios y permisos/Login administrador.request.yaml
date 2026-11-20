@@ -1,0 +1,29 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/auth/login'
+order: 1000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "{{adminUsuario}}",
+      "contrasena": "{{adminContrasena}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const r = pm.response.json();
+      pm.test('devuelve un token y el rol Administrador con todos sus permisos', () => {
+        pm.expect(r.token).to.be.a('string');
+        pm.expect(r.usuario.roles).to.include('Administrador');
+        pm.expect(r.usuario.permisos).to.include.members(['Lectura', 'Edicion', 'Administracion']);
+      });
+      pm.collectionVariables.set('token', r.token);

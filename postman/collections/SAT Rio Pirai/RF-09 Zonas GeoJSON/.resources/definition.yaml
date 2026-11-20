@@ -1,0 +1,3 @@
+$kind: collection
+description: 'Zonas de riesgo como polígonos WGS84 en PostGIS. Importación y exportación GeoJSON.'
+order: 2000

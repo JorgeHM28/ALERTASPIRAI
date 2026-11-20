@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Rechaza un canal no aprobado'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}/destinos'
+order: 300
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "canales": ["Email"] }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('dice que el canal no está aprobado', () => pm.expect(pm.response.json().detail).to.include('no aprobado'));

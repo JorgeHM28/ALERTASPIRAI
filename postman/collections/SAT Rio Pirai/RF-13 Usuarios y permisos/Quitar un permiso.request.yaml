@@ -1,0 +1,22 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/usuarios/{{usuarioMultiId}}'
+order: 11100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreCompleto": "Operadora y aprobadora",
+      "email": "{{usuarioMulti}}@sat-pirai.local",
+      "roles": ["Aprobador"],
+      "activo": true
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('queda solo como Aprobador', () => pm.expect(pm.response.json().roles).to.eql(['Aprobador']));

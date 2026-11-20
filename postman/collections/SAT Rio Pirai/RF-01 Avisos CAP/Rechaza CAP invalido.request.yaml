@@ -1,0 +1,29 @@
+$kind: http-request
+name: 'Rechaza CAP inválido'
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 4000
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+      <identifier>con espacios</identifier>
+      <status>Actual</status>
+      <msgType>Alert</msgType>
+      <scope>Public</scope>
+    </alert>
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+
+      const detalle = pm.response.json().detail;
+      pm.test('el Builder lista todos los errores', () => {
+        pm.expect(detalle).to.include('identifier');
+        pm.expect(detalle).to.include('sender');
+        pm.expect(detalle).to.include('info');
+      });

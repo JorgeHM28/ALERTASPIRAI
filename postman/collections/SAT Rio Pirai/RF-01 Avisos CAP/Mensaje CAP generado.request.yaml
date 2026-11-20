@@ -1,0 +1,16 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/avisos/{{avisoManualId}}/cap'
+order: 6000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const xml = pm.response.text();
+      pm.test('es CAP 1.2 válido con el área de la zona', () => {
+        pm.expect(xml).to.include('urn:oasis:names:tc:emergency:cap:1.2');
+        pm.expect(xml).to.include('<polygon>');
+        pm.expect(xml).to.match(/<sent>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-04:00<\/sent>/);
+      });

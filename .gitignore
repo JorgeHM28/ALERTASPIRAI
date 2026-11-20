@@ -485,3 +485,12 @@ $RECYCLE.BIN/
 node_modules/
 frontend/dist/
 .env
+
+# Herramientas de diseño locales (skills, MCP y sus informes) y capturas de prueba: no son parte del proyecto
+.claude/
+.impeccable/
+.mcp.json
+DESIGN.md
+PRODUCT.md
+landing-*.png
+login-*.png

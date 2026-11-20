@@ -1,0 +1,16 @@
+$kind: http-request
+name: 'Bitácora registra la desactivación'
+method: GET
+url: '{{baseUrl}}/api/usuarios/{{usuarioConsultaId}}/bitacora'
+order: 14000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json().find(r => r.accion === 'Desactivado');
+      pm.test('la desactivación quedó con su administrador y fecha', () => {
+        pm.expect(d).to.exist;
+        pm.expect(d.administrador).to.eql(pm.environment.get('adminUsuario'));
+        pm.expect(d.fecha).to.be.a('string');
+      });

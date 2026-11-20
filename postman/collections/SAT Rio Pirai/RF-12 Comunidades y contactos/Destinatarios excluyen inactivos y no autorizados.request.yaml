@@ -1,0 +1,24 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/destinatarios?zonaIds={{zonaId}}'
+order: 5100
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      const r = pm.response.json();
+      const ids = r.destinatarios.map(d => d.contactoId);
+      pm.test('el contacto activo y autorizado es destinatario', () => pm.expect(ids).to.include(pm.collectionVariables.get('contactoId')));
+      pm.test('el no autorizado y el inactivo no son destinatarios', () => {
+        pm.expect(ids).to.not.include(pm.collectionVariables.get('contactoNoAutorizadoId'));
+        pm.expect(ids).to.not.include(pm.collectionVariables.get('contactoInactivoId'));
+      });
+      pm.test('los excluidos aparecen con su motivo', () => {
+        const noAut = r.excluidos.find(x => x.contactoId === pm.collectionVariables.get('contactoNoAutorizadoId'));
+        const inact = r.excluidos.find(x => x.contactoId === pm.collectionVariables.get('contactoInactivoId'));
+        pm.expect(noAut.motivos).to.include('sin autorización');
+        pm.expect(inact.motivos).to.include('inactivo');
+      });
+      pm.test('todos los destinatarios tienen al menos un canal', () => r.destinatarios.forEach(d => pm.expect(d.canales).to.not.be.empty));

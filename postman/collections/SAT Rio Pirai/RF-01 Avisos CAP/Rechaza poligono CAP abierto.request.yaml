@@ -1,0 +1,23 @@
+$kind: http-request
+name: 'Rechaza polígono CAP abierto'
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 4300
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "identifier": "COED-POLIGONO-{{$timestamp}}",
+      "sender": "coed@santacruz.gob.bo",
+      "info": [ { "event": "Crecida", "urgency": "Expected", "severity": "Severe", "certainty": "Likely",
+                  "area": [ { "areaDesc": "Mal cerrado", "polygon": ["-17.7,-63.2 -17.7,-63.1 -17.8,-63.1 -17.8,-63.3"] } ] } ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('señala el polígono', () => pm.expect(pm.response.json().detail).to.include('polygon'));

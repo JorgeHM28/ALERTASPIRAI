@@ -1,0 +1,26 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/zonas'
+order: 11200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "",
+      "nivelRiesgo": "Bajo",
+      "geometria": {"type": "Polygon", "coordinates": [[[-63.2,-17.7],[-63.1,-17.7],[-63.1,-17.8],[-63.2,-17.7]]]}
+    }
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenMulti}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // Mismo token de antes: los roles se leen de la base en cada petición.
+      pm.test('responde 403 con el token que antes podía editar', () => pm.response.to.have.status(403));

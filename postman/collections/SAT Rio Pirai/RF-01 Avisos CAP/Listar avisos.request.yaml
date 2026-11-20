@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/avisos'
+order: 7000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+
+      pm.test('hay avisos de los tres orígenes', () => {
+        const formatos = pm.response.json().map(a => a.formato);
+        pm.expect(formatos).to.include.members(['CapXml', 'CapJson', 'Manual']);
+      });

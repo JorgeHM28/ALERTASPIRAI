@@ -1,0 +1,48 @@
+$kind: http-request
+name: 'Importar Update oficial del SENAMHI'
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 2200
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+      <identifier>SENAMHI-S2-{{$timestamp}}-U</identifier>
+      <sender>avisos@senamhi.gob.bo</sender>
+      <sent>{{capEfectivo}}</sent>
+      <status>Actual</status>
+      <msgType>Update</msgType>
+      <scope>Public</scope>
+      <references>avisos@senamhi.gob.bo,{{senamhiAlertIdentificador}},{{capEfectivo}}</references>
+      <info>
+        <language>es-BO</language>
+        <category>Met</category>
+        <event>Crecida del río Piraí</event>
+        <urgency>Expected</urgency>
+        <severity>Extreme</severity>
+        <certainty>Likely</certainty>
+        <effective>{{capEfectivo}}</effective>
+        <expires>{{capExpiraFutura}}</expires>
+        <senderName>SENAMHI Santa Cruz</senderName>
+        <headline>Crecida del río Piraí</headline>
+        <description>Precipitaciones de 60 a 90 mm en la cuenca alta.</description>
+        <instruction>Alejarse de las riberas y preparar mochila de emergencia.</instruction>
+        <area>
+          <areaDesc>Ribera Piraí - Porongo</areaDesc>
+          <polygon>-17.77,-63.255 -17.77,-63.215 -17.825,-63.215 -17.825,-63.255 -17.77,-63.255</polygon>
+        </area>
+      </info>
+    </alert>
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const a = pm.response.json();
+      pm.test('se engancha a la cadena del Alert oficial', () => pm.expect(a.cadenaId).to.eql(pm.collectionVariables.get('senamhiAlertId')));
+      pm.test('es preparable', () => pm.expect(a.preparable).to.be.true);
+      pm.collectionVariables.set('senamhiUpdateId', a.id);

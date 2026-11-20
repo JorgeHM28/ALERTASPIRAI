@@ -1,0 +1,22 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/usuarios/{{usuarioConsultaId}}'
+order: 12000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreCompleto": "Usuario de solo lectura",
+      "email": "{{usuarioConsulta}}@sat-pirai.local",
+      "roles": ["Consulta"],
+      "activo": false
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('queda inactivo', () => pm.expect(pm.response.json().activo).to.be.false);

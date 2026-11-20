@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'Aprobar la version del SENAMHI'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionSenamhiId}}/aprobar'
+order: 2170
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('queda aprobada', () => pm.expect(pm.response.json().detalle.resumen.estado).to.eql('Aprobada'));

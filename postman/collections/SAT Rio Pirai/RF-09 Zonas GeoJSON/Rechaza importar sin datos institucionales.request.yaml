@@ -1,0 +1,26 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/zonas/importar'
+order: 1500
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": { "nombre": "Zona sin origen {{$timestamp}}" },
+          "geometry": { "type": "Polygon", "coordinates": [[[-63.40,-17.60],[-63.39,-17.60],[-63.39,-17.61],[-63.40,-17.61],[-63.40,-17.60]]] }
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica que faltan los datos institucionales', () => pm.expect(pm.response.json().detail).to.include('institucionales'));

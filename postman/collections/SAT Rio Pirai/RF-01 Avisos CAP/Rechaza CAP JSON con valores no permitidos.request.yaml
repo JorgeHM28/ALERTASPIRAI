@@ -1,0 +1,21 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 4100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "identifier": "COED-MAL-{{$timestamp}}",
+      "sender": "coed@santacruz.gob.bo",
+      "info": [ { "event": "Crecida", "urgency": "MuyAlta", "severity": "Severe", "certainty": "Likely" } ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica el error de formato', () => pm.expect(pm.response.json().detail).to.include('JSON CAP no es válido'));

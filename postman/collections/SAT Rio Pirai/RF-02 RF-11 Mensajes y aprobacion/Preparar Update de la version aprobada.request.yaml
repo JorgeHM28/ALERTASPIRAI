@@ -1,0 +1,27 @@
+$kind: http-request
+name: 'Preparar Update de la version aprobada'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionAprobadaId}}/update'
+order: 1500
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "titular": "Crecida extrema en Porongo: sigue subiendo" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const d = pm.response.json().detalle;
+      pm.test('es un Update en borrador', () => {
+        pm.expect(d.resumen.tipo).to.eql('Update');
+        pm.expect(d.resumen.estado).to.eql('Borrador');
+      });
+      pm.test('referencia a la versión aprobada', () => {
+        pm.expect(d.referenciaVersionId).to.eql(pm.collectionVariables.get('versionAprobadaId'));
+        pm.expect(d.referencias).to.include(pm.collectionVariables.get('versionAprobadaIdentificador'));
+      });
+      pm.collectionVariables.set('versionUpdateId', d.resumen.id);

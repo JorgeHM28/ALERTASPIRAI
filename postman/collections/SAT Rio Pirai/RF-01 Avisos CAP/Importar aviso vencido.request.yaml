@@ -1,0 +1,46 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 3300
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+      <identifier>SENAMHI-VENCIDO-{{$timestamp}}</identifier>
+      <sender>avisos@senamhi.gob.bo</sender>
+      <sent>2026-01-10T08:00:00-04:00</sent>
+      <status>Actual</status>
+      <msgType>Alert</msgType>
+      <scope>Public</scope>
+      <info>
+        <category>Met</category>
+        <event>Crecida del río Piraí</event>
+        <urgency>Expected</urgency>
+        <severity>Severe</severity>
+        <certainty>Likely</certainty>
+        <effective>2026-01-10T08:00:00-04:00</effective>
+        <expires>2026-01-11T08:00:00-04:00</expires>
+        <headline>Alerta de enero (ya vencida)</headline>
+        <instruction>Alejarse de las riberas.</instruction>
+        <area>
+          <areaDesc>Ribera Piraí - Porongo</areaDesc>
+          <polygon>-17.77,-63.255 -17.77,-63.215 -17.825,-63.215 -17.825,-63.255 -17.77,-63.255</polygon>
+        </area>
+      </info>
+    </alert>
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const a = pm.response.json();
+      pm.test('queda registrado como vencido y no apto', () => {
+        pm.expect(a.vencido).to.be.true;
+        pm.expect(a.incompleto).to.be.false;
+        pm.expect(a.aptoParaDifusion).to.be.false;
+        pm.expect(a.motivosNoApto.join(' ')).to.include('Vencido');
+      });
+      pm.collectionVariables.set('avisoVencidoId', a.id);

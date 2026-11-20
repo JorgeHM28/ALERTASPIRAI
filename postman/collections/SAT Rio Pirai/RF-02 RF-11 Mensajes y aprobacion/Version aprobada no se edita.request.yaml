@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Version aprobada no se edita'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionAprobadaId}}'
+order: 1200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "titular": "cambio" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('dice que se corrige con otra versión', () => pm.expect(pm.response.json().detail).to.include('aprobada no se puede editar'));

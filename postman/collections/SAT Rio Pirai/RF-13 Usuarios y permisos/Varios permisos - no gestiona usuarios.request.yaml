@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'Varios permisos: no gestiona usuarios'
+method: GET
+url: '{{baseUrl}}/api/usuarios'
+order: 6500
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenMulti}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 403: ningún rol suyo da Administracion', () => pm.response.to.have.status(403));

@@ -1,0 +1,21 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/avisos/{{avisoXmlId}}/original'
+order: 1500
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const CryptoJS = require('crypto-js');
+      pm.test('responde 200 en XML', () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/xml');
+      });
+      const texto = pm.response.text();
+      pm.test('es el documento tal como llegó (declaración, comentario y formato)', () => {
+        pm.expect(texto.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).to.be.true;
+        pm.expect(texto).to.include('<!-- Documento oficial: este comentario debe conservarse en el original -->');
+        pm.expect(texto).to.include('<identifier>' + pm.collectionVariables.get('avisoXmlIdentificador') + '</identifier>');
+      });
+      pm.test('el SHA-256 coincide con el contenido', () =>
+        pm.expect(CryptoJS.SHA256(texto).toString()).to.eql(pm.response.headers.get('X-Contenido-Sha256')));

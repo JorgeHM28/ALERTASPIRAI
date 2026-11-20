@@ -1,0 +1,10 @@
+$kind: http-request
+name: 'Eliminar comunidad pendiente'
+method: DELETE
+url: '{{baseUrl}}/api/comunidades/{{comunidadPendienteId}}'
+order: 800
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 204', () => pm.response.to.have.status(204));

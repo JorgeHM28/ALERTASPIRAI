@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'El XML generado valida contra CAP 1.2'
+method: POST
+url: '{{baseUrl}}/api/avisos/validar-cap'
+order: 550
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    {{xmlGenerado}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('el XML generado es válido', () => pm.expect(pm.response.json().valido).to.be.true);

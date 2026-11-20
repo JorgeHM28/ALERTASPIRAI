@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Aprobar version'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionId}}/aprobar'
+order: 1100
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json().detalle;
+      pm.test('queda aprobada', () => pm.expect(d.resumen.estado).to.eql('Aprobada'));
+      pm.test('guarda identidad y fecha del aprobador', () => {
+        pm.expect(d.revisadoPorId).to.be.a('string');
+        pm.expect(d.resumen.revisadoEn).to.be.a('string');
+      });
+      pm.collectionVariables.set('versionAprobadaId', d.resumen.id);
+      pm.collectionVariables.set('versionAprobadaIdentificador', d.identificadorCap);

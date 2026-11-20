@@ -1,0 +1,23 @@
+$kind: http-request
+name: 'Preparar Cancel'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}/cancel'
+order: 500
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "instruccion": "El aviso fue cancelado. Puede volver a su casa con precaución." }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const d = pm.response.json().detalle;
+      pm.test('es un Cancel que referencia la versión vigente', () => {
+        pm.expect(d.resumen.tipo).to.eql('Cancel');
+        pm.expect(d.referenciaVersionId).to.eql(pm.collectionVariables.get('versionUpdateId'));
+      });
+      pm.collectionVariables.set('versionCancelId', d.resumen.id);

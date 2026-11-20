@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'Aprobar Update'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionUpdateId}}/aprobar'
+order: 1800
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('queda aprobado', () => pm.expect(pm.response.json().detalle.resumen.estado).to.eql('Aprobada'));

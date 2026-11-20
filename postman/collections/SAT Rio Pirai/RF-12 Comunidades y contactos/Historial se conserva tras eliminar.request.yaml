@@ -1,0 +1,10 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/contactos/{{contactoInactivoId}}/historial'
+order: 5800
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200 aunque el contacto ya no existe', () => pm.response.to.have.status(200));
+      pm.test('registra el alta y la baja', () => pm.expect(pm.response.json().map(x => x.accion)).to.have.members(['Baja', 'Alta']));

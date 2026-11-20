@@ -1,0 +1,21 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/zonas'
+order: 4000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Punto {{$timestamp}}",
+      "nivelRiesgo": "Bajo",
+      "geometria": {"type": "Point", "coordinates": [-63.2, -17.7]}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica el motivo', () => pm.expect(pm.response.json().detail).to.include('Polygon'));

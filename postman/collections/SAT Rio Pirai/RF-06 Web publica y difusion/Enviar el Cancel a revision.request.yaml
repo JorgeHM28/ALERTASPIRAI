@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'Enviar el Cancel a revision'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionCancelId}}/enviar-revision'
+order: 600
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('el XML es un Cancel', () => pm.expect(pm.response.json().detalle.xmlCap).to.include('<msgType>Cancel</msgType>'));

@@ -1,0 +1,13 @@
+$kind: http-request
+name: 'La version anterior queda reemplazada'
+method: GET
+url: '{{baseUrl}}/api/versiones/{{versionAprobadaId}}'
+order: 1900
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const r = pm.response.json().detalle.resumen;
+      pm.test('el Update la reemplazó', () => pm.expect(r.reemplazadaPorId).to.eql(pm.collectionVariables.get('versionUpdateId')));
+      pm.test('sigue aprobada e inmutable', () => pm.expect(r.estado).to.eql('Aprobada'));

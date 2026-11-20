@@ -1,0 +1,36 @@
+$kind: http-request
+name: 'Registrar aviso sin instrucciones'
+method: POST
+url: '{{baseUrl}}/api/avisos'
+order: 100
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "evento": "Crecida del río Piraí",
+      "urgencia": "Immediate",
+      "severidad": "Extreme",
+      "certeza": "Observed",
+      "titular": "Crecida extrema en Porongo",
+      "descripcion": "El río sube 40 cm por hora.",
+      "expira": "{{capExpiraFutura}}",
+      "zonaIds": ["{{zonaId}}"]
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      const cap = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+      const ahora = Date.now();
+      pm.collectionVariables.set('capEfectivo', cap(new Date(ahora - 3600e3)));
+      pm.collectionVariables.set('capExpiraFutura', cap(new Date(ahora + 2 * 86400e3)));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const a = pm.response.json();
+      pm.test('se puede preparar un mensaje desde el aviso', () => pm.expect(a.preparable).to.be.true);
+      pm.collectionVariables.set('msgAvisoId', a.id);

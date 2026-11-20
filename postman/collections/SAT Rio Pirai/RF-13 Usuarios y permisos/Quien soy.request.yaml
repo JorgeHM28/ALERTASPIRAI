@@ -1,0 +1,12 @@
+$kind: http-request
+name: '¿Quién soy?'
+method: GET
+url: '{{baseUrl}}/api/auth/yo'
+order: 4000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('es el administrador', () => pm.expect(pm.response.json().nombreUsuario).to.eql(pm.environment.get('adminUsuario')));
+      pm.collectionVariables.set('adminId', pm.response.json().id);

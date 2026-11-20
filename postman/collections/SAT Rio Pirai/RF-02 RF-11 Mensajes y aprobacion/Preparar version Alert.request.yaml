@@ -1,0 +1,26 @@
+$kind: http-request
+name: 'Preparar version Alert'
+method: POST
+url: '{{baseUrl}}/api/avisos/{{msgAvisoId}}/versiones'
+order: 200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const r = pm.response.json().detalle.resumen;
+      pm.test('la primera versión es un Alert en borrador', () => {
+        pm.expect(r.tipo).to.eql('Alert');
+        pm.expect(r.estado).to.eql('Borrador');
+        pm.expect(r.numero).to.eql(1);
+      });
+      pm.test('conserva el nivel oficial y lo dice con texto', () => pm.expect(r.nivel.texto).to.eql('Alerta roja'));
+      pm.test('avisa que faltan las instrucciones', () => pm.expect(r.faltantes.join(' ')).to.include('instrucciones'));
+      pm.collectionVariables.set('versionId', r.id);

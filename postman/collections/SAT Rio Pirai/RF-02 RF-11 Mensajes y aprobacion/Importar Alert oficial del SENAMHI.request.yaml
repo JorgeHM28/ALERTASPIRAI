@@ -1,0 +1,54 @@
+$kind: http-request
+name: 'Importar Alert oficial del SENAMHI'
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 2000
+headers:
+  - key: Content-Type
+    value: 'application/xml'
+body:
+  type: xml
+  content: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+      <identifier>SENAMHI-S2-{{$timestamp}}</identifier>
+      <sender>avisos@senamhi.gob.bo</sender>
+      <sent>{{capEfectivo}}</sent>
+      <status>Actual</status>
+      <msgType>Alert</msgType>
+      <scope>Public</scope>
+      <info>
+        <language>es-BO</language>
+        <category>Met</category>
+        <event>Crecida del río Piraí</event>
+        <urgency>Expected</urgency>
+        <severity>Severe</severity>
+        <certainty>Likely</certainty>
+        <effective>{{capEfectivo}}</effective>
+        <expires>{{capExpiraFutura}}</expires>
+        <senderName>SENAMHI Santa Cruz</senderName>
+        <headline>Crecida del río Piraí</headline>
+        <description>Precipitaciones de 60 a 90 mm en la cuenca alta.</description>
+        <instruction>Alejarse de las riberas y preparar mochila de emergencia.</instruction>
+        <area>
+          <areaDesc>Ribera Piraí - Porongo</areaDesc>
+          <polygon>-17.77,-63.255 -17.77,-63.215 -17.825,-63.215 -17.825,-63.255 -17.77,-63.255</polygon>
+        </area>
+      </info>
+    </alert>
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      const cap = (d) => d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+      const ahora = Date.now();
+      pm.collectionVariables.set('capEfectivo', cap(new Date(ahora - 3600e3)));
+      pm.collectionVariables.set('capExpiraFutura', cap(new Date(ahora + 2 * 86400e3)));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const a = pm.response.json();
+      pm.collectionVariables.set('senamhiAlertId', a.id);
+      pm.collectionVariables.set('senamhiAlertIdentificador', a.identificadorCap);
+      pm.test('inicia su propia cadena', () => pm.expect(a.cadenaId).to.eql(a.id));

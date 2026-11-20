@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'Canales aprobados'
+method: GET
+url: '{{baseUrl}}/api/destinos/canales'
+order: 200
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('incluye SMS', () => pm.expect(pm.response.json()).to.include('Sms'));

@@ -1,0 +1,36 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/avisos/importar'
+order: 3200
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "identifier": "COED-INCOMPLETO-{{$timestamp}}",
+      "sender": "coed@santacruz.gob.bo",
+      "sent": "2026-11-04T09:30:00-04:00",
+      "status": "Actual",
+      "msgType": "Alert",
+      "scope": "Public",
+      "info": [ { "event": "Lluvias intensas", "urgency": "Expected", "severity": "Moderate", "certainty": "Possible", "headline": "Lluvias en la cuenca alta" } ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201: el CAP es válido, se registra', () => pm.response.to.have.status(201));
+      const a = pm.response.json();
+      pm.test('queda registrado como incompleto y no apto', () => {
+        pm.expect(a.incompleto).to.be.true;
+        pm.expect(a.aptoParaDifusion).to.be.false;
+      });
+      pm.test('dice qué le falta', () => {
+        const m = a.motivosNoApto.join(' | ');
+        pm.expect(m).to.include('instrucción');
+        pm.expect(m).to.include('área');
+        pm.expect(m).to.include('expiración');
+      });
+      pm.collectionVariables.set('avisoIncompletoId', a.id);

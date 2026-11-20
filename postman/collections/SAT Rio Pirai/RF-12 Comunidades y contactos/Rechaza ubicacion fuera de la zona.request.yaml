@@ -1,0 +1,22 @@
+$kind: http-request
+name: 'Rechaza ubicación fuera de la zona'
+method: POST
+url: '{{baseUrl}}/api/comunidades'
+order: 2000
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Fuera {{$timestamp}}",
+      "latitud": -17.00,
+      "longitud": -63.00,
+      "zonaId": "{{zonaId}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));

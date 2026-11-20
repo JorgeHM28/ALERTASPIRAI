@@ -1,0 +1,20 @@
+{
+  "identifier": "COED-SCZ-2026-1104-007",
+  "sender": "coed@santacruz.gob.bo",
+  "sent": "2026-11-04T09:30:00-04:00",
+  "status": "Actual",
+  "msgType": "Alert",
+  "scope": "Public",
+  "info": [
+    {
+      "language": "es-BO",
+      "category": ["Met"],
+      "event": "Desborde en Urubó",
+      "urgency": "Immediate",
+      "severity": "Extreme",
+      "certainty": "Observed",
+      "headline": "Desborde observado en Playa Piraí",
+      "area": [ { "areaDesc": "Urubó - Playa Piraí", "polygon": ["-17.735,-63.215 -17.735,-63.185 -17.77,-63.185 -17.77,-63.215 -17.735,-63.215"] } ]
+    }
+  ]
+}

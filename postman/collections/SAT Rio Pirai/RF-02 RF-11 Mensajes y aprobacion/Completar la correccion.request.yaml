@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Completar la correccion'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionId}}'
+order: 950
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "instruccion": "Evacuar a la zona alta. Punto de reunión: colegio de Porongo, desde las 18:00." }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('ya está completa', () => pm.expect(pm.response.json().detalle.resumen.faltantes).to.be.empty);

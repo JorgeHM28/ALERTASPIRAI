@@ -1,0 +1,9 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/avisos/{{avisoManualId}}/original'
+order: 5500
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 404', () => pm.response.to.have.status(404));
