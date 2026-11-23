@@ -1,0 +1,317 @@
+.pirai {
+  --paper: #f6f7f3;
+  --card: #fff;
+  --ink: #123742;
+  --sub: #495e63;
+  --line: #cbd7d3;
+  --action: #115e72;
+  --glass: rgba(248, 252, 248, 0.9);
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    16px/1.55 system-ui,
+    sans-serif;
+  padding: 18px clamp(14px, 4vw, 64px) 24px;
+}
+.pirai * {
+  box-sizing: border-box;
+}
+.pirai main,
+.pirai footer,
+.pirai-nav {
+  max-width: 1400px;
+  margin-inline: auto;
+}
+.pirai a {
+  color: var(--action);
+  text-underline-offset: 3px;
+}
+.pirai :focus-visible {
+  outline: 3px solid var(--action);
+  outline-offset: 3px;
+}
+.pirai button {
+  cursor: pointer;
+}
+.pirai-nav,
+.pirai-hero,
+.pirai-section {
+  position: relative;
+}
+.pirai-curves {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: min(520px, 60vh);
+  background:
+    linear-gradient(to bottom, transparent, var(--paper)),
+    url('../assets/pirai-curves.svg') center 55% / cover;
+  opacity: 0.35;
+}
+.pirai-nav {
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 12px 8px 22px;
+  border: 1px solid var(--line);
+  border-radius: 40px;
+  background: var(--glass);
+  box-shadow: 0 4px 22px #102f3910;
+}
+#pirai-lens {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  backdrop-filter: blur(14px);
+}
+.pirai-nav > *:not(#pirai-lens) {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
+.pirai-nav a {
+  text-decoration: none;
+  color: var(--ink);
+}
+.pirai-brand,
+.pirai-location,
+.pirai-zone {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pirai-brand {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  margin-right: auto;
+}
+.pirai-nav nav {
+  display: flex;
+  gap: 22px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pirai-nav nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+}
+.pirai-nav nav a:hover,
+.pirai-brand:hover {
+  text-decoration: underline;
+}
+.pirai-nav button,
+.pirai-copy button,
+.pirai-section > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 18px;
+  border-radius: 40px;
+  background: var(--ink);
+  color: var(--card);
+  border: 0;
+  font-weight: 650;
+}
+.pirai-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  min-height: 480px;
+  margin-top: 22px;
+  border-radius: 28px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.pirai-copy {
+  align-self: center;
+  padding: clamp(22px, 4.4vw, 68px);
+  overflow-wrap: anywhere;
+}
+.pirai h1,
+.pirai h2,
+.pirai h3 {
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.pirai h1 {
+  font-size: clamp(40px, 5.8vw, 88px);
+  font-weight: 670;
+  margin: 22px 0;
+}
+.pirai-copy h2 {
+  font-size: clamp(23px, 2.2vw, 34px);
+  margin-top: 12px;
+}
+.pirai-copy p {
+  margin: 10px 0 16px;
+}
+.pirai p,
+.pirai small,
+.pirai-location {
+  color: var(--sub);
+}
+.pirai-location {
+  font-weight: 620;
+  font-size: 14px;
+}
+.pirai-time {
+  font-size: 14px;
+}
+.pirai-river {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: end;
+  padding: 32px;
+  background: #205765;
+}
+.pirai-river-lines {
+  position: absolute;
+  inset: 0;
+  background: url('../assets/pirai-curves.svg') center/cover;
+}
+.pirai-river span {
+  z-index: 1;
+  font:
+    italic clamp(38px, 5vw, 76px)/1 Georgia,
+    serif;
+  color: white;
+  letter-spacing: -0.065em;
+  text-shadow: 0 1px 6px #17404c;
+}
+.pirai-section {
+  padding: clamp(28px, 4vw, 60px) 0;
+  border-bottom: 1px solid var(--line);
+}
+.pirai-section h2 {
+  font-size: clamp(28px, 3.5vw, 48px);
+  margin-bottom: 22px;
+}
+.pirai-section ul {
+  list-style: none;
+  padding: 0;
+}
+.pirai-section li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pirai-section li a {
+  margin-inline: 8px;
+}
+.pirai-section .mapa {
+  margin-top: 16px;
+}
+.pirai-levels {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.pirai-levels article,
+.pirai .ui-accordion {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+}
+.pirai-levels i {
+  display: block;
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  margin-bottom: 18px;
+}
+.pirai-levels p {
+  margin: 10px 0 0;
+}
+.pirai .ui-accordion {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--ink);
+}
+.pirai .ui-accordion button {
+  background: transparent;
+  color: inherit;
+  min-height: 52px;
+  line-height: 1.4;
+  text-align: left;
+}
+.pirai footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px 0;
+  font-size: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  .pirai {
+    --paper: #102329;
+    --card: #18313a;
+    --ink: #e9f3f1;
+    --sub: #bfcecf;
+    --line: #476168;
+    --action: #99d8e4;
+    --glass: rgba(22, 44, 52, 0.92);
+    color-scheme: dark;
+  }
+}
+@media (max-width: 760px) {
+  .pirai {
+    padding-top: 10px;
+  }
+  .pirai-nav {
+    flex-wrap: wrap;
+    gap: 0 8px;
+    padding: 8px 12px 2px;
+    border-radius: 22px;
+  }
+  .pirai-brand {
+    font-size: 16px;
+  }
+  .pirai-nav button {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+  .pirai-nav nav {
+    order: 3;
+    width: 100%;
+    justify-content: space-around;
+    gap: 4px;
+  }
+  .pirai-hero {
+    grid-template-columns: 1fr;
+    margin-top: 12px;
+    min-height: 0;
+  }
+  .pirai-river {
+    height: 145px;
+    padding: 18px;
+  }
+  .pirai-levels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pirai-levels article {
+    padding: 14px;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .pirai-nav {
+    background: var(--card);
+    border: 2px solid currentColor;
+  }
+  #pirai-lens {
+    backdrop-filter: none;
+  }
+}
+.pirai main {
+  padding: 0;
+}

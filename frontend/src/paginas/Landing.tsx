@@ -1,175 +1,318 @@
-import { useEffect, useState } from 'react'
-import { ArrowRight, BellRing, Clock3, MapPin, RefreshCw, Waves } from 'lucide-react'
-import { api, fecha, NOMBRE_TIPO, type AvisoPublico } from '../api'
-import { aclararSobre } from '../color'
-import Mapa from './Mapa'
+import { useCallback, useState } from 'react'
+import { ArrowRight, MapPin, RefreshCw } from 'lucide-react'
+import { type AvisoPublico } from '../api'
+import { GlassNav } from '../components/GlassNav'
+import { UnfoldAccordion } from '../components/ui/UnfoldAccordion'
 import { NivelAlerta } from '../components/NivelAlerta'
+import { usePublicResource } from './usePublicResource'
+import './landing.css'
 
 const NIVELES = [
-  { codigo: 'roja', texto: 'Alerta roja', color: '#C62828', orden: 4, que: 'Peligro inminente. Siga de inmediato las instrucciones de evacuación.' },
-  { codigo: 'naranja', texto: 'Alerta naranja', color: '#EF6C00', orden: 3, que: 'Peligro probable. Prepare su mochila de emergencia y esté listo para salir.' },
-  { codigo: 'amarilla', texto: 'Alerta amarilla', color: '#F9A825', orden: 2, que: 'Situación a vigilar. Manténgase informado por los canales oficiales.' },
-  { codigo: 'verde', texto: 'Alerta verde', color: '#2E7D32', orden: 1, que: 'Sin peligro previsto. Conozca su ruta de evacuación.' },
+  {
+    codigo: 'roja',
+    texto: 'Alerta roja',
+    color: '#C62828',
+    orden: 4,
+    que: 'Peligro inminente. Siga de inmediato las instrucciones de evacuación.',
+  },
+  {
+    codigo: 'naranja',
+    texto: 'Alerta naranja',
+    color: '#EF6C00',
+    orden: 3,
+    que: 'Peligro probable. Prepare su mochila de emergencia y esté listo para salir.',
+  },
+  {
+    codigo: 'amarilla',
+    texto: 'Alerta amarilla',
+    color: '#F9A825',
+    orden: 2,
+    que: 'Situación a vigilar. Manténgase informado por los canales oficiales.',
+  },
+  {
+    codigo: 'verde',
+    texto: 'Alerta verde',
+    color: '#2E7D32',
+    orden: 1,
+    que: 'Sin peligro previsto. Conozca su ruta de evacuación.',
+  },
 ]
-const COLOR_CANCELADO = '#687783'
-const COLOR_SIN_AVISOS = '#2E7D32'
-
-/** El titular oficial suele repetir el nivel ("Alerta naranja por…"): si ya lo dice, se usa el nombre del evento. */
-const tituloDe = (a: AvisoPublico) => {
-  const t = a.titular ?? a.evento
-  return t.toLowerCase().startsWith(a.nivel.texto.toLowerCase()) ? a.evento : t
-}
-/** "hace 20 min" / "hace 3 h": las cancelaciones solo se muestran 24 horas, así que no hace falta más escala. */
-const hace = (iso: string | null) => {
-  if (!iso) return ''
-  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000))
-  if (min < 1) return 'hace un momento'
-  return min < 60 ? `hace ${min} min` : `hace ${Math.floor(min / 60)} h`
-}
-const hora = (d: Date) => d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })
-
-/**
- * Página de inicio pública, sin sesión. Muestra solo mensajes aprobados: texto, nivel (con palabras), instrucciones
- * y zona en el mapa (RF-06). Nunca contactos ni datos internos.
- * Lo primero es el estado: una banda con el nivel en texto grande, qué hacer y la zona; el mapa y la guía van después.
- */
-export default function Landing({ alIngresar }: { alIngresar: () => void }) {
-  const [avisos, setAvisos] = useState<AvisoPublico[]>([])
-  const [enlazado, setEnlazado] = useState<AvisoPublico | null>(null)
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-  const [consultadoEn, setConsultadoEn] = useState<Date | null>(null)
-  const idEnlace = new URLSearchParams(window.location.search).get('aviso')
-
-  const cargar = () => {
-    setCargando(true); setError('')
-    return api<AvisoPublico[]>('/api/publico/avisos?cancelados=true').then(a => { setAvisos(a); setConsultadoEn(new Date()) })
-      .catch(() => setError('No se pudo consultar los avisos. Intente de nuevo en unos minutos.'))
-      .finally(() => setCargando(false))
+const funciones = [
+  [
+    'Administrar usuarios y permisos',
+    'El administrador gestiona las cuentas y los permisos del personal que opera el sistema.',
+  ],
+  [
+    'Administrar configuración territorial y de contactos',
+    'El personal autorizado mantiene las zonas de riesgo, comunidades y contactos de coordinación. La población puede consultar las zonas publicadas.',
+  ],
+  [
+    'Gestionar ciclo de vida del mensaje CAP',
+    'El operador prepara el mensaje de alerta en el formato común CAP. El aprobador revisa el aviso, sus actualizaciones y su cancelación.',
+  ],
+  [
+    'Gestionar y registrar difusión de alertas',
+    'El equipo autorizado coordina la difusión del aviso aprobado y registra las acciones e incidencias por canal.',
+  ],
+  [
+    'Consultar y reportar',
+    'La población consulta los avisos aprobados y las zonas afectadas. Coordinación utiliza la información del sistema para el seguimiento de alertas.',
+  ],
+]
+const clave = 'pirai-ultima-consulta'
+function ultimaConsulta() {
+  try {
+    return sessionStorage.getItem(clave)
+  } catch {
+    return null
   }
-  useEffect(() => {
-    cargar()
-    if (idEnlace) api<AvisoPublico>(`/api/publico/avisos/${idEnlace}`).then(setEnlazado).catch(() => setEnlazado(null))
-  }, [idEnlace])
-
-  const activos = avisos.filter(a => a.vigente && a.tipo !== 'Cancel').sort((a, b) => b.nivel.orden - a.nivel.orden)
-  const cancelados = avisos.filter(a => a.tipo === 'Cancel')
-  // Si llegan por un enlace a un aviso concreto, ese es el que ocupa la banda.
-  const principal = enlazado ?? activos[0] ?? null
-  const otros = activos.filter(a => a.id !== principal?.id)
-  const cancelado = principal?.tipo === 'Cancel'
-  const color = principal ? (cancelado ? COLOR_CANCELADO : principal.nivel.color) : error || (cargando && !consultadoEn) ? null : COLOR_SIN_AVISOS
-  const estilo = color ? { '--nivel': color, '--acento': aclararSobre(color, '#0b1f2a') } as React.CSSProperties : undefined
-
+}
+function fechaLocal(value: string | null) {
+  if (!value || !Number.isFinite(Date.parse(value))) return ''
+  return new Date(value).toLocaleString('es-BO', {
+    timeZone: 'America/La_Paz',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+}
+const enlace = (id: string) => '/?publico=1&aviso=' + encodeURIComponent(id)
+const zona = (a: AvisoPublico) => a.descripcionArea?.trim() || 'Zona no indicada en el aviso'
+function contenido(a: AvisoPublico) {
+  if (a.tipo === 'Cancel') return 'Este aviso fue cancelado'
+  if (a.reemplazadoPor) return 'Este aviso fue reemplazado'
+  if (!a.vigente) return 'Este aviso venció'
+  return a.nivel.texto
+}
+function Detalle({ aviso: a }: { aviso: AvisoPublico }) {
   return (
-    <div className="publico">
-      <a className="saltar skip-link" href="#avisos-publicos">Saltar a los avisos</a>
-      <header className="publico-header">
-        <div className="marca"><span className="marca-simbolo"><Waves size={24} aria-hidden="true" /></span>
-          <div><strong>SAT Río Piraí</strong><span className="marca-descripcion">ALERTAS TEMPRANAS · SANTA CRUZ</span></div></div>
-        <button className="primario" onClick={alIngresar}>Ingresar al sistema<ArrowRight size={17} aria-hidden="true" /></button>
-      </header>
-
-      <section id="avisos-publicos" tabIndex={-1} className="estado" style={estilo} aria-live="polite" aria-busy={cargando}>
-        <svg className="estado-olas" viewBox="0 0 1280 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#8bd6dc" strokeOpacity=".16" strokeWidth="2">
-          {[520, 560, 600, 640, 680, 720].map(y => <path key={y} d={`M-20 ${y}C160 ${y - 50} 260 ${y + 60} 440 ${y + 10}S700 ${y - 70} 860 ${y - 20}S1120 ${y + 40} 1300 ${y - 20}`} />)}
-        </g></svg>
-        <div className="estado-interior">
-          {principal ? <>
-            <Titular palabras={cancelado ? 'Aviso cancelado' : principal.nivel.texto} detalle={tituloDe(principal)} />
-            <div className="estado-cuerpo">
-              {principal.instruccion && <div className="estado-hacer"><b>Qué hacer</b><p>{principal.instruccion}</p></div>}
-              <div className="estado-datos">
-                <div><span className="etq">Zona</span><strong><MapPin size={16} aria-hidden="true" />{principal.descripcionArea ?? 'Zona del aviso'}</strong></div>
-                <div><span className="etq">{cancelado ? 'Cancelado' : 'Vigente hasta'}</span><strong><Clock3 size={16} aria-hidden="true" />{cancelado ? fecha(principal.aprobadoEn) : fecha(principal.hasta)}</strong></div>
-                {principal.descripcion && <div><span className="etq">Qué pasa</span><p>{principal.descripcion}</p></div>}
-              </div>
-            </div>
-            {otros.length > 0 && <p className="estado-descripcion"><a href="#otros-avisos">Hay {otros.length} aviso{otros.length > 1 ? 's' : ''} más en otras zonas</a></p>}
-          </> : error ? <>
-            <Titular palabras="Sin conexión" />
-            <div className="estado-cuerpo"><div className="estado-hacer"><p>{error}</p></div></div>
-          </> : cargando && !consultadoEn ? <Titular palabras="Consultando avisos…" /> : <>
-            <Titular palabras="Sin avisos vigentes" />
-            <div className="estado-cuerpo"><div className="estado-hacer"><p>No hay avisos oficiales activos para la cuenca del río Piraí. Esto no reemplaza las indicaciones de las autoridades: siga informándose por los canales oficiales.</p></div></div>
-          </>}
-          <p className="estado-pie">
-            <span>{consultadoEn ? `Consultado a las ${hora(consultadoEn)}` : 'Consultando…'}</span>
-            <button onClick={cargar} disabled={cargando}><RefreshCw size={15} className={cargando ? 'girando' : undefined} aria-hidden="true" />{cargando ? 'Actualizando avisos…' : 'Actualizar avisos'}</button>
-          </p>
-        </div>
-      </section>
-
-      <main className="publico-main">
-        {otros.length > 0 && <section className="publico-lista" id="otros-avisos">
-          <h2>Otros avisos vigentes</h2>
-          {otros.map(a => <TarjetaAviso key={a.id} a={a} />)}
-        </section>}
-
-        <section className="publico-zonas" aria-label="Zonas con aviso">
-          <div>
-            <h2>Zonas con aviso</h2>
-            {activos.length > 0 ? <ul className="zonas-lista">
-              {activos.map(a => <li key={a.id}><NivelAlerta nivel={a.nivel} /><span>{a.descripcionArea ?? 'Zona del aviso'}</span></li>)}
-            </ul> : error ? <p className="tenue">No se pudo comprobar qué zonas tienen un aviso vigente.</p>
-              : <p className="tenue">Ninguna zona tiene un aviso vigente en este momento.</p>}
-            {/* Una cancelación confirma que un aviso que alguien pudo recibir ya no rige: va aquí, junto a las zonas, y breve. */}
-            {cancelados.length > 0 && <>
-              <p className="cancelados-intro">Cancelados en las últimas 24 horas</p>
-              <ul className="zonas-lista zonas-canceladas" aria-label="Avisos cancelados en las últimas 24 horas">{cancelados.map(a => <li key={a.id}>
-                <span className="nivel-alerta cancelado">Cancelado</span>
-                <span>{a.descripcionArea ?? 'Zona del aviso'} · <time dateTime={a.aprobadoEn ?? undefined} title={fecha(a.aprobadoEn)}>{hace(a.aprobadoEn)}</time></span>
-                {a.instruccion && <span className="cancelados-texto">{a.instruccion}</span>}
-              </li>)}</ul>
-            </>}
-            <p className="tenue">Si su zona no aparece aquí, no tiene un aviso oficial activo. Ante cualquier duda, siga las indicaciones de las autoridades.</p>
+    <>
+      <h2>{a.titular || a.evento}</h2>
+      <p className="pirai-zone">
+        <MapPin size={18} aria-hidden="true" />
+        {zona(a)}
+      </p>
+      {a.descripcion && <p>{a.descripcion}</p>}
+      <strong>{a.vigente ? 'Qué hacer' : 'Instrucción del aviso original'}</strong>
+      <p>{a.instruccion?.trim() || 'La fuente no indicó una instrucción.'}</p>
+      <small>
+        {a.tipo === 'Cancel'
+          ? 'Cancelación'
+          : a.reemplazadoPor
+            ? 'Aprobación de esta versión'
+            : 'Fin de vigencia'}{' '}
+        ·{' '}
+        {fechaLocal(a.tipo === 'Cancel' || a.reemplazadoPor ? a.aprobadoEn : a.hasta) || 'Fecha no indicada'}
+      </small>
+      {a.reemplazadoPor && (
+        <p>
+          <a href={enlace(a.reemplazadoPor)}>Consultar la versión posterior</a>
+        </p>
+      )}
+    </>
+  )
+}
+export default function Landing({ alIngresar }: { alIngresar: () => void }) {
+  const id = new URLSearchParams(location.search).get('aviso')
+  const [ultima, setUltima] = useState(ultimaConsulta)
+  const guardarHora = useCallback(() => {
+    const now = new Date().toISOString()
+    setUltima(now)
+    try {
+      sessionStorage.setItem(clave, now)
+    } catch {
+      /* disponible en memoria */
+    }
+  }, [])
+  const lista = usePublicResource<AvisoPublico[]>('/api/publico/avisos?cancelados=true', guardarHora)
+  const detalle = usePublicResource<AvisoPublico>(id ? '/api/publico/avisos/' + encodeURIComponent(id) : null)
+  const [Mapa, setMapa] = useState<typeof import('./Mapa').default>()
+  const [mapState, setMapState] = useState<'idle' | 'loading' | 'error'>('idle')
+  async function cargarMapa() {
+    setMapState('loading')
+    try {
+      const modulo = await import('./Mapa')
+      setMapa(() => modulo.default)
+      setMapState('idle')
+    } catch {
+      setMapState('error')
+    }
+  }
+  const activos = (lista.data ?? [])
+    .filter((a) => a.vigente && a.tipo !== 'Cancel')
+    .sort(
+      (a, b) =>
+        b.nivel.orden - a.nivel.orden ||
+        (Date.parse(b.aprobadoEn ?? '') || 0) - (Date.parse(a.aprobadoEn ?? '') || 0) ||
+        a.id.localeCompare(b.id),
+    )
+  const cancelados = lista.data?.filter((a) => a.tipo === 'Cancel') ?? []
+  const principal = id ? detalle.data : activos[0]
+  const estadoLista = lista.loading
+    ? 'Consultando avisos…'
+    : lista.error !== null
+      ? 'No se pudo comprobar el estado actual'
+      : activos.length
+        ? contenido(activos[0])
+        : 'Sin avisos vigentes'
+  const titulo = !id
+    ? estadoLista
+    : detalle.loading
+      ? 'Consultando el aviso…'
+      : detalle.error === 404
+        ? 'El aviso de este enlace no está disponible'
+        : detalle.error !== null
+          ? 'No se pudo consultar este aviso'
+          : principal
+            ? contenido(principal)
+            : 'Consultando el aviso…'
+  return (
+    <div className="pirai">
+      <a className="saltar" href="#avisos">
+        Saltar a los avisos
+      </a>
+      <div className="pirai-curves" aria-hidden="true" />
+      <GlassNav alIngresar={alIngresar} />
+      <main>
+        <section id="avisos" tabIndex={-1} className="pirai-hero">
+          <div className="pirai-copy">
+            <span className="pirai-location">
+              <MapPin size={15} aria-hidden="true" /> Cuenca del río Piraí · Santa Cruz
+            </span>
+            <h1
+              style={
+                principal?.vigente && titulo === principal.nivel.texto
+                  ? { borderInlineStart: '6px solid ' + principal.nivel.color, paddingInlineStart: '0.22em' }
+                  : undefined
+              }
+            >
+              {titulo}
+            </h1>
+            {principal && (!id || detalle.error === null) && (
+              <>
+                {!id && (lista.loading || lista.error !== null) && (
+                  <p>Datos de la última consulta exitosa.</p>
+                )}
+                {titulo !== principal.nivel.texto && <NivelAlerta nivel={principal.nivel} />}
+                <Detalle aviso={principal} />
+              </>
+            )}
+            {!id && !principal && !lista.loading && lista.error === null && (
+              <p>Consulte las zonas y conozca el significado de cada nivel de alerta.</p>
+            )}
+            {id && (
+              <p>
+                <a href="#mapa">Ver avisos vigentes</a>
+              </p>
+            )}
+            {id && detalle.error !== null && detalle.error !== 404 && (
+              <button onClick={detalle.retry}>Reintentar consulta del aviso</button>
+            )}
+            <p className="pirai-time">
+              {ultima && fechaLocal(ultima) && (
+                <>Última consulta exitosa del listado · {fechaLocal(ultima)} (Bolivia)</>
+              )}
+            </p>
+            <button
+              onClick={() => {
+                if (!lista.loading) lista.retry()
+              }}
+              aria-disabled={lista.loading}
+            >
+              <RefreshCw size={16} aria-hidden="true" />{' '}
+              {lista.error !== null ? 'Reintentar' : 'Actualizar avisos'}
+            </button>
           </div>
-          <div>
-            <Mapa zoomMaximo={11} capas={activos.filter(a => a.area).map(a => ({ clave: a.id, geometria: a.area!, color: a.nivel.color, etiqueta: `${a.nivel.texto}: ${a.titular ?? a.evento}` }))} />
-            <ul className="leyenda" aria-label="Niveles de alerta">{NIVELES.map(n => <li key={n.codigo}><NivelAlerta nivel={n} /></li>)}</ul>
+          <div className="pirai-river" aria-hidden="true">
+            <div className="pirai-river-lines" />
+            <span>Río Piraí</span>
           </div>
         </section>
-
-        <section className="publico-niveles"><h2>Niveles de alerta: qué significa cada uno</h2>
-          <div className="niveles-grid">{NIVELES.map(n => <div key={n.codigo} className="nivel-col" style={{ '--c': n.color } as React.CSSProperties}>
-            <div className="nivel-barra" aria-hidden="true" />
-            <strong className="nivel-nombre">{n.texto}</strong>
-            {activos.some(a => a.nivel.codigo === n.codigo) && <span className="nivel-actual">Nivel actual</span>}
-            <p>{n.que}</p></div>)}</div>
+        <p className="solo-lector" role="status" aria-live="polite">
+          {titulo}. {id && estadoLista} {ultima && fechaLocal(ultima)}
+        </p>
+        <section id="mapa" className="pirai-section">
+          <h2>
+            {lista.error !== null && lista.data ? 'Zonas en la última consulta exitosa' : 'Avisos y zonas'}
+          </h2>
+          {(lista.loading || lista.error !== null || !activos.length) && <p>{estadoLista}</p>}
+          {activos.length > 0 && (
+            <ul>
+              {activos.map((a) => (
+                <li key={a.id}>
+                  <NivelAlerta nivel={a.nivel} />{' '}
+                  <a href={enlace(a.id)}>
+                    {zona(a)} · {a.titular || a.evento}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+          {cancelados.length > 0 && (
+            <>
+              <h3>Cancelaciones de las últimas 24 horas consultadas</h3>
+              <ul>
+                {cancelados.map((a) => (
+                  <li key={a.id}>
+                    <a href={enlace(a.id)}>
+                      {zona(a)} · {fechaLocal(a.aprobadoEn)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {Mapa ? (
+            <Mapa
+              alto={340}
+              zoomMaximo={11}
+              capas={activos.flatMap((a) =>
+                a.area ? [{ clave: a.id, geometria: a.area, color: a.nivel.color, etiqueta: zona(a) }] : [],
+              )}
+            />
+          ) : (
+            <>
+              <button disabled={mapState === 'loading'} onClick={cargarMapa}>
+                Ver mapa <ArrowRight size={16} aria-hidden="true" />
+              </button>
+              <span role="status">
+                {mapState === 'loading'
+                  ? 'Cargando mapa…'
+                  : mapState === 'error'
+                    ? 'No se pudo cargar el mapa. Puede volver a intentarlo.'
+                    : ''}
+              </span>
+            </>
+          )}
+        </section>
+        <section className="pirai-section">
+          <h2>Guía de niveles de alerta</h2>
+          <div className="pirai-levels">
+            {NIVELES.map((n) => (
+              <article key={n.codigo}>
+                <i style={{ background: n.color }} />
+                <h3>{n.texto}</h3>
+                <p>{n.que}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section className="pirai-section" id="funciones">
+          <h2>Funciones del sistema</h2>
+          {funciones.map(([title, body], i) => (
+            <UnfoldAccordion key={title} title={title}>
+              <p>{body}</p>
+              {i === 4 && (
+                <p>
+                  <a href="#avisos">Consultar avisos</a> · <a href="#mapa">Ver zonas y mapa</a>
+                </p>
+              )}
+            </UnfoldAccordion>
+          ))}
         </section>
       </main>
-      <footer className="app-footer publico-footer"><span>SAT Río Piraí · Gestión del riesgo</span><span>Santa Cruz · Bolivia</span></footer>
+      <footer>
+        SAT Río Piraí <span>Santa Cruz · Bolivia</span>
+      </footer>
     </div>
-  )
-}
-
-/** El nivel en dos líneas de letra monumental: la primera palabra con el color del nivel y el resto en blanco. El detalle (nombre del evento) va debajo. */
-function Titular({ palabras, detalle }: { palabras: string; detalle?: string }) {
-  const [primera, ...resto] = palabras.split(' ')
-  const segunda = resto.join(' ')
-  const largo = Math.max(primera.length, segunda.length)
-  return (
-    <h1 className="estado-titular" data-tam={largo <= 8 ? 'g' : largo <= 12 ? 'm' : 'p'}>
-      <span className="estado-palabra">{primera}</span>
-      {segunda && <span className="estado-nivel">{segunda}</span>}
-      {detalle && <span className="estado-titulo">{detalle}</span>}
-    </h1>
-  )
-}
-
-function TarjetaAviso({ a }: { a: AvisoPublico }) {
-  const cancelado = a.tipo === 'Cancel'
-  return (
-    <article className="tarjeta aviso-publico" style={{ '--nivel': cancelado ? COLOR_CANCELADO : a.nivel.color } as React.CSSProperties}>
-      <div className="aviso-publico-cabecera">
-        {cancelado ? <span className="nivel-alerta grande cancelado">Aviso cancelado</span> : <NivelAlerta nivel={a.nivel} grande />}
-        {a.tipo === 'Update' && <span className="estado-version estado-EnRevision">{NOMBRE_TIPO.Update}</span>}
-        {!a.vigente && !cancelado && <span className="estado-version estado-Rechazada">Ya no está vigente</span>}
-      </div>
-      <h3><BellRing size={18} aria-hidden="true" /> {a.titular ?? a.evento}</h3>
-      {a.descripcion && <p>{a.descripcion}</p>}
-      {a.instruccion && <div className="aviso-instruccion"><b>Qué hacer</b><p>{a.instruccion}</p></div>}
-      <p className="tenue aviso-meta"><MapPin size={14} aria-hidden="true" />{a.descripcionArea ?? 'Zona del aviso'} · <Clock3 size={14} aria-hidden="true" />{cancelado ? `Cancelado ${fecha(a.aprobadoEn)}` : `Vigente hasta ${fecha(a.hasta)}`}</p>
-    </article>
   )
 }
