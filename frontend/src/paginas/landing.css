@@ -1,10 +1,10 @@
 .pirai {
-  --paper: #f6f7f3;
+  --paper: #f7f8fa;
   --card: #fff;
-  --ink: #123742;
+  --ink: #192329;
   --sub: #495e63;
   --line: #cbd7d3;
-  --action: #115e72;
+  --action: #065fae;
   --glass: rgba(248, 252, 248, 0.9);
   position: relative;
   isolation: isolate;
@@ -49,7 +49,7 @@
   background:
     linear-gradient(to bottom, transparent, var(--paper)),
     url('../assets/pirai-curves.svg') center 55% / cover;
-  opacity: 0.35;
+  opacity: 0.065;
 }
 .pirai-nav {
   isolation: isolate;
@@ -122,14 +122,8 @@
   font-weight: 650;
 }
 .pirai-hero {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  min-height: 480px;
-  margin-top: 22px;
-  border-radius: 28px;
+  border-block: 1px solid var(--line);
   background: var(--card);
-  border: 1px solid var(--line);
-  overflow: hidden;
 }
 .pirai-copy {
   align-self: center;
@@ -167,28 +161,6 @@
 }
 .pirai-time {
   font-size: 14px;
-}
-.pirai-river {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: end;
-  padding: 32px;
-  background: #205765;
-}
-.pirai-river-lines {
-  position: absolute;
-  inset: 0;
-  background: url('../assets/pirai-curves.svg') center/cover;
-}
-.pirai-river span {
-  z-index: 1;
-  font:
-    italic clamp(38px, 5vw, 76px)/1 Georgia,
-    serif;
-  color: white;
-  letter-spacing: -0.065em;
-  text-shadow: 0 1px 6px #17404c;
 }
 .pirai-section {
   padding: clamp(28px, 4vw, 60px) 0;
@@ -287,15 +259,6 @@
     justify-content: space-around;
     gap: 4px;
   }
-  .pirai-hero {
-    grid-template-columns: 1fr;
-    margin-top: 12px;
-    min-height: 0;
-  }
-  .pirai-river {
-    height: 145px;
-    padding: 18px;
-  }
   .pirai-levels {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -314,4 +277,38 @@
 }
 .pirai main {
   padding: 0;
+}
+
+.pirai-nav, .pirai main, .pirai footer {max-width: 1152px}
+.pirai-nav {padding-block: 3px; box-shadow: 0 2px 12px #18304308}
+.pirai-intro {position:relative; text-align:center; padding:clamp(78px,9vw,130px) 0 24px}
+.pirai-intro h1 {font-size:clamp(48px,6.3vw,88px); line-height:1.03; font-weight:650; margin:0}
+.pirai-intro > p {font-size:clamp(19px,2.3vw,31px); color:var(--ink); letter-spacing:-.035em; margin:12px 0 24px; text-wrap:balance}
+.pirai-actions {display:flex; justify-content:center; gap:12px}
+.pirai-actions a {display:inline-flex; align-items:center; min-height:46px; padding:8px 20px; border:1px solid var(--action); border-radius:30px; text-decoration:none; font-weight:530}
+.pirai-actions a:first-child {background:var(--action);color:var(--card)}
+.pirai-actions a:hover {text-decoration:underline}
+.pirai-bulletin {position:absolute; top:14px; left:0; right:0; margin:auto; display:flex; align-items:center; justify-content:center; gap:7px; width:fit-content; max-width:100%; font-size:14px; text-decoration:none;line-height:1.25}
+.pirai-bulletin span {width:8px;height:8px;border-radius:100%;flex:none}
+.pirai-ribbon {display:block;width:min(94%,900px);height:auto;margin:22px auto 0}
+.pirai-copy {padding:clamp(22px,3.4vw,48px);max-width:880px}
+.pirai-copy > h2:first-of-type {font-size:clamp(28px,3.4vw,46px)}
+@keyframes pirai-enter {from {opacity:0;transform:translateY(9px)}to {opacity:1;transform:none}}
+@keyframes pirai-flow {from {opacity:0;transform:translateY(9px) scaleX(.96)}to {opacity:1;transform:none}}
+@keyframes pirai-glint {from {background-position:140% 0}to {background-position:-40% 0}}
+@media (prefers-reduced-motion:no-preference) {
+  .pirai-intro h1,.pirai-intro > p,.pirai-actions {animation:pirai-enter .48s ease-out backwards}
+  .pirai-intro > p {animation-delay:.07s}
+  .pirai-actions {animation-delay:.12s}
+  .pirai-ribbon {animation:pirai-flow 1s cubic-bezier(.18,.65,.32,1) .12s backwards}
+  .pirai-actions a {transition:transform .16s ease-out}
+  .pirai-actions a:active {transform:scale(.97)}
+}
+@media (min-width:1024px) and (pointer:fine) and (prefers-reduced-motion:no-preference) and (prefers-contrast:no-preference) {
+  .pirai-nav::after {content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.23) 50%,transparent 58%) 0 0/250% 100%;animation:pirai-glint 1.2s ease-out both}
+}
+@media (max-width:760px) {
+  .pirai-intro {padding:74px 0 18px}
+  .pirai-ribbon {width:100%;margin-top:18px}
+  .pirai-bulletin {font-size:12px}
 }

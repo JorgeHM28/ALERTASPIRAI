@@ -56,7 +56,7 @@ export function GlassNav({ alIngresar }: { alIngresar: () => void }) {
   return (
     <header className="pirai-nav">
       <div id="pirai-lens" aria-hidden="true" />
-      <a className="pirai-brand" href="#avisos">
+      <a className="pirai-brand" href="#inicio">
         <Waves aria-hidden="true" /> SAT Río Piraí
       </a>
       <nav aria-label="Navegación pública">

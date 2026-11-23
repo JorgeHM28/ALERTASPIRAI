@@ -166,27 +166,36 @@ export default function Landing({ alIngresar }: { alIngresar: () => void }) {
             ? contenido(principal)
             : 'Consultando el aviso…'
   return (
-    <div className="pirai">
+    <div className="pirai" id="inicio">
       <a className="saltar" href="#avisos">
         Saltar a los avisos
       </a>
       <div className="pirai-curves" aria-hidden="true" />
       <GlassNav alIngresar={alIngresar} />
       <main>
+        {!id && (
+          <section className="pirai-intro" aria-labelledby="pirai-title">
+            {principal?.vigente && !lista.loading && lista.error === null && (
+              <a className="pirai-bulletin" href="#avisos">
+                <span style={{ background: principal.nivel.color }} aria-hidden="true" />
+                {principal.nivel.texto} · {zona(principal)} <ArrowRight size={14} aria-hidden="true" />
+              </a>
+            )}
+            <h1 id="pirai-title">SAT Río Piraí</h1>
+            <p>Alertas tempranas para la cuenca del Piraí.</p>
+            <div className="pirai-actions">
+              <a href="#avisos">Consultar avisos</a>
+              <a href="#mapa">Ver zonas</a>
+            </div>
+            <RiverRibbon />
+          </section>
+        )}
         <section id="avisos" tabIndex={-1} className="pirai-hero">
           <div className="pirai-copy">
             <span className="pirai-location">
               <MapPin size={15} aria-hidden="true" /> Cuenca del río Piraí · Santa Cruz
             </span>
-            <h1
-              style={
-                principal?.vigente && titulo === principal.nivel.texto
-                  ? { borderInlineStart: '6px solid ' + principal.nivel.color, paddingInlineStart: '0.22em' }
-                  : undefined
-              }
-            >
-              {titulo}
-            </h1>
+            {id ? <h1>{titulo}</h1> : <h2>{titulo}</h2>}
             {principal && (!id || detalle.error === null) && (
               <>
                 {!id && (lista.loading || lista.error !== null) && (
@@ -221,10 +230,6 @@ export default function Landing({ alIngresar }: { alIngresar: () => void }) {
               <RefreshCw size={16} aria-hidden="true" />{' '}
               {lista.error !== null ? 'Reintentar' : 'Actualizar avisos'}
             </button>
-          </div>
-          <div className="pirai-river" aria-hidden="true">
-            <div className="pirai-river-lines" />
-            <span>Río Piraí</span>
           </div>
         </section>
         <p className="solo-lector" role="status" aria-live="polite">
@@ -314,5 +319,33 @@ export default function Landing({ alIngresar }: { alIngresar: () => void }) {
         SAT Río Piraí <span>Santa Cruz · Bolivia</span>
       </footer>
     </div>
+  )
+}
+
+// Las dos orillas se aproximan y se separan para dibujar los pliegues del cauce.
+function RiverRibbon() {
+  return (
+    <svg className="pirai-ribbon" viewBox="0 0 920 260" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="cauce" x1="0" y1=".3" x2="1" y2=".6">
+          <stop stopColor="#8dd6db" />
+          <stop offset=".18" stopColor="#3c90a3" />
+          <stop offset=".34" stopColor="#c0ede4" />
+          <stop offset=".48" stopColor="#176775" />
+          <stop offset=".66" stopColor="#74c5ca" />
+          <stop offset=".83" stopColor="#285e81" />
+          <stop offset="1" stopColor="#99cfda" />
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#cauce)" strokeWidth="2.2" strokeLinecap="round">
+        {Array.from({ length: 54 }, (_, i) => {
+          const t = i / 53
+          return <path key={i} d={`M 6 ${176 + 5*t}
+            C 142 ${211 - 72*t}, 172 ${16 + 129*t}, 310 ${101 + 70*t}
+            S 492 ${293 - 134*t}, 595 ${126 - 36*t}
+            S 754 ${39 + 142*t}, 914 ${70 + 5*t}`} />
+        })}
+      </g>
+    </svg>
   )
 }
