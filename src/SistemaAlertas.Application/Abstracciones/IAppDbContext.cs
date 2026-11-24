@@ -18,5 +18,6 @@ public interface IAppDbContext
     DbSet<HistorialContacto> HistorialContactos { get; }
     DbSet<VersionMensaje> VersionesMensaje { get; }
     DbSet<ListaDestinos> ListasDestinos { get; }
+    DbSet<ProtocoloOficial> Protocolos { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -55,6 +55,13 @@ public class VersionMensaje : Entidad
     /// <summary>Un Update o Cancel aprobado que la reemplaza. Mientras sea null, es la versión vigente de su cadena.</summary>
     public Guid? ReemplazadaPorId { get; private set; }
 
+    /// <summary>RF-05: protocolo oficial del que salen las instrucciones. Título y cita se copian al vincularlo,
+    /// así la versión conserva de dónde salió su texto aunque el protocolo cambie después.</summary>
+    public Guid? ProtocoloId { get; private set; }
+    public string? ProtocoloTitulo { get; private set; }
+    /// <summary>Institución, documento y fecha del protocolo: "COED Santa Cruz, Plan 01/2026, 15/01/2026".</summary>
+    public string? ProtocoloCita { get; private set; }
+
     private VersionMensaje() { }
 
     /// <summary>Primera versión o versión derivada (Update/Cancel) de una cadena.</summary>
@@ -83,6 +90,9 @@ public class VersionMensaje : Entidad
         Remitente = remitente;
         PreparadoPorId = preparadoPorId;
         IdentificadorCap = $"SAT-PIRAI-{CreadoEn:yyyyMMdd}-{Id.ToString("N")[..12]}";
+        // Un Update que conserva las instrucciones de la versión que corrige conserva también su protocolo.
+        if (referencia?.ProtocoloId is not null && contenido.Instruccion == referencia.Contenido.Instruccion)
+            CopiarProtocolo(referencia);
     }
 
     /// <summary>
@@ -103,6 +113,7 @@ public class VersionMensaje : Entidad
         Referencias = rechazada.Referencias;
         VersionAnteriorId = rechazada.Id;
         MotivoDevolucion = rechazada.MotivoRechazo;
+        CopiarProtocolo(rechazada);
         PreparadoPorId = preparadoPorId;
         IdentificadorCap = $"SAT-PIRAI-{CreadoEn:yyyyMMdd}-{Id.ToString("N")[..12]}";
     }
@@ -126,6 +137,9 @@ public class VersionMensaje : Entidad
         var faltan = new List<string>();
         if (string.IsNullOrWhiteSpace(c.Titular) && string.IsNullOrWhiteSpace(c.Descripcion)) faltan.Add("Falta el titular o la descripción.");
         if (string.IsNullOrWhiteSpace(c.Instruccion)) faltan.Add("Faltan las instrucciones a la población.");
+        // RF-05: las instrucciones de una alerta o actualización salen de un protocolo oficial con fuente y fecha.
+        else if (Tipo != TipoMensajeCap.Cancel && ProtocoloId is null)
+            faltan.Add("Falta vincular el protocolo oficial del que salen las instrucciones.");
         if (Area is null || Area.IsEmpty) faltan.Add("Falta el área afectada.");
         if (Tipo != TipoMensajeCap.Cancel)
         {
@@ -140,7 +154,37 @@ public class VersionMensaje : Entidad
     public void Redactar(string? titular, string? descripcion, string? instruccion)
     {
         EstadoActual.Editar(this);
+        if (ProtocoloId is not null && (string.IsNullOrWhiteSpace(instruccion) ? null : instruccion.Trim()) != Contenido.Instruccion)
+            throw new ExcepcionDominio($"Las instrucciones son las del protocolo «{ProtocoloTitulo}» y no se editan. " +
+                "Para usar otro texto, elige otro protocolo o quita el vínculo.");
         Contenido = Contenido.Redactar(titular, descripcion, instruccion);
+    }
+
+    /// <summary>RF-05: toma las instrucciones de un protocolo oficial vigente y guarda de dónde salen.</summary>
+    public void VincularProtocolo(ProtocoloOficial protocolo)
+    {
+        EstadoActual.Editar(this);
+        if (!protocolo.Activo) throw new ExcepcionDominio($"El protocolo «{protocolo.Titulo}» está desactivado.");
+        ProtocoloId = protocolo.Id;
+        ProtocoloTitulo = protocolo.Titulo;
+        ProtocoloCita = protocolo.Cita;
+        Contenido = Contenido.Redactar(Contenido.Titular, Contenido.Descripcion, protocolo.Instruccion);
+    }
+
+    /// <summary>Quita el vínculo: el texto queda, pero la versión no pasa a revisión hasta vincular otro protocolo.</summary>
+    public void QuitarProtocolo()
+    {
+        EstadoActual.Editar(this);
+        ProtocoloId = null;
+        ProtocoloTitulo = null;
+        ProtocoloCita = null;
+    }
+
+    private void CopiarProtocolo(VersionMensaje origen)
+    {
+        ProtocoloId = origen.ProtocoloId;
+        ProtocoloTitulo = origen.ProtocoloTitulo;
+        ProtocoloCita = origen.ProtocoloCita;
     }
 
     /// <summary>Fija el XML CAP generado (ya validado) y pasa a revisión. Si está incompleta, sigue en borrador.</summary>

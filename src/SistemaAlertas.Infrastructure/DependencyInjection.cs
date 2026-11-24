@@ -1,3 +1,4 @@
+using SistemaAlertas.Domain.Mensajes;
 using SistemaAlertas.Domain.Zonas;
 using SistemaAlertas.Domain.Comunidades;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,19 @@ public static class DependencyInjection
                    .UseAsyncSeeding(async (context, _, ct) =>
                    {
                        var db = (AlertasDbContext)context;
-                       if (configuration["Semilla:DatosDemo"] != "true" || await db.Zonas.AnyAsync(ct)) return;
+                       if (configuration["Semilla:DatosDemo"] != "true") return;
+                       // RF-05: dos protocolos de ejemplo (ficticios) para poder vincular instrucciones en la demo.
+                       if (!await db.Protocolos.AnyAsync(ct))
+                       {
+                           db.Protocolos.Add(new ProtocoloOficial("Evacuación por crecida del río (demo)",
+                               "Diríjase de inmediato a la zona alta o al punto de encuentro de su comunidad. Lleve documentos, agua y medicamentos. No cruce el río ni zonas inundadas.",
+                               "Datos de demostración", "DEMO-PROT-01", new DateOnly(2026, 1, 15)));
+                           db.Protocolos.Add(new ProtocoloOficial("Vigilancia ante posible desborde (demo)",
+                               "Esté atento a los avisos oficiales. Prepare una mochila de emergencia y ubique la ruta de evacuación. Aleje a niños y animales de la orilla.",
+                               "Datos de demostración", "DEMO-PROT-02", new DateOnly(2026, 1, 15)));
+                           await db.SaveChangesAsync(ct);
+                       }
+                       if (await db.Zonas.AnyAsync(ct)) return;
                        var connection = (Npgsql.NpgsqlConnection)db.Database.GetDbConnection();
                        await connection.ReloadTypesAsync(ct);
                        var area = new NetTopologySuite.IO.WKTReader().Read("POLYGON ((-63.2 -17.8, -63.1 -17.8, -63.1 -17.7, -63.2 -17.8))");

@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Protocolo sin fuente se rechaza'
+method: POST
+url: '{{baseUrl}}/api/protocolos'
+order: 70
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "titulo": "Sin fuente", "instruccion": "Evacuar.", "fuente": "", "referencia": "X-1", "fechaDocumento": "2026-01-15" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('pide la institución', () => pm.expect(pm.response.json().detail).to.include('institución'));

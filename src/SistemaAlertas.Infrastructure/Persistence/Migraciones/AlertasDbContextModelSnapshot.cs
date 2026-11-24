@@ -399,6 +399,59 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.ToTable("listas_destinos", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.ProtocoloOficial", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateOnly>("FechaDocumento")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_documento");
+
+                    b.Property<string>("Fuente")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("fuente");
+
+                    b.Property<string>("Instruccion")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("instruccion");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("referencia");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("titulo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_protocolos_oficiales");
+
+                    b.HasIndex("Titulo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_protocolos_oficiales_titulo");
+
+                    b.ToTable("protocolos_oficiales", (string)null);
+                });
+
             modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.VersionMensaje", b =>
                 {
                     b.Property<Guid>("Id")
@@ -469,6 +522,20 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.Property<Guid>("PreparadoPorId")
                         .HasColumnType("uuid")
                         .HasColumnName("preparado_por_id");
+
+                    b.Property<string>("ProtocoloCita")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("protocolo_cita");
+
+                    b.Property<Guid?>("ProtocoloId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("protocolo_id");
+
+                    b.Property<string>("ProtocoloTitulo")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("protocolo_titulo");
 
                     b.Property<Guid?>("ReemplazadaPorId")
                         .HasColumnType("uuid")
@@ -588,6 +655,9 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
 
                     b.HasIndex("PreparadoPorId")
                         .HasDatabaseName("ix_versiones_mensaje_preparado_por_id");
+
+                    b.HasIndex("ProtocoloId")
+                        .HasDatabaseName("ix_versiones_mensaje_protocolo_id");
 
                     b.HasIndex("ReemplazadaPorId")
                         .HasDatabaseName("ix_versiones_mensaje_reemplazada_por_id");
@@ -965,6 +1035,12 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_versiones_mensaje_usuarios_preparado_por_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.ProtocoloOficial", null)
+                        .WithMany()
+                        .HasForeignKey("ProtocoloId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_versiones_mensaje_protocolos_oficiales_protocolo_id");
 
                     b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
                         .WithMany()

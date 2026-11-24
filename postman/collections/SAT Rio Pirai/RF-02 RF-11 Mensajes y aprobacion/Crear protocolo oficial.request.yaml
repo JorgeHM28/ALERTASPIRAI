@@ -1,0 +1,36 @@
+$kind: http-request
+name: 'Crear protocolo oficial'
+method: POST
+url: '{{baseUrl}}/api/protocolos'
+order: 60
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "{{protocoloTitulo}}",
+      "instruccion": "Evacuar a la zona alta. Punto de reunión: colegio de Porongo, desde las 18:00.",
+      "fuente": "COED Santa Cruz (pruebas)",
+      "referencia": "Plan de contingencia PRUEBA-01",
+      "fechaDocumento": "2026-01-15"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      // RF-05: el título es único en el catálogo; cada corrida crea el suyo.
+      pm.collectionVariables.set('protocoloTitulo', 'Evacuación por crecida ' + Date.now());
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const p = pm.response.json();
+      pm.test('guarda fuente, documento y fecha', () => {
+        pm.expect(p.fuente).to.eql('COED Santa Cruz (pruebas)');
+        pm.expect(p.referencia).to.eql('Plan de contingencia PRUEBA-01');
+        pm.expect(p.fechaDocumento).to.eql('2026-01-15');
+        pm.expect(p.activo).to.eql(true);
+      });
+      pm.collectionVariables.set('protocoloId', p.id);

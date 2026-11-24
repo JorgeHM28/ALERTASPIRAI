@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, MessageSquareText, RefreshCw, Send, ShieldAlert, Trash2, Undo2, Users, XCircle } from 'lucide-react'
 import {
   api, descargarTexto, esAdministrador, fecha, leerSesion, NOMBRE_ESTADO_VERSION, NOMBRE_TIPO, puedeAprobar, puedeEditar,
-  type EstadoVersion, type ListaDestinos, type ResultadoDifusion, type Rol, type TipoCanal, type VersionDetalle, type VersionResumen,
+  type EstadoVersion, type ListaDestinos, type Protocolo, type ResultadoDifusion, type Rol, type TipoCanal, type VersionDetalle, type VersionResumen,
 } from '../api'
 import Mapa from './Mapa'
 import { Alert } from '../components/ui/Alert'
@@ -127,7 +127,16 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
   const vigente = (r.estado === 'Aprobada' || r.estado === 'Difundida') && !r.reemplazadaPorId
   const ruta = `/api/versiones/${r.id}`
 
-  const guardar = () => api<VersionDetalle>(ruta, { method: 'PUT', json: redaccion })
+  // Con protocolo vinculado, las instrucciones son las del protocolo: no se envían para no pisarlas.
+  const guardar = () => api<VersionDetalle>(ruta, { method: 'PUT', json: d.protocoloId ? { ...redaccion, instruccion: null } : redaccion })
+
+  // RF-05: protocolos oficiales activos para elegir las instrucciones.
+  const [protocolos, setProtocolos] = useState<Protocolo[]>([])
+  useEffect(() => {
+    if (r.estado === 'Borrador' && editar) api<Protocolo[]>('/api/protocolos?activos=true').then(setProtocolos).catch(() => setProtocolos([]))
+  }, [r.id, r.estado, editar])
+  const vincular = (protocoloId: string | null) => accion(protocoloId ? 'Instrucciones tomadas del protocolo oficial.' : 'Se quitó el protocolo: elige otro antes de enviar a revisión.',
+    async () => { await guardar(); return api<VersionDetalle>(`${ruta}/protocolo`, { method: 'PUT', json: { protocoloId } }) })
 
   const { panel, titulo } = useEnfocarAlAbrir<HTMLDivElement>(r.id)
   const [decidiendo, setDecidiendo] = useState<'aprobar' | 'rechazar' | null>(null)
@@ -188,7 +197,17 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
           <b>Redacción para la población</b>
           <label>Titular<input value={redaccion.titular} maxLength={300} onChange={e => setRedaccion({ ...redaccion, titular: e.target.value })} /></label>
           <label>Descripción<textarea value={redaccion.descripcion} onChange={e => setRedaccion({ ...redaccion, descripcion: e.target.value })} /></label>
-          <label>Instrucciones oficiales<textarea value={redaccion.instruccion} onChange={e => setRedaccion({ ...redaccion, instruccion: e.target.value })} /></label>
+          <label>Protocolo oficial (RF-05)
+            <select value={d.protocoloId ?? ''} onChange={e => vincular(e.target.value || null)}>
+              <option value="">— Elige el protocolo de donde salen las instrucciones —</option>
+              {d.protocoloId && !protocolos.some(x => x.id === d.protocoloId) && <option value={d.protocoloId}>{d.protocoloTitulo}</option>}
+              {protocolos.map(x => <option key={x.id} value={x.id}>{x.titulo} · {x.fuente}</option>)}
+            </select>
+          </label>
+          {d.protocoloCita && <p className="tenue">Fuente: {d.protocoloCita}</p>}
+          {!d.protocoloId && protocolos.length === 0 && <p className="tenue">No hay protocolos activos: un administrador debe cargarlos en «Protocolos».</p>}
+          <label>Instrucciones oficiales<textarea value={d.protocoloId ? (d.instruccion ?? '') : redaccion.instruccion} readOnly={!!d.protocoloId}
+            onChange={e => setRedaccion({ ...redaccion, instruccion: e.target.value })} /></label>
           <p className="tenue">Los hechos, el nivel y el ámbito son los del aviso oficial y no se editan.</p>
           <div className="acciones">
             <button>Guardar borrador</button>
@@ -222,6 +241,7 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
             <dt>Hechos</dt><dd>{r.evento} · urgencia {en(NOMBRE_URGENCIA, d.urgencia).toLowerCase()} · severidad {en(NOMBRE_SEVERIDAD, d.severidad).toLowerCase()} · certeza {en(NOMBRE_CERTEZA, d.certeza).toLowerCase()}</dd>
             <dt>Vigencia</dt><dd>{fecha(d.vigente)} → {fecha(r.expira)}</dd>
             <dt>Zona</dt><dd>{r.descripcionArea ?? '—'}</dd>
+            <dt>Instrucciones</dt><dd>{d.protocoloTitulo ? <>{d.protocoloTitulo} ({d.protocoloCita})</> : 'Sin protocolo oficial vinculado'}</dd>
             {d.referencias && <><dt>Referencias</dt><dd className="codigo-linea">{d.referencias}</dd></>}
             {r.revisadoEn && <><dt>Revisión</dt><dd>{NOMBRE_ESTADO_VERSION[r.estado]} el {fecha(r.revisadoEn)}</dd></>}
           </dl>) },

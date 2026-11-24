@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Vincular protocolo a la version del SENAMHI'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionSenamhiId}}/protocolo'
+order: 2120
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "protocoloId": "{{protocoloId}}" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.test('ya está completa', () => pm.expect(pm.response.json().detalle.resumen.faltantes).to.be.empty);

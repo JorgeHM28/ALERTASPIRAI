@@ -174,6 +174,24 @@ public class VersionMensajeConfig : IEntityTypeConfiguration<VersionMensaje>
         b.HasOne<VersionMensaje>().WithMany().HasForeignKey(v => v.ReemplazadaPorId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Usuario>().WithMany().HasForeignKey(v => v.PreparadoPorId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Usuario>().WithMany().HasForeignKey(v => v.RevisadoPorId).OnDelete(DeleteBehavior.Restrict);
+        b.Property(v => v.ProtocoloTitulo).HasMaxLength(200);
+        b.Property(v => v.ProtocoloCita).HasMaxLength(400);
+        b.HasOne<ProtocoloOficial>().WithMany().HasForeignKey(v => v.ProtocoloId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>RF-05: catálogo de protocolos oficiales. No se borran, se desactivan.</summary>
+public class ProtocoloOficialConfig : IEntityTypeConfiguration<ProtocoloOficial>
+{
+    public void Configure(EntityTypeBuilder<ProtocoloOficial> b)
+    {
+        b.ToTable("protocolos_oficiales");
+        b.Ignore(p => p.Cita);
+        b.Property(p => p.Titulo).HasMaxLength(200).IsRequired();
+        b.Property(p => p.Instruccion).HasMaxLength(4000).IsRequired();
+        b.Property(p => p.Fuente).HasMaxLength(150).IsRequired();
+        b.Property(p => p.Referencia).HasMaxLength(200).IsRequired();
+        b.HasIndex(p => p.Titulo).IsUnique();
     }
 }
 

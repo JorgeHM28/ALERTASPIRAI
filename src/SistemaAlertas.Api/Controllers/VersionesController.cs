@@ -76,6 +76,12 @@ public sealed class VersionesController(IAppDbContext db, ServicioVersiones serv
         await DetalleAsync(await servicio.RedactarAsync(id, redaccion, User.Id(), ct), ct);
 
     /// <summary>Genera y valida el XML CAP 1.2. Si está incompleta o el XML no es válido, sigue en borrador (400).</summary>
+    /// <summary>RF-05: vincula el borrador a un protocolo oficial (o lo desvincula con null).</summary>
+    [HttpPut("versiones/{id:guid}/protocolo")]
+    [Authorize(Politicas.Edicion)]
+    public async Task<VersionDetalleDto> Protocolo(Guid id, VinculoProtocolo vinculo, CancellationToken ct) =>
+        await DetalleAsync(await servicio.VincularProtocoloAsync(id, vinculo.ProtocoloId, ct), ct);
+
     [HttpPost("versiones/{id:guid}/enviar-revision")]
     [Authorize(Politicas.Edicion)]
     public async Task<VersionDetalleDto> EnviarARevision(Guid id, CancellationToken ct) =>
@@ -156,7 +162,8 @@ public sealed class VersionesController(IAppDbContext db, ServicioVersiones serv
         var detalle = new VersionDetalle(VersionMapeo.ResumenDe(v, reloj.GetUtcNow()), c.Urgencia, c.Severidad, c.Certeza,
             c.Descripcion, c.Instruccion, c.Vigente, v.IdentificadorCap, v.Remitente, v.EnviadoCap, v.Referencias,
             v.ReferenciaVersionId, v.VersionAnteriorId, v.MotivoDevolucion, v.EnviadaARevisionEn, v.RevisadoPorId,
-            v.DifundidaEn, v.XmlCap, aviso.Remitente, aviso.IdentificadorCap, aviso.Enviado, aviso.TipoMensaje);
+            v.DifundidaEn, v.XmlCap, aviso.Remitente, aviso.IdentificadorCap, aviso.Enviado, aviso.TipoMensaje,
+            v.ProtocoloId, v.ProtocoloTitulo, v.ProtocoloCita);
         var (sms, lectura) = TextosMensaje.De(v);
         return new VersionDetalleDto(detalle, v.Area is null ? null : geoJson.AGeoJson(v.Area), sms, lectura);
     }

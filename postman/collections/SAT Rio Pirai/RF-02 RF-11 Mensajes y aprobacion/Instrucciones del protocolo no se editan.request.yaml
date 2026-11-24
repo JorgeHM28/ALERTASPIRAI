@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Instrucciones del protocolo no se editan'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionId}}'
+order: 470
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "instruccion": "Texto escrito a mano." }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica que vienen del protocolo', () => pm.expect(pm.response.json().detail).to.include('protocolo'));

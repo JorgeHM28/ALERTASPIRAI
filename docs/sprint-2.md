@@ -1,6 +1,6 @@
 # Sprint 2: mensajes, aprobación, destinos y web pública
 
-Entrega: 20/11/2026. Requisitos: RF-02, RF-05 (parcial), RF-06, RF-07 y RF-11.
+Entrega: 20/11/2026. Requisitos: RF-02, RF-05, RF-06, RF-07 y RF-11.
 
 ## Flujo
 
@@ -12,7 +12,8 @@ Entrega: 20/11/2026. Requisitos: RF-02, RF-05 (parcial), RF-06, RF-07 y RF-11.
    Los hechos (evento, urgencia, severidad, certeza), el nivel y el ámbito (vigencia y área) se copian del aviso y no se editan. El operador redacta el titular, la descripción y las instrucciones.
 3. El borrador se corrige (`PUT /api/versiones/{id}`; un campo en `null` se conserva y `""` lo borra).
    Un borrador que no se va a usar se elimina con `DELETE /api/versiones/{id}`. Solo se eliminan borradores (lo que ya se envió a revisión, se rechazó o se aprobó es historial de RF-11) y solo los elimina quien los preparó o un administrador (si no, 403). El borrado queda en la bitácora del aviso.
-4. **Enviar a revisión** (`POST /api/versiones/{id}/enviar-revision`) genera el XML CAP 1.2 con el Builder y lo valida. Si la versión está incompleta, o si el XML no es válido, queda como borrador y la respuesta dice por qué.
+   **Instrucciones oficiales (RF-05):** se eligen de un protocolo del catálogo con `PUT /api/versiones/{id}/protocolo` y `{ "protocoloId": "…" }` (o `null` para quitarlo). La versión copia el texto, el título y la cita (institución, documento y fecha). Mientras esté vinculada, las instrucciones no se editan a mano. Una alerta o actualización sin protocolo no pasa a revisión. La cancelación no lo exige. La corrección de una rechazada, y un Update que conserva las instrucciones, heredan el protocolo.
+4. **Enviar a revisión** (`POST /api/versiones/{id}/enviar-revision`) genera el XML CAP 1.2 con el Builder y lo valida contra el **XSD oficial de OASIS** (`src/SistemaAlertas.Application/Cap/CAP-v1.2.xsd`, sin cambios, incluido como recurso del ensamblado). El XSD controla el orden de los elementos, las enumeraciones y el formato de las fechas. Si la versión está incompleta, o si el XML no es válido, queda como borrador y la respuesta dice por qué.
 5. El **aprobador** revisa la fuente, las instrucciones, el contenido CAP, el tipo, las referencias y el alcance, y decide:
    - `POST /api/versiones/{id}/aprobar`: se guardan su identidad y la fecha. La versión queda inmutable.
    - **Separación de funciones:** quien preparó la versión no puede aprobarla, aunque sea administrador (400). En desarrollo se crea el usuario `aprobador` / `Aprobador12345` (rol Aprobador, `Semilla:ContrasenaAprobador`) para mostrar el flujo completo.
@@ -28,6 +29,13 @@ Entrega: 20/11/2026. Requisitos: RF-02, RF-05 (parcial), RF-06, RF-07 y RF-11.
 - Un Update o Cancel solo puede referirse a la versión vigente de su mismo evento, que debe estar aprobada, no reemplazada y no ser un Cancel. Cualquier otra referencia se rechaza como **incoherente**. Una versión que no existe se rechaza como **referencia inexistente**.
 - Un Update o Cancel oficial importado cuyo `<references>` apunta a un aviso que no está registrado se guarda igual, porque es el documento oficial. No se puede preparar un mensaje desde él (referencia inexistente).
 - Cada evento tiene a lo sumo una versión en curso (borrador o en revisión).
+
+## Protocolos oficiales (RF-05)
+
+- Catálogo en `GET /api/protocolos` (`?activos=true` para elegir). Cada protocolo tiene título, instrucciones, institución, documento de referencia y fecha del documento, todos obligatorios.
+- Lo mantiene un administrador: `POST /api/protocolos`, `PUT /api/protocolos/{id}` y `POST /api/protocolos/{id}/desactivar` o `/activar`. No se borra, porque las versiones lo citan.
+- Si se corrige un protocolo, las versiones ya preparadas conservan el texto y la cita que copiaron.
+- En desarrollo (`Semilla:DatosDemo`) se cargan dos protocolos de ejemplo, marcados como «Datos de demostración».
 
 ## Destinos por comunidad (RF-07)
 
@@ -56,7 +64,8 @@ El nivel sale de la severidad oficial y siempre se escribe con palabras:
 
 - **Página de inicio pública** (sin sesión): avisos vigentes con su texto y un mapa, cancelaciones de las últimas 24 h y qué significa cada nivel. El enlace `/?aviso={id}` abre un aviso concreto.
 - **Avisos**: tiene el botón «Preparar mensaje» y explica por qué un aviso no se puede preparar.
-- **Mensajes**: lista de versiones por estado. Para cada versión permite editar el borrador, eliminarlo (con confirmación), enviarlo a revisión, aprobar o rechazar con motivo, corregir, preparar un Update o un Cancel, revisar los destinos por comunidad y difundir.
+- **Protocolos**: catálogo de protocolos oficiales. Todos lo consultan; el administrador lo mantiene.
+- **Mensajes**: lista de versiones por estado. El borrador tiene un selector «Protocolo oficial» que llena las instrucciones y muestra su fuente. Para cada versión permite editar el borrador, eliminarlo (con confirmación), enviarlo a revisión, aprobar o rechazar con motivo, corregir, preparar un Update o un Cancel, revisar los destinos por comunidad y difundir.
 
 ## Base de datos
 
@@ -64,7 +73,8 @@ La migración `Sprint2VersionesMensaje` hace lo siguiente:
 - Agrega `avisos.referencias` y `avisos.cadena_id`, y rellena los avisos existentes.
 - Crea `versiones_mensaje`, `listas_destinos`, `destinos_envio` y `comunidades_pendientes`.
 
+La migración `Sprint2ProtocolosOficiales` crea `protocolos_oficiales` y agrega a `versiones_mensaje` las columnas `protocolo_id`, `protocolo_titulo` y `protocolo_cita`.
+
 ## Pendiente para retomar
 
-- **RF-05:** un catálogo de protocolos oficiales con fuente y fecha. Hoy las instrucciones son texto libre de la versión, aunque son obligatorias para aprobar.
-- Validar el XML contra el XSD oficial de OASIS. Hoy la validación es estructural, más las reglas del Builder.
+Nada del Sprint 2. El catálogo de protocolos (RF-05), la regla de que quien prepara no aprueba y la validación contra el XSD oficial quedaron hechos el 24/11/2026.

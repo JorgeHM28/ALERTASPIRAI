@@ -42,6 +42,34 @@ public class ModuloCapTests
     }
 
     [Fact]
+    public void Valida_contra_el_xsd_oficial_el_orden_de_los_elementos()
+    {
+        // Mismo ejemplo oficial con <sender> antes de <identifier>: la estructura propia no lo detecta, el XSD de OASIS sí.
+        var xml = Ejemplo("aviso-senamhi.xml");
+        var identificador = System.Text.RegularExpressions.Regex.Match(xml, @"<identifier>.*?</identifier>").Value;
+        var remitente = System.Text.RegularExpressions.Regex.Match(xml, @"<sender>.*?</sender>").Value;
+        var desordenado = xml.Replace(identificador, "@@ID@@").Replace(remitente, identificador).Replace("@@ID@@", remitente);
+
+        var r = _modulo.Validar(desordenado);
+
+        Assert.False(r.Valido);
+        Assert.Contains(r.Errores, e => e.StartsWith("XSD oficial CAP 1.2"));
+    }
+
+    [Fact]
+    public void El_xsd_oficial_rechaza_una_fecha_en_formato_z()
+    {
+        // CAP 1.2 exige la zona horaria como +hh:mm o -hh:mm; "Z" no está permitido.
+        var xml = System.Text.RegularExpressions.Regex.Replace(Ejemplo("aviso-senamhi.xml"),
+            @"<sent>(.*?)([+-]\d\d:\d\d)</sent>", "<sent>$1Z</sent>");
+
+        var r = _modulo.Validar(xml);
+
+        Assert.False(r.Valido);
+        Assert.Contains(r.Errores, e => e.StartsWith("XSD oficial CAP 1.2"));
+    }
+
+    [Fact]
     public void Informa_todos_los_elementos_obligatorios_que_faltan()
     {
         const string xml = """
