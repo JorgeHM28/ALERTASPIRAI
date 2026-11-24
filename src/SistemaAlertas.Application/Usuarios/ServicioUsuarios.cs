@@ -129,6 +129,16 @@ public sealed class ServicioUsuarios(IAppDbContext db, IHasherContrasena hasher,
         await CrearAsync(new CrearUsuario("admin", "Administrador del sistema", "admin@sat-pirai.local", [Rol.Administrador], contrasena), null, ct);
     }
 
+    /// <summary>
+    /// Solo para la demo: crea el usuario "aprobador" (rol Aprobador) si no existe, porque quien prepara un mensaje
+    /// no puede aprobarlo y con el admin solo no se podría mostrar el flujo completo.
+    /// </summary>
+    public async Task SembrarAprobadorDemoAsync(string contrasena, CancellationToken ct)
+    {
+        if (await db.Usuarios.AnyAsync(u => u.NombreUsuario == "aprobador", ct)) return;
+        await CrearAsync(new CrearUsuario("aprobador", "Aprobador de la demo", "aprobador@sat-pirai.local", [Rol.Aprobador], contrasena), null, ct);
+    }
+
     private static void ValidarContrasena(string? contrasena)
     {
         if (string.IsNullOrEmpty(contrasena) || contrasena.Length < LongitudMinimaContrasena

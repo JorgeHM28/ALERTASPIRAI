@@ -57,6 +57,9 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
   }
 
   const filtradas = versiones.filter(v => coincide(filtro, v.estado))
+  // Quien preparó una versión no la aprueba: el aviso cuenta solo las que preparó otra persona.
+  const miId = leerSesion()?.usuario.id
+  const porAprobar = versiones.filter(v => v.estado === 'EnRevision' && v.preparadoPorId !== miId).length
   const cuenta = (f: Filtro) => versiones.filter(v => coincide(f, v.estado)).length
 
   return (
@@ -64,8 +67,8 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
       <div className="barra">
         <div><h2>Mensajes a la población</h2><p className="tenue">Alertas, actualizaciones y cancelaciones preparadas desde los avisos oficiales, con su revisión y aprobación.</p></div>
       </div>
-      {puedeAprobar(roles) && !cargando && !error && cuenta('EnRevision') > 0 && filtro !== 'EnRevision' && (
-        <p className="atencion" role="status"><ShieldAlert size={18} aria-hidden="true" /><span><b>{cuenta('EnRevision')} {cuenta('EnRevision') === 1 ? 'versión espera' : 'versiones esperan'} tu aprobación.</b></span><button className="primario" onClick={() => setFiltro('EnRevision')}>Revisar ahora</button></p>
+      {puedeAprobar(roles) && !cargando && !error && porAprobar > 0 && filtro !== 'EnRevision' && (
+        <p className="atencion" role="status"><ShieldAlert size={18} aria-hidden="true" /><span><b>{porAprobar} {porAprobar === 1 ? 'versión espera' : 'versiones esperan'} tu aprobación.</b></span><button className="primario" onClick={() => setFiltro('EnRevision')}>Revisar ahora</button></p>
       )}
       <AyudaPanel />
       {aviso && <Alert key={aviso.texto} tone={aviso.ok ? 'success' : 'danger'} dismissible>{aviso.texto}</Alert>}
@@ -119,7 +122,8 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
   const [difusion, setDifusion] = useState<ResultadoDifusion | null>(null)
   const [errorDifusion, setErrorDifusion] = useState('')
   // Solo un borrador se elimina, y solo lo elimina quien lo preparó o un administrador (la API vuelve a comprobarlo).
-  const puedeEliminar = r.estado === 'Borrador' && editar && (esAdministrador(roles) || leerSesion()?.usuario.id === r.preparadoPorId)
+  const preparadaPorMi = leerSesion()?.usuario.id === r.preparadoPorId
+  const puedeEliminar = r.estado === 'Borrador' && editar && (esAdministrador(roles) || preparadaPorMi)
   const vigente = (r.estado === 'Aprobada' || r.estado === 'Difundida') && !r.reemplazadaPorId
   const ruta = `/api/versiones/${r.id}`
 
@@ -196,7 +200,8 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
         </form>
       )}
 
-      {r.estado === 'EnRevision' && aprobar && (
+      {r.estado === 'EnRevision' && aprobar && preparadaPorMi && <Alert tone="info">Tú preparaste esta versión: la aprueba otra persona con permiso de aprobación (separación de funciones). Puedes rechazarla si quieres retirarla.</Alert>}
+      {r.estado === 'EnRevision' && aprobar && !preparadaPorMi && (
         <div className="tarjeta interior revision">
           <b>Revisión</b>
           <p className="tenue">Lee el texto de cada canal, la zona, la fuente oficial y los destinos antes de decidir. Aprobar y Rechazar están en la barra del pie, siempre a la vista.</p>
@@ -245,7 +250,7 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
         {vigente && aprobar && <button className="primario ancho-movil" onClick={pedirDifusion}><Send size={16} aria-hidden="true" />Difundir</button>}
         {r.estado === 'EnRevision' && aprobar && <>
           <button className="peligro" onClick={() => { setMotivo(''); setDecidiendo('rechazar') }}><XCircle size={16} aria-hidden="true" />Rechazar</button>
-          <button className="primario" onClick={pedirAprobacion}><CheckCircle2 size={16} aria-hidden="true" />Aprobar</button>
+          {!preparadaPorMi && <button className="primario" onClick={pedirAprobacion}><CheckCircle2 size={16} aria-hidden="true" />Aprobar</button>}
         </>}
       </div>
 

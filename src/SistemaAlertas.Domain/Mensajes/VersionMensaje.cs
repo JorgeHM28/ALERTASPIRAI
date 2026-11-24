@@ -155,6 +155,9 @@ public class VersionMensaje : Entidad
     /// <param name="referencia">La versión que este Update/Cancel referencia, para confirmar que sigue vigente.</param>
     public void Aprobar(Guid usuarioId, DateTimeOffset ahora, VersionMensaje? referencia)
     {
+        // Separación de funciones (RF-11): nadie aprueba su propio mensaje, tampoco un administrador.
+        if (usuarioId == PreparadoPorId)
+            throw new ExcepcionDominio("Quien preparó la versión no puede aprobarla: la aprueba otra persona con permiso de aprobación.");
         if (ReferenciaVersionId is not null)
         {
             if (referencia is null || referencia.Id != ReferenciaVersionId)

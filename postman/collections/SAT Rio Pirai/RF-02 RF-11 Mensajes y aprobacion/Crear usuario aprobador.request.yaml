@@ -1,0 +1,29 @@
+$kind: http-request
+name: 'Crear usuario aprobador'
+method: POST
+url: '{{baseUrl}}/api/usuarios'
+order: 40
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "{{usuarioAprobador}}",
+      "nombreCompleto": "Aprobadora de las pruebas",
+      "email": "{{usuarioAprobador}}@sat-pirai.local",
+      "roles": ["Aprobador"],
+      "contrasena": "Aprueba12345"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      // Quien prepara una versión no puede aprobarla: las aprobaciones las hace este usuario, no el admin.
+      pm.collectionVariables.set('usuarioAprobador', 'aprueba' + Date.now());
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      pm.test('tiene el rol Aprobador', () => pm.expect(pm.response.json().roles).to.eql(['Aprobador']));

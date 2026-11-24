@@ -1,0 +1,12 @@
+$kind: http-request
+name: 'Quien prepara no puede aprobar'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionId}}/aprobar'
+order: 1050
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // El admin preparó la versión: aunque tiene permiso de aprobación, no aprueba lo suyo (separación de funciones).
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica que la aprueba otra persona', () => pm.expect(pm.response.json().detail).to.include('no puede aprobarla'));

@@ -83,7 +83,7 @@ cd frontend && npm install && npm run dev             # Web en http://localhost:
 
 No mezcles las dos opciones: si la API de Docker está corriendo, ocupa el puerto 5080.
 
-Usuario inicial (solo en Development): **admin / Admin12345**. Cámbiale la contraseña después de entrar.
+Usuarios iniciales (solo en Development): **admin / Admin12345** y **aprobador / Aprobador12345** (rol Aprobador: quien prepara un mensaje no puede aprobarlo, así que la aprobación la hace otra persona). Cámbiales la contraseña después de entrar.
 
 Para probar rápido en la web:
 1. **Zonas → Importar GeoJSON** con `docs/ejemplos/zonas-pirai.geojson`.

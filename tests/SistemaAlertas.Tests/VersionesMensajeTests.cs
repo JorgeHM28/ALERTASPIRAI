@@ -115,6 +115,18 @@ public class VersionesMensajeTests
     }
 
     [Fact]
+    public void Quien_preparo_la_version_no_puede_aprobarla()
+    {
+        var v = Borrador();
+        v.EnviarARevision("<alert/>", Ahora, Ahora);
+        var ex = Assert.Throws<ExcepcionDominio>(() => v.Aprobar(Operador, Ahora, null));
+        Assert.Contains("no puede aprobarla", ex.Message);
+        Assert.Equal(EstadoVersion.EnRevision, v.Estado);
+        v.Aprobar(Aprobador, Ahora, null);
+        Assert.Equal(EstadoVersion.Aprobada, v.Estado);
+    }
+
+    [Fact]
     public void Un_borrador_no_se_aprueba_sin_pasar_por_revision()
     {
         var v = Borrador();
