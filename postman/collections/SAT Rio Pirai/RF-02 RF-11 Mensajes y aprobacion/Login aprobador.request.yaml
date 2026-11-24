@@ -1,0 +1,23 @@
+$kind: http-request
+name: 'Login aprobador'
+method: POST
+url: '{{baseUrl}}/api/auth/login'
+order: 50
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "{{usuarioAprobador}}",
+      "contrasena": "Aprueba12345"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      pm.collectionVariables.set('tokenAprobador', pm.response.json().token);

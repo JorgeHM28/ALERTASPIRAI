@@ -155,6 +155,9 @@ public class VersionMensaje : Entidad
     /// <param name="referencia">La versión que este Update/Cancel referencia, para confirmar que sigue vigente.</param>
     public void Aprobar(Guid usuarioId, DateTimeOffset ahora, VersionMensaje? referencia)
     {
+        // Separación de funciones (RF-11): nadie aprueba su propio mensaje, tampoco un administrador.
+        if (usuarioId == PreparadoPorId)
+            throw new ExcepcionDominio("Quien preparó la versión no puede aprobarla: la aprueba otra persona con permiso de aprobación.");
         if (ReferenciaVersionId is not null)
         {
             if (referencia is null || referencia.Id != ReferenciaVersionId)
@@ -185,6 +188,17 @@ public class VersionMensaje : Entidad
     {
         EstadoActual.Corregir(this);
         return new VersionMensaje(this, numero, usuarioId);
+    }
+
+    /// <summary>
+    /// Comprueba que esta versión se puede eliminar: tiene que ser un borrador (lo decide su estado) y solo la elimina
+    /// quien la preparó o un administrador.
+    /// </summary>
+    public void VerificarEliminable(Guid usuarioId, bool esAdministrador)
+    {
+        EstadoActual.Eliminar(this);
+        if (!esAdministrador && PreparadoPorId != usuarioId)
+            throw new UnauthorizedAccessException("Solo quien preparó el borrador o un administrador puede eliminarlo.");
     }
 
     public void MarcarDifundida(DateTimeOffset ahora)

@@ -3,6 +3,11 @@ name: 'Aprobar la version del SENAMHI'
 method: POST
 url: '{{baseUrl}}/api/versiones/{{versionSenamhiId}}/aprobar'
 order: 2170
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenAprobador}}'
 scripts:
   - type: afterResponse
     language: text/javascript

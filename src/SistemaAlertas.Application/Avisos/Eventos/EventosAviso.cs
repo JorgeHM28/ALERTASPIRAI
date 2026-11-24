@@ -6,7 +6,8 @@ public enum TipoEventoAviso
 {
     Registrado, Aprobado, Descartado, Vencido, Difundido,
     // Sprint 2: versiones del mensaje (RF-02, RF-11) y destinos (RF-07).
-    VersionPreparada, VersionEnviadaARevision, VersionRechazada, VersionCorregida, DestinosSeleccionados
+    VersionPreparada, VersionEnviadaARevision, VersionRechazada, VersionCorregida, DestinosSeleccionados,
+    VersionEliminada
 }
 
 /// <summary>Algo que le pasó a un aviso. Quien lo causó puede ser null si fue un proceso del sistema (vencimiento).</summary>

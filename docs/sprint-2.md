@@ -11,9 +11,11 @@ Entrega: 20/11/2026. Requisitos: RF-02, RF-05 (parcial), RF-06, RF-07 y RF-11.
    - **Cancel** si el aviso oficial es un Cancel (y hay algo aprobado que cancelar).
    Los hechos (evento, urgencia, severidad, certeza), el nivel y el ámbito (vigencia y área) se copian del aviso y no se editan. El operador redacta el titular, la descripción y las instrucciones.
 3. El borrador se corrige (`PUT /api/versiones/{id}`; un campo en `null` se conserva y `""` lo borra).
+   Un borrador que no se va a usar se elimina con `DELETE /api/versiones/{id}`. Solo se eliminan borradores (lo que ya se envió a revisión, se rechazó o se aprobó es historial de RF-11) y solo los elimina quien los preparó o un administrador (si no, 403). El borrado queda en la bitácora del aviso.
 4. **Enviar a revisión** (`POST /api/versiones/{id}/enviar-revision`) genera el XML CAP 1.2 con el Builder y lo valida. Si la versión está incompleta, o si el XML no es válido, queda como borrador y la respuesta dice por qué.
 5. El **aprobador** revisa la fuente, las instrucciones, el contenido CAP, el tipo, las referencias y el alcance, y decide:
    - `POST /api/versiones/{id}/aprobar`: se guardan su identidad y la fecha. La versión queda inmutable.
+   - **Separación de funciones:** quien preparó la versión no puede aprobarla, aunque sea administrador (400). En desarrollo se crea el usuario `aprobador` / `Aprobador12345` (rol Aprobador, `Semilla:ContrasenaAprobador`) para mostrar el flujo completo.
    - `POST /api/versiones/{id}/rechazar` con `{ "motivo": "…" }` (obligatorio). La versión vuelve al operador.
 6. Una versión rechazada se corrige con `POST /api/versiones/{id}/corregir`, que crea la versión siguiente en borrador con el motivo a la vista (Prototype).
 7. Una versión aprobada se corrige con `POST /api/versiones/{id}/update` o se cancela con `POST /api/versiones/{id}/cancel`. Al aprobarse, el Update o el Cancel reemplaza a la versión que referencia.
@@ -54,7 +56,7 @@ El nivel sale de la severidad oficial y siempre se escribe con palabras:
 
 - **Página de inicio pública** (sin sesión): avisos vigentes con su texto y un mapa, cancelaciones de las últimas 24 h y qué significa cada nivel. El enlace `/?aviso={id}` abre un aviso concreto.
 - **Avisos**: tiene el botón «Preparar mensaje» y explica por qué un aviso no se puede preparar.
-- **Mensajes**: lista de versiones por estado. Para cada versión permite editar el borrador, enviarlo a revisión, aprobar o rechazar con motivo, corregir, preparar un Update o un Cancel, revisar los destinos por comunidad y difundir.
+- **Mensajes**: lista de versiones por estado. Para cada versión permite editar el borrador, eliminarlo (con confirmación), enviarlo a revisión, aprobar o rechazar con motivo, corregir, preparar un Update o un Cancel, revisar los destinos por comunidad y difundir.
 
 ## Base de datos
 
@@ -65,5 +67,4 @@ La migración `Sprint2VersionesMensaje` hace lo siguiente:
 ## Pendiente para retomar
 
 - **RF-05:** un catálogo de protocolos oficiales con fuente y fecha. Hoy las instrucciones son texto libre de la versión, aunque son obligatorias para aprobar.
-- Impedir que la misma persona que preparó una versión la apruebe.
 - Validar el XML contra el XSD oficial de OASIS. Hoy la validación es estructural, más las reglas del Builder.

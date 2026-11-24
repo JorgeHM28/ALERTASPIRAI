@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, MessageSquareText, RefreshCw, Send, ShieldAlert, Undo2, Users, XCircle } from 'lucide-react'
+import { CheckCircle2, MessageSquareText, RefreshCw, Send, ShieldAlert, Trash2, Undo2, Users, XCircle } from 'lucide-react'
 import {
-  api, descargarTexto, fecha, NOMBRE_ESTADO_VERSION, NOMBRE_TIPO, puedeAprobar, puedeEditar,
+  api, descargarTexto, esAdministrador, fecha, leerSesion, NOMBRE_ESTADO_VERSION, NOMBRE_TIPO, puedeAprobar, puedeEditar,
   type EstadoVersion, type ListaDestinos, type ResultadoDifusion, type Rol, type TipoCanal, type VersionDetalle, type VersionResumen,
 } from '../api'
 import Mapa from './Mapa'
@@ -47,7 +47,19 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
     } catch (e) { setAviso({ ok: false, texto: e instanceof Error ? e.message : 'No se pudo completar la acción.' }) }
   }
 
+  /** Elimina el borrador abierto: se cierra el detalle y se recarga la lista. */
+  async function eliminar(id: string) {
+    setAviso(null)
+    try {
+      await api<void>(`/api/versiones/${id}`, { method: 'DELETE' })
+      setDetalle(null); setAviso({ ok: true, texto: 'Borrador eliminado. Quedó registrado en la bitácora del aviso.' }); cargar()
+    } catch (e) { setAviso({ ok: false, texto: e instanceof Error ? e.message : 'No se pudo eliminar el borrador.' }) }
+  }
+
   const filtradas = versiones.filter(v => coincide(filtro, v.estado))
+  // Quien preparó una versión no la aprueba: el aviso cuenta solo las que preparó otra persona.
+  const miId = leerSesion()?.usuario.id
+  const porAprobar = versiones.filter(v => v.estado === 'EnRevision' && v.preparadoPorId !== miId).length
   const cuenta = (f: Filtro) => versiones.filter(v => coincide(f, v.estado)).length
 
   return (
@@ -55,8 +67,8 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
       <div className="barra">
         <div><h2>Mensajes a la población</h2><p className="tenue">Alertas, actualizaciones y cancelaciones preparadas desde los avisos oficiales, con su revisión y aprobación.</p></div>
       </div>
-      {puedeAprobar(roles) && !cargando && !error && cuenta('EnRevision') > 0 && filtro !== 'EnRevision' && (
-        <p className="atencion" role="status"><ShieldAlert size={18} aria-hidden="true" /><span><b>{cuenta('EnRevision')} {cuenta('EnRevision') === 1 ? 'versión espera' : 'versiones esperan'} tu aprobación.</b></span><button className="primario" onClick={() => setFiltro('EnRevision')}>Revisar ahora</button></p>
+      {puedeAprobar(roles) && !cargando && !error && porAprobar > 0 && filtro !== 'EnRevision' && (
+        <p className="atencion" role="status"><ShieldAlert size={18} aria-hidden="true" /><span><b>{porAprobar} {porAprobar === 1 ? 'versión espera' : 'versiones esperan'} tu aprobación.</b></span><button className="primario" onClick={() => setFiltro('EnRevision')}>Revisar ahora</button></p>
       )}
       <AyudaPanel />
       {aviso && <Alert key={aviso.texto} tone={aviso.ok ? 'success' : 'danger'} dismissible>{aviso.texto}</Alert>}
@@ -86,7 +98,7 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
         </div>
 
         {detalle
-          ? <DetalleVersion key={detalle.detalle.resumen.id} v={detalle} roles={roles} accion={accion} cerrar={() => setDetalle(null)} numeroReferencia={versiones.find(x => x.id === detalle.detalle.referenciaVersionId)?.numero} />
+          ? <DetalleVersion key={detalle.detalle.resumen.id} v={detalle} roles={roles} accion={accion} eliminar={eliminar} cerrar={() => setDetalle(null)} numeroReferencia={versiones.find(x => x.id === detalle.detalle.referenciaVersionId)?.numero} />
           : <aside className="detail-empty"><span className="detail-empty-icon"><MessageSquareText size={28} aria-hidden="true" /></span><h3>Selecciona una versión</h3><p>Aquí verás su texto, su zona en el mapa, sus referencias y los destinos.</p></aside>}
       </div>
     </section>
@@ -97,8 +109,8 @@ function EstadoChip({ estado }: { estado: EstadoVersion }) {
   return <span className={`estado-version estado-${estado}`}>{NOMBRE_ESTADO_VERSION[estado]}</span>
 }
 
-function DetalleVersion({ v, roles, accion, cerrar, numeroReferencia }: {
-  v: VersionDetalle; roles: Rol[]; cerrar: () => void; numeroReferencia?: number
+function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }: {
+  v: VersionDetalle; roles: Rol[]; cerrar: () => void; numeroReferencia?: number; eliminar: (id: string) => Promise<void>
   accion: (texto: string, llamada: () => Promise<VersionDetalle>) => Promise<void>
 }) {
   const d = v.detalle
@@ -109,6 +121,9 @@ function DetalleVersion({ v, roles, accion, cerrar, numeroReferencia }: {
   const [motivo, setMotivo] = useState('')
   const [difusion, setDifusion] = useState<ResultadoDifusion | null>(null)
   const [errorDifusion, setErrorDifusion] = useState('')
+  // Solo un borrador se elimina, y solo lo elimina quien lo preparó o un administrador (la API vuelve a comprobarlo).
+  const preparadaPorMi = leerSesion()?.usuario.id === r.preparadoPorId
+  const puedeEliminar = r.estado === 'Borrador' && editar && (esAdministrador(roles) || preparadaPorMi)
   const vigente = (r.estado === 'Aprobada' || r.estado === 'Difundida') && !r.reemplazadaPorId
   const ruta = `/api/versiones/${r.id}`
 
@@ -135,7 +150,7 @@ function DetalleVersion({ v, roles, accion, cerrar, numeroReferencia }: {
     }).catch(() => setCambios(null))
   }
 
-  const [confirmando, setConfirmando] = useState<'difundir' | 'cancel' | null>(null)
+  const [confirmando, setConfirmando] = useState<'difundir' | 'cancel' | 'eliminar' | null>(null)
   const [vista, setVista] = useState<ListaDestinos | null>(null)
   const [vistaFallo, setVistaFallo] = useState(false)
   const [enviando, setEnviando] = useState(false)
@@ -180,11 +195,13 @@ function DetalleVersion({ v, roles, accion, cerrar, numeroReferencia }: {
             <button type="button" className="primario" onClick={() => accion('Enviada a revisión: el XML CAP 1.2 se generó y es válido.', async () => {
               await guardar(); return api<VersionDetalle>(`${ruta}/enviar-revision`, { method: 'POST' })
             })}><Send size={16} aria-hidden="true" />Enviar a revisión</button>
+            {puedeEliminar && <button type="button" className="peligro" onClick={() => setConfirmando('eliminar')}><Trash2 size={16} aria-hidden="true" />Eliminar borrador</button>}
           </div>
         </form>
       )}
 
-      {r.estado === 'EnRevision' && aprobar && (
+      {r.estado === 'EnRevision' && aprobar && preparadaPorMi && <Alert tone="info">Tú preparaste esta versión: la aprueba otra persona con permiso de aprobación (separación de funciones). Puedes rechazarla si quieres retirarla.</Alert>}
+      {r.estado === 'EnRevision' && aprobar && !preparadaPorMi && (
         <div className="tarjeta interior revision">
           <b>Revisión</b>
           <p className="tenue">Lee el texto de cada canal, la zona, la fuente oficial y los destinos antes de decidir. Aprobar y Rechazar están en la barra del pie, siempre a la vista.</p>
@@ -233,7 +250,7 @@ function DetalleVersion({ v, roles, accion, cerrar, numeroReferencia }: {
         {vigente && aprobar && <button className="primario ancho-movil" onClick={pedirDifusion}><Send size={16} aria-hidden="true" />Difundir</button>}
         {r.estado === 'EnRevision' && aprobar && <>
           <button className="peligro" onClick={() => { setMotivo(''); setDecidiendo('rechazar') }}><XCircle size={16} aria-hidden="true" />Rechazar</button>
-          <button className="primario" onClick={pedirAprobacion}><CheckCircle2 size={16} aria-hidden="true" />Aprobar</button>
+          {!preparadaPorMi && <button className="primario" onClick={pedirAprobacion}><CheckCircle2 size={16} aria-hidden="true" />Aprobar</button>}
         </>}
       </div>
 
@@ -296,6 +313,15 @@ function DetalleVersion({ v, roles, accion, cerrar, numeroReferencia }: {
           <button className="peligro" onClick={() => { setConfirmando(null); accion('Cancelación preparada como borrador.', () => api(`${ruta}/cancel`, { method: 'POST', json: { instruccion: 'El aviso fue cancelado. Puede retomar sus actividades con precaución.' } })) }}>Preparar cancelación</button>
         </>}>
         <p>Se crea un borrador de cancelación de «{r.titular ?? r.evento}». Todavía no se envía nada: debe pasar por revisión y aprobación, y recién entonces reemplaza a esta versión.</p>
+      </Dialogo>
+
+      <Dialogo abierto={confirmando === 'eliminar'} titulo="¿Eliminar este borrador?" alCerrar={() => setConfirmando(null)}
+        pie={<>
+          <button autoFocus onClick={() => setConfirmando(null)}>Volver</button>
+          <button className="peligro" onClick={() => { setConfirmando(null); eliminar(r.id) }}><Trash2 size={16} aria-hidden="true" />Eliminar borrador</button>
+        </>}>
+        <p>Se elimina el borrador de la versión {r.numero} («{r.titular ?? r.evento}»). No se puede deshacer, pero queda registrado en la bitácora del aviso.</p>
+        <p className="tenue">Solo se eliminan borradores. Lo que ya se envió a revisión, se rechazó o se aprobó se conserva como historial.</p>
       </Dialogo>
     </div>
   )

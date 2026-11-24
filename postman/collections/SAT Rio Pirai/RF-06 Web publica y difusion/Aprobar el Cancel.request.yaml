@@ -3,6 +3,11 @@ name: 'Aprobar el Cancel'
 method: POST
 url: '{{baseUrl}}/api/versiones/{{versionCancelId}}/aprobar'
 order: 650
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenAprobador}}'
 scripts:
   - type: afterResponse
     language: text/javascript

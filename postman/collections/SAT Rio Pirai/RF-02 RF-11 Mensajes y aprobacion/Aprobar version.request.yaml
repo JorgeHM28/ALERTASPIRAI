@@ -3,6 +3,11 @@ name: 'Aprobar version'
 method: POST
 url: '{{baseUrl}}/api/versiones/{{versionId}}/aprobar'
 order: 1100
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenAprobador}}'
 scripts:
   - type: afterResponse
     language: text/javascript

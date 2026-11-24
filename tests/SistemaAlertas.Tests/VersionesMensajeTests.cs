@@ -76,6 +76,32 @@ public class VersionesMensajeTests
         Assert.Contains("aprobada no se puede editar", ex.Message);
     }
 
+    [Fact]
+    public void Un_borrador_lo_elimina_quien_lo_preparo_o_un_administrador()
+    {
+        var v = Borrador();
+        v.VerificarEliminable(Operador, esAdministrador: false);
+        v.VerificarEliminable(Guid.NewGuid(), esAdministrador: true);
+        var ex = Assert.Throws<UnauthorizedAccessException>(() => v.VerificarEliminable(Guid.NewGuid(), esAdministrador: false));
+        Assert.Contains("quien preparó", ex.Message);
+    }
+
+    [Fact]
+    public void Solo_se_eliminan_borradores_ni_en_revision_ni_rechazada_ni_aprobada()
+    {
+        var enRevision = Borrador();
+        enRevision.EnviarARevision("<alert/>", Ahora, Ahora);
+        Assert.Throws<ExcepcionDominio>(() => enRevision.VerificarEliminable(Operador, esAdministrador: true));
+
+        var rechazada = Borrador();
+        rechazada.EnviarARevision("<alert/>", Ahora, Ahora);
+        rechazada.Rechazar(Aprobador, "Falta el punto de encuentro.", Ahora);
+        var ex = Assert.Throws<ExcepcionDominio>(() => rechazada.VerificarEliminable(Operador, esAdministrador: true));
+        Assert.Contains("solo se eliminan borradores", ex.Message);
+
+        Assert.Throws<ExcepcionDominio>(() => Aprobada().VerificarEliminable(Operador, esAdministrador: true));
+    }
+
     // ---------- RF-11: aprobación o rechazo ----------
 
     [Fact]
@@ -86,6 +112,18 @@ public class VersionesMensajeTests
         Assert.Equal(Aprobador, v.RevisadoPorId);
         Assert.Equal(Ahora, v.RevisadoEn);
         Assert.True(v.EstadoActual.PermiteDifundir);
+    }
+
+    [Fact]
+    public void Quien_preparo_la_version_no_puede_aprobarla()
+    {
+        var v = Borrador();
+        v.EnviarARevision("<alert/>", Ahora, Ahora);
+        var ex = Assert.Throws<ExcepcionDominio>(() => v.Aprobar(Operador, Ahora, null));
+        Assert.Contains("no puede aprobarla", ex.Message);
+        Assert.Equal(EstadoVersion.EnRevision, v.Estado);
+        v.Aprobar(Aprobador, Ahora, null);
+        Assert.Equal(EstadoVersion.Aprobada, v.Estado);
     }
 
     [Fact]

@@ -109,6 +109,9 @@ if (app.Configuration.GetValue("BaseDeDatos:MigrarAlIniciar", true))
     var contrasenaAdmin = app.Configuration["Semilla:ContrasenaAdmin"];
     if (!string.IsNullOrWhiteSpace(contrasenaAdmin))
         await scope.ServiceProvider.GetRequiredService<ServicioUsuarios>().SembrarAdministradorAsync(contrasenaAdmin, default);
+    var contrasenaAprobador = app.Configuration["Semilla:ContrasenaAprobador"];
+    if (!string.IsNullOrWhiteSpace(contrasenaAprobador))
+        await scope.ServiceProvider.GetRequiredService<ServicioUsuarios>().SembrarAprobadorDemoAsync(contrasenaAprobador, default);
 }
 
 app.Run();
