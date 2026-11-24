@@ -28,7 +28,7 @@ export default function App() {
   const [versionAbierta, setVersionAbierta] = useState<string | null>(null)
   // Si la sesión terminó sola (venció o el servidor la rechazó), se vuelve al login con un aviso, no a la landing sin explicación.
   const [vencida] = useState(sesionVencidaPendiente)
-  const [verLogin, setVerLogin] = useState(vencida)
+  const [verLogin, setVerLogin] = useState(vencida || new URLSearchParams(location.search).has('ingresar'))
   // Cierra la sesión justo cuando caduca el token, aunque el panel siga abierto, en vez de esperar a que una petición falle con 401.
   useEffect(() => {
     if (!sesion) return
@@ -43,8 +43,9 @@ export default function App() {
     document.querySelector('.sidebar nav [aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
   }, [pagina, sesion])
   // La página pública también se puede ver con la sesión abierta (/?publico=1), para comprobar lo que ve la población.
-  if (new URLSearchParams(window.location.search).has('publico')) {
-    return <Suspense fallback={<div className="publico"><Esqueleto etiqueta="Cargando avisos" /></div>}><Landing alIngresar={() => { window.location.href = '/' }} /></Suspense>
+  const consulta = new URLSearchParams(window.location.search)
+  if (consulta.has('publico') || consulta.has('aviso')) {
+    return <Suspense fallback={<div className="publico"><Esqueleto etiqueta="Cargando avisos" /></div>}><Landing alIngresar={() => { window.location.href = sesion ? '/' : '/?ingresar=1' }} /></Suspense>
   }
   // Sin sesión se ve la página de inicio pública; el panel privado pide iniciar sesión.
   if (!sesion) return verLogin

@@ -64,7 +64,11 @@ export default function Mapa({ capas, puntos = [], alto, zoomMaximo = 13 }: { ca
           interactive={!!c.alClic}
           style={{ color: c.color, weight: 2, fillOpacity: 0.3 }}
           eventHandlers={{ click: () => c.alClic?.() }}
-          onEachFeature={(_, capa) => capa.bindTooltip(c.etiqueta)} />
+          onEachFeature={(_, capa) => {
+            const texto = document.createElement('span')
+            texto.textContent = c.etiqueta
+            capa.bindTooltip(texto)
+          }} />
       ))}
       {puntos.map((p) => (
         <CircleMarker key={p.clave} center={[p.lat, p.lon]} radius={6} pathOptions={{ color: '#0b3d61', fillOpacity: 0.9 }}>
