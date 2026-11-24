@@ -15,4 +15,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- XSD oficial de OASIS para CAP 1.2 (https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2.xsd), sin cambios. -->
+    <EmbeddedResource Include="Cap\CAP-v1.2.xsd" LogicalName="CAP-v1.2.xsd" />
+  </ItemGroup>
+
 </Project>

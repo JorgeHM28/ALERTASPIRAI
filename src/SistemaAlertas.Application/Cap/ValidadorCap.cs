@@ -1,5 +1,6 @@
 using System.Xml;
 using System.Xml.Linq;
+using System.Xml.Schema;
 using SistemaAlertas.Application.Avisos.Importacion;
 using SistemaAlertas.Domain.Comun;
 
@@ -8,8 +9,8 @@ namespace SistemaAlertas.Application.Cap;
 /// <summary>
 /// Validación básica de estructura CAP 1.2: XML bien formado y sin DTD, raíz &lt;alert&gt; con el namespace de OASIS,
 /// elementos obligatorios de &lt;alert&gt;, &lt;info&gt; y &lt;area&gt;, y polígonos bien escritos.
-/// Si la estructura está bien, revisa los valores (enumeraciones, fechas, reglas) con el importador y el Builder.
-/// No reemplaza la validación contra el XSD oficial, que puede agregarse detrás de esta misma interfaz.
+/// Después valida contra el XSD oficial de OASIS (CAP-v1.2.xsd, incluido en el ensamblado) y, si pasa,
+/// revisa los valores (enumeraciones, fechas, reglas) con el importador y el Builder.
 /// </summary>
 public sealed class ValidadorCap : IValidadorCap
 {
@@ -17,6 +18,18 @@ public sealed class ValidadorCap : IValidadorCap
     private static readonly string[] ObligatoriosInfo = ["category", "event", "urgency", "severity", "certainty"];
 
     private readonly ImportadorCapXml _importador = new();
+
+    /// <summary>El XSD oficial se compila una sola vez: es inmutable y XmlSchemaSet compilado es seguro para leer en paralelo.</summary>
+    private static readonly Lazy<XmlSchemaSet> EsquemaOficial = new(() =>
+    {
+        using var flujo = typeof(ValidadorCap).Assembly.GetManifestResourceStream("CAP-v1.2.xsd")
+            ?? throw new InvalidOperationException("No se encontró el XSD oficial CAP-v1.2.xsd en el ensamblado.");
+        var esquemas = new XmlSchemaSet { XmlResolver = null };
+        using var lector = XmlReader.Create(flujo, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
+        esquemas.Add(CapXml.Ns.NamespaceName, lector);
+        esquemas.Compile();
+        return esquemas;
+    });
 
     public ResultadoValidacionCap Validar(string xml)
     {
@@ -57,6 +70,10 @@ public sealed class ValidadorCap : IValidadorCap
                         errores.Add($"{donde}/area[{a + 1}]: polígono inválido, {error}");
             }
         }
+
+        // Validación contra el XSD oficial de OASIS (orden de elementos, enumeraciones, formato de fechas, etc.).
+        if (errores.Count == 0)
+            doc.Validate(EsquemaOficial.Value, (_, e) => errores.Add($"XSD oficial CAP 1.2: {e.Message}"));
 
         if (errores.Count == 0)
         {
