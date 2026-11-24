@@ -16,5 +16,5 @@ scripts:
     code: |-
       pm.test('responde 201', () => pm.response.to.have.status(201));
       const r = pm.response.json().detalle.resumen;
-      pm.test('toma las instrucciones del aviso oficial y ya está completa', () => pm.expect(r.faltantes).to.be.empty);
+      pm.test('toma las instrucciones del aviso oficial y solo falta el protocolo', () => pm.expect(r.faltantes).to.eql(['Falta vincular el protocolo oficial del que salen las instrucciones.']));
       pm.collectionVariables.set('versionSenamhiId', r.id);

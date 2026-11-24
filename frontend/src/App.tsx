@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Bell, Eye, EyeOff, LogOut, Map, MapPin, MessageSquareText, ShieldCheck, Users, Waves } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bell, BookOpenCheck, Eye, EyeOff, LogOut, Map, MapPin, MessageSquareText, ShieldCheck, Users, Waves } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 import { api, esAdministrador, guardarSesion, leerSesion, marcarSesionVencida, sesionVencidaPendiente, type Sesion } from './api'
@@ -11,12 +11,14 @@ const Comunidades = lazy(() => import('./paginas/Comunidades'))
 const Avisos = lazy(() => import('./paginas/Avisos'))
 const Usuarios = lazy(() => import('./paginas/Usuarios'))
 const Mensajes = lazy(() => import('./paginas/Mensajes'))
+const Protocolos = lazy(() => import('./paginas/Protocolos'))
 const Landing = lazy(() => import('./paginas/Landing'))
 
-type Pagina = 'avisos' | 'mensajes' | 'zonas' | 'comunidades' | 'usuarios'
+type Pagina = 'avisos' | 'mensajes' | 'protocolos' | 'zonas' | 'comunidades' | 'usuarios'
 const paginas: { id: Pagina; nombre: string; Icon: typeof Bell }[] = [
   { id: 'avisos', nombre: 'Avisos', Icon: Bell },
   { id: 'mensajes', nombre: 'Mensajes', Icon: MessageSquareText },
+  { id: 'protocolos', nombre: 'Protocolos', Icon: BookOpenCheck },
   { id: 'zonas', nombre: 'Zonas de riesgo', Icon: Map },
   { id: 'comunidades', nombre: 'Comunidades', Icon: MapPin },
   { id: 'usuarios', nombre: 'Usuarios', Icon: Users },
@@ -78,6 +80,7 @@ export default function App() {
         <Suspense fallback={<Esqueleto etiqueta="Cargando sección" />}>
         {pagina === 'avisos' && <Avisos roles={usuario.roles} alPreparar={(id) => { setVersionAbierta(id); setPagina('mensajes') }} />}
         {pagina === 'mensajes' && <Mensajes roles={usuario.roles} versionInicial={versionAbierta} />}
+        {pagina === 'protocolos' && <Protocolos roles={usuario.roles} />}
         {pagina === 'zonas' && <Zonas roles={usuario.roles} />}
         {pagina === 'comunidades' && <Comunidades roles={usuario.roles} />}
         {pagina === 'usuarios' && esAdministrador(usuario.roles) && <Usuarios usuarioActualId={usuario.id} />}

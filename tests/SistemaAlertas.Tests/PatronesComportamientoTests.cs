@@ -78,6 +78,8 @@ public class PatronesComportamientoTests
         var contenido = new ContenidoMensaje(aviso.Evento, aviso.Urgencia, aviso.Severidad, aviso.Certeza, aviso.Titular,
             aviso.Descripcion, aviso.Instruccion, aviso.Vigente, aviso.Expira, "Zona");
         var v = new VersionMensaje(aviso.Id, aviso.Id, 1, TipoMensajeCap.Alert, contenido, Area, EstadoCap.Actual, "sat", Guid.NewGuid());
+        v.VincularProtocolo(new ProtocoloOficial("Evacuación", aviso.Instruccion ?? "Evacuar a la zona alta.", "COED Santa Cruz",
+            "Plan 01/2026", new DateOnly(2026, 1, 15)));
         v.EnviarARevision("<alert/>", Ahora, Ahora);
         v.Aprobar(Guid.NewGuid(), Ahora, null);
         return v;

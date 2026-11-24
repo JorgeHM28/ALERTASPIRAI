@@ -19,6 +19,7 @@ public class AlertasDbContext(DbContextOptions<AlertasDbContext> options) : DbCo
     public DbSet<HistorialContacto> HistorialContactos => Set<HistorialContacto>();
     public DbSet<VersionMensaje> VersionesMensaje => Set<VersionMensaje>();
     public DbSet<ListaDestinos> ListasDestinos => Set<ListaDestinos>();
+    public DbSet<ProtocoloOficial> Protocolos => Set<ProtocoloOficial>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

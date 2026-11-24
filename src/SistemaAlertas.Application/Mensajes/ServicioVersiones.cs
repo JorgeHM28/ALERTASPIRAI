@@ -101,6 +101,24 @@ public sealed class ServicioVersiones(IAppDbContext db, IModuloCap moduloCap, Op
     }
 
     /// <summary>
+    /// RF-05: vincula el borrador a un protocolo oficial (sus instrucciones pasan a ser las del protocolo)
+    /// o, con null, quita el vínculo.
+    /// </summary>
+    public async Task<VersionMensaje> VincularProtocoloAsync(Guid versionId, Guid? protocoloId, CancellationToken ct)
+    {
+        var version = await Buscar(versionId, ct);
+        if (protocoloId is { } id)
+        {
+            var protocolo = await db.Protocolos.FirstOrDefaultAsync(p => p.Id == id, ct)
+                ?? throw new ExcepcionDominio("El protocolo indicado no existe.");
+            version.VincularProtocolo(protocolo);
+        }
+        else version.QuitarProtocolo();
+        await db.SaveChangesAsync(ct);
+        return version;
+    }
+
+    /// <summary>
     /// Genera el XML CAP 1.2 de la versión y lo valida. Una versión incompleta, o cuyo XML no es válido, queda como borrador.
     /// </summary>
     public async Task<VersionMensaje> EnviarARevisionAsync(Guid versionId, Guid usuarioId, CancellationToken ct)

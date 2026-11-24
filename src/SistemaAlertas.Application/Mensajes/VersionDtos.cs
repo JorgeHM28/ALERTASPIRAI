@@ -27,7 +27,12 @@ public sealed record VersionDetalle(
     Guid? VersionAnteriorId, string? MotivoDevolucion, DateTimeOffset? EnviadaARevisionEn, Guid? RevisadoPorId,
     DateTimeOffset? DifundidaEn, string? XmlCap,
     // Fuente oficial: el aviso del que sale la versión (RF-11: el aprobador revisa la fuente).
-    string FuenteRemitente, string FuenteIdentificador, DateTimeOffset FuenteEnviado, TipoMensajeCap FuenteTipo);
+    string FuenteRemitente, string FuenteIdentificador, DateTimeOffset FuenteEnviado, TipoMensajeCap FuenteTipo,
+    // RF-05: protocolo oficial del que salen las instrucciones.
+    Guid? ProtocoloId, string? ProtocoloTitulo, string? ProtocoloCita);
+
+/// <param name="ProtocoloId">Protocolo oficial a vincular; null quita el vínculo.</param>
+public sealed record VinculoProtocolo(Guid? ProtocoloId);
 
 public static class VersionMapeo
 {

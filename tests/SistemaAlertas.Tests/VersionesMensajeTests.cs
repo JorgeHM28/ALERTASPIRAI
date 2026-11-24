@@ -26,14 +26,24 @@ public class VersionesMensajeTests
         new("Crecida del río Piraí", UrgenciaCap.Immediate, severidad, CertezaCap.Observed, "Crecida en Porongo",
             "El río sube 40 cm por hora.", instruccion, Ahora, expira ?? Ahora.AddHours(6), "Porongo");
 
-    private static VersionMensaje Borrador(Guid? cadena = null, ContenidoMensaje? contenido = null) =>
-        new(cadena ?? Guid.NewGuid(), cadena ?? Guid.NewGuid(), 1, TipoMensajeCap.Alert, contenido ?? Contenido(), Area,
+    private static ProtocoloOficial Protocolo(string instruccion = "Evacuar a la zona alta.") =>
+        new("Evacuación por crecida", instruccion, "COED Santa Cruz", "Plan 01/2026", new DateOnly(2026, 1, 15));
+
+    /// <summary>Borrador con su protocolo oficial vinculado (RF-05), salvo que el contenido no traiga instrucciones.</summary>
+    private static VersionMensaje Borrador(Guid? cadena = null, ContenidoMensaje? contenido = null)
+    {
+        contenido ??= Contenido();
+        var v = new VersionMensaje(cadena ?? Guid.NewGuid(), cadena ?? Guid.NewGuid(), 1, TipoMensajeCap.Alert, contenido, Area,
             EstadoCap.Actual, "sat@santacruz.gob.bo", Operador);
+        if (contenido.Instruccion is { } texto) v.VincularProtocolo(Protocolo(texto));
+        return v;
+    }
 
     private static VersionMensaje Aprobada(Guid? cadena = null)
     {
         var id = cadena ?? Guid.NewGuid();
         var v = new VersionMensaje(id, id, 1, TipoMensajeCap.Alert, Contenido(), Area, EstadoCap.Actual, "sat@santacruz.gob.bo", Operador);
+        v.VincularProtocolo(Protocolo());
         v.EnviarARevision("<alert/>", Ahora, Ahora);
         v.Aprobar(Aprobador, Ahora, null);
         return v;
@@ -57,6 +67,7 @@ public class VersionesMensajeTests
     {
         var v = Borrador(contenido: Contenido(instruccion: null));
         v.Redactar("Nuevo titular", null, "Diríjase al colegio de Porongo.");
+        v.VincularProtocolo(Protocolo("Diríjase al colegio de Porongo."));
         Assert.Equal("Nuevo titular", v.Contenido.Titular);
         Assert.Equal("Diríjase al colegio de Porongo.", v.Contenido.Instruccion);
         Assert.Equal(SeveridadCap.Severe, v.Contenido.Severidad);
@@ -74,6 +85,55 @@ public class VersionesMensajeTests
         v.Aprobar(Aprobador, Ahora, null);
         var ex = Assert.Throws<ExcepcionDominio>(() => v.Redactar("x", "y", "z"));
         Assert.Contains("aprobada no se puede editar", ex.Message);
+    }
+
+    // ---------- RF-05: instrucciones desde un protocolo oficial ----------
+
+    [Fact]
+    public void Sin_protocolo_oficial_no_pasa_a_revision()
+    {
+        var v = new VersionMensaje(Guid.NewGuid(), Guid.NewGuid(), 1, TipoMensajeCap.Alert, Contenido(), Area,
+            EstadoCap.Actual, "sat@santacruz.gob.bo", Operador);
+        var ex = Assert.Throws<ExcepcionDominio>(() => v.EnviarARevision("<alert/>", Ahora, Ahora));
+        Assert.Contains("protocolo oficial", ex.Message);
+        Assert.Equal(EstadoVersion.Borrador, v.Estado);
+    }
+
+    [Fact]
+    public void Vincular_un_protocolo_copia_sus_instrucciones_su_fuente_y_su_fecha()
+    {
+        var v = Borrador(contenido: Contenido(instruccion: null));
+        var protocolo = Protocolo("Diríjase al colegio de Porongo.");
+        v.VincularProtocolo(protocolo);
+
+        Assert.Equal(protocolo.Id, v.ProtocoloId);
+        Assert.Equal("Diríjase al colegio de Porongo.", v.Contenido.Instruccion);
+        Assert.Equal("COED Santa Cruz, Plan 01/2026, 15/01/2026", v.ProtocoloCita);
+        Assert.Empty(v.Faltantes(Ahora));
+        // El texto oficial no se edita a mano mientras esté vinculado; el titular sí.
+        Assert.Throws<ExcepcionDominio>(() => v.Redactar("Otro titular", null, "Otro texto"));
+        v.Redactar("Otro titular", null, "Diríjase al colegio de Porongo.");
+        Assert.Equal("Otro titular", v.Contenido.Titular);
+    }
+
+    [Fact]
+    public void Un_protocolo_desactivado_no_se_vincula_y_sus_datos_son_obligatorios()
+    {
+        var protocolo = Protocolo();
+        protocolo.Desactivar();
+        Assert.Throws<ExcepcionDominio>(() => Borrador(contenido: Contenido(instruccion: null)).VincularProtocolo(protocolo));
+        Assert.Throws<ExcepcionDominio>(() => new ProtocoloOficial("Evacuación", "Evacuar.", "", "Plan 01/2026", new DateOnly(2026, 1, 15)));
+        Assert.Throws<ExcepcionDominio>(() => new ProtocoloOficial("Evacuación", "Evacuar.", "COED", "Plan 01/2026", default));
+    }
+
+    [Fact]
+    public void Un_update_que_conserva_las_instrucciones_conserva_el_protocolo()
+    {
+        var aprobada = Aprobada();
+        var update = new VersionMensaje(aprobada.AvisoId, aprobada.CadenaId, 2, TipoMensajeCap.Update, aprobada.Contenido with { },
+            Area, EstadoCap.Actual, "sat@santacruz.gob.bo", Operador, aprobada);
+        Assert.Equal(aprobada.ProtocoloId, update.ProtocoloId);
+        Assert.Equal(aprobada.ProtocoloCita, update.ProtocoloCita);
     }
 
     [Fact]
@@ -175,6 +235,8 @@ public class VersionesMensajeTests
         Assert.NotSame(v.Contenido, nueva.Contenido);        // pero es un clon
         Assert.NotEqual(v.IdentificadorCap, nueva.IdentificadorCap);
         Assert.Equal(EstadoVersion.Rechazada, v.Estado);     // la rechazada queda intacta
+        Assert.Equal(v.ProtocoloId, nueva.ProtocoloId);      // y conserva su protocolo oficial (RF-05)
+        nueva.QuitarProtocolo();
         nueva.Redactar("Crecida en Porongo", null, "Reunirse en la plaza principal.");
         Assert.Equal("El río sube 40 cm por hora.", v.Contenido.Descripcion);
     }

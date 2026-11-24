@@ -69,8 +69,14 @@ export interface VersionDetalle {
     versionAnteriorId: string | null; motivoDevolucion: string | null; enviadaARevisionEn: string | null; revisadoPorId: string | null
     difundidaEn: string | null; xmlCap: string | null
     fuenteRemitente: string; fuenteIdentificador: string; fuenteEnviado: string; fuenteTipo: TipoMensaje
+    protocoloId: string | null; protocoloTitulo: string | null; protocoloCita: string | null
   }
   area: GeoJSON.Geometry | null; textoSms: string; textoLectura: string
+}
+/** RF-05: protocolo oficial del que salen las instrucciones de un mensaje. */
+export interface Protocolo {
+  id: string; titulo: string; instruccion: string; fuente: string; referencia: string
+  fechaDocumento: string; cita: string; activo: boolean; versiones: number
 }
 export interface DestinoVista { comunidadId: string; comunidad: string; contactoId: string; contacto: string; canal: TipoCanal; direccion: string }
 export interface ListaDestinos {

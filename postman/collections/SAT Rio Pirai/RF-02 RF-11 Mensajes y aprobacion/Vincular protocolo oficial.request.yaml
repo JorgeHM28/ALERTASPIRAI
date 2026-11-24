@@ -1,0 +1,25 @@
+$kind: http-request
+name: 'Vincular protocolo oficial'
+method: PUT
+url: '{{baseUrl}}/api/versiones/{{versionId}}/protocolo'
+order: 450
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "protocoloId": "{{protocoloId}}" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json().detalle;
+      pm.test('las instrucciones son las del protocolo', () => pm.expect(d.instruccion).to.include('desde las 18:00'));
+      pm.test('guarda la fuente y la fecha', () => {
+        pm.expect(d.protocoloId).to.eql(pm.collectionVariables.get('protocoloId'));
+        pm.expect(d.protocoloCita).to.include('COED Santa Cruz (pruebas)');
+        pm.expect(d.protocoloCita).to.include('15/01/2026');
+      });
+      pm.test('ya no le falta nada', () => pm.expect(d.resumen.faltantes).to.be.empty);

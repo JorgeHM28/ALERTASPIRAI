@@ -17,5 +17,8 @@ scripts:
       pm.test('responde 200', () => pm.response.to.have.status(200));
       const d = pm.response.json().detalle;
       pm.test('guardó las instrucciones', () => pm.expect(d.instruccion).to.include('colegio'));
-      pm.test('ya no le falta nada', () => pm.expect(d.resumen.faltantes).to.be.empty);
+      pm.test('solo le falta el protocolo oficial (RF-05)', () => {
+        pm.expect(d.resumen.faltantes).to.have.length(1);
+        pm.expect(d.resumen.faltantes[0]).to.include('protocolo oficial');
+      });
       pm.test('los hechos oficiales no cambian', () => pm.expect(d.severidad).to.eql('Extreme'));
