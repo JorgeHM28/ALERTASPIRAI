@@ -8,6 +8,7 @@ using SistemaAlertas.Application.Mensajes;
 using SistemaAlertas.Domain.Cap;
 using SistemaAlertas.Domain.Comunidades;
 using SistemaAlertas.Domain.Mensajes;
+using SistemaAlertas.Domain.Usuarios;
 
 namespace SistemaAlertas.Api.Controllers;
 
@@ -98,6 +99,16 @@ public sealed class VersionesController(IAppDbContext db, ServicioVersiones serv
     {
         var v = await servicio.CorregirAsync(id, User.Id(), ct);
         return CreatedAtAction(nameof(Obtener), new { id = v.Id }, await DetalleAsync(v, ct));
+    }
+
+    /// <summary>Elimina un borrador. Solo borradores, y solo quien lo preparó o un administrador.</summary>
+    [HttpDelete("versiones/{id:guid}")]
+    [Authorize(Politicas.Edicion)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> EliminarBorrador(Guid id, CancellationToken ct)
+    {
+        await servicio.EliminarBorradorAsync(id, User.Id(), User.IsInRole(nameof(Rol.Administrador)), ct);
+        return NoContent();
     }
 
     /// <summary>Corrige una versión aprobada: prepara un Update que la referencia.</summary>

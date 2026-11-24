@@ -76,6 +76,32 @@ public class VersionesMensajeTests
         Assert.Contains("aprobada no se puede editar", ex.Message);
     }
 
+    [Fact]
+    public void Un_borrador_lo_elimina_quien_lo_preparo_o_un_administrador()
+    {
+        var v = Borrador();
+        v.VerificarEliminable(Operador, esAdministrador: false);
+        v.VerificarEliminable(Guid.NewGuid(), esAdministrador: true);
+        var ex = Assert.Throws<UnauthorizedAccessException>(() => v.VerificarEliminable(Guid.NewGuid(), esAdministrador: false));
+        Assert.Contains("quien preparó", ex.Message);
+    }
+
+    [Fact]
+    public void Solo_se_eliminan_borradores_ni_en_revision_ni_rechazada_ni_aprobada()
+    {
+        var enRevision = Borrador();
+        enRevision.EnviarARevision("<alert/>", Ahora, Ahora);
+        Assert.Throws<ExcepcionDominio>(() => enRevision.VerificarEliminable(Operador, esAdministrador: true));
+
+        var rechazada = Borrador();
+        rechazada.EnviarARevision("<alert/>", Ahora, Ahora);
+        rechazada.Rechazar(Aprobador, "Falta el punto de encuentro.", Ahora);
+        var ex = Assert.Throws<ExcepcionDominio>(() => rechazada.VerificarEliminable(Operador, esAdministrador: true));
+        Assert.Contains("solo se eliminan borradores", ex.Message);
+
+        Assert.Throws<ExcepcionDominio>(() => Aprobada().VerificarEliminable(Operador, esAdministrador: true));
+    }
+
     // ---------- RF-11: aprobación o rechazo ----------
 
     [Fact]

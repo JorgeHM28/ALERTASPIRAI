@@ -15,6 +15,7 @@ public sealed class ManejadorErrores(ILogger<ManejadorErrores> logger, IProblemD
         {
             ExcepcionDominio => (StatusCodes.Status400BadRequest, "Datos no válidos"),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "No encontrado"),
+            UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Sin permiso"),
             DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } }
                 => (StatusCodes.Status409Conflict, "Registro duplicado"),
             DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } }

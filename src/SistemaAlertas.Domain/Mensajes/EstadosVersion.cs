@@ -27,6 +27,11 @@ public abstract class EstadoVersionBase
     public virtual void Corregir(VersionMensaje v) => throw NoPermitido("corregir");
     public virtual EstadoVersion Difundir(VersionMensaje v) => throw NoPermitido("difundir");
 
+    /// <summary>Solo un borrador se elimina: lo que ya pasó por revisión es parte del historial de RF-11.</summary>
+    public virtual void Eliminar(VersionMensaje v) =>
+        throw new ExcepcionDominio($"Una versión en estado {Valor} no se puede eliminar: solo se eliminan borradores, " +
+            "porque lo que ya se envió a revisión, se rechazó o se aprobó forma parte del historial.");
+
     protected ExcepcionDominio NoPermitido(string accion) =>
         new($"Una versión en estado {Valor} no se puede {accion}.");
 
@@ -49,6 +54,8 @@ public sealed class EstadoVersionBorrador : EstadoVersionBase
     public override EstadoVersion Valor => EstadoVersion.Borrador;
 
     public override void Editar(VersionMensaje v) { }
+
+    public override void Eliminar(VersionMensaje v) { }
 
     public override EstadoVersion EnviarARevision(VersionMensaje v, DateTimeOffset ahora)
     {

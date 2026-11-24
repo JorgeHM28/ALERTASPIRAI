@@ -165,6 +165,20 @@ public sealed class ServicioVersiones(IAppDbContext db, IModuloCap moduloCap, Op
         return nueva;
     }
 
+    /// <summary>
+    /// Elimina un borrador que no se va a usar. Solo borradores, y solo quien lo preparó o un administrador.
+    /// Queda en la bitácora del aviso. Si era la corrección de una rechazada, esa rechazada se puede volver a corregir.
+    /// </summary>
+    public async Task EliminarBorradorAsync(Guid versionId, Guid usuarioId, bool esAdministrador, CancellationToken ct)
+    {
+        var version = await Buscar(versionId, ct);
+        version.VerificarEliminable(usuarioId, esAdministrador);
+        db.VersionesMensaje.Remove(version);
+        await db.SaveChangesAsync(ct);
+        await Publicar(version, TipoEventoAviso.VersionEliminada, usuarioId,
+            $"Borrador de la versión {version.Numero} ({version.Tipo}) eliminado.", ct);
+    }
+
     /// <summary>Arma el mensaje CAP de la versión con el Builder y lo escribe como XML.</summary>
     public string GenerarXml(VersionMensaje v, DateTimeOffset enviado)
     {

@@ -187,6 +187,17 @@ public class VersionMensaje : Entidad
         return new VersionMensaje(this, numero, usuarioId);
     }
 
+    /// <summary>
+    /// Comprueba que esta versión se puede eliminar: tiene que ser un borrador (lo decide su estado) y solo la elimina
+    /// quien la preparó o un administrador.
+    /// </summary>
+    public void VerificarEliminable(Guid usuarioId, bool esAdministrador)
+    {
+        EstadoActual.Eliminar(this);
+        if (!esAdministrador && PreparadoPorId != usuarioId)
+            throw new UnauthorizedAccessException("Solo quien preparó el borrador o un administrador puede eliminarlo.");
+    }
+
     public void MarcarDifundida(DateTimeOffset ahora)
     {
         Estado = EstadoActual.Difundir(this);
