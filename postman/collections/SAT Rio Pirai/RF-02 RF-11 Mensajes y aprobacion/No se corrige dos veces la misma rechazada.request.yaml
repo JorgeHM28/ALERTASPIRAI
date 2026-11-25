@@ -1,0 +1,11 @@
+$kind: http-request
+name: 'No se corrige dos veces la misma rechazada'
+method: POST
+url: '{{baseUrl}}/api/versiones/{{versionRechazadaId}}/corregir'
+order: 920
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // La rechazada ya tiene su corrección (la versión siguiente): otra corrección abriría una rama paralela.
+      pm.test('responde 400', () => pm.response.to.have.status(400));

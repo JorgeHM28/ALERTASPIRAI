@@ -88,7 +88,7 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
                   <td><button className="row-link" onClick={e => { e.stopPropagation(); abrir(v.id) }}>{v.titular ?? v.evento}</button>
                     <div className="tenue">Versión {v.numero} · {NOMBRE_TIPO[v.tipo]}{v.esPrueba ? ' · prueba' : ''}</div></td>
                   <td><NivelAlerta nivel={v.nivel} /></td>
-                  <td><EstadoChip estado={v.estado} />{v.reemplazadaPorId && <div className="tenue">Reemplazada</div>}</td>
+                  <td><EstadoChip estado={v.estado} />{v.reemplazadaPorId && <div className="tenue">{versiones.find(x => x.id === v.reemplazadaPorId)?.tipo === 'Cancel' ? 'Cancelada' : 'Reemplazada'}</div>}</td>
                 </tr>
               ))}
               {cargando && <tr><td colSpan={4}><div className="table-empty" role="status"><RefreshCw size={26} /><strong>Cargando versiones…</strong></div></td></tr>}
@@ -98,7 +98,7 @@ export default function Mensajes({ roles, versionInicial }: { roles: Rol[]; vers
         </div>
 
         {detalle
-          ? <DetalleVersion key={detalle.detalle.resumen.id} v={detalle} roles={roles} accion={accion} eliminar={eliminar} cerrar={() => setDetalle(null)} numeroReferencia={versiones.find(x => x.id === detalle.detalle.referenciaVersionId)?.numero} />
+          ? <DetalleVersion key={detalle.detalle.resumen.id} v={detalle} roles={roles} accion={accion} eliminar={eliminar} abrir={abrir} cadena={versiones.filter(x => x.cadenaId === detalle.detalle.resumen.cadenaId)} cerrar={() => setDetalle(null)} numeroReferencia={versiones.find(x => x.id === detalle.detalle.referenciaVersionId)?.numero} />
           : <aside className="detail-empty"><span className="detail-empty-icon"><MessageSquareText size={28} aria-hidden="true" /></span><h3>Selecciona una versión</h3><p>Aquí verás su texto, su zona en el mapa, sus referencias y los destinos.</p></aside>}
       </div>
     </section>
@@ -109,8 +109,10 @@ function EstadoChip({ estado }: { estado: EstadoVersion }) {
   return <span className={`estado-version estado-${estado}`}>{NOMBRE_ESTADO_VERSION[estado]}</span>
 }
 
-function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }: {
+function DetalleVersion({ v, roles, accion, eliminar, abrir, cadena, cerrar, numeroReferencia }: {
   v: VersionDetalle; roles: Rol[]; cerrar: () => void; numeroReferencia?: number; eliminar: (id: string) => Promise<void>
+  /** Todas las versiones del mismo evento: deciden qué acciones tienen sentido aquí (la API vuelve a comprobarlo). */
+  abrir: (id: string) => void; cadena: VersionResumen[]
   accion: (texto: string, llamada: () => Promise<VersionDetalle>) => Promise<void>
 }) {
   const d = v.detalle
@@ -125,6 +127,11 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
   const preparadaPorMi = leerSesion()?.usuario.id === r.preparadoPorId
   const puedeEliminar = r.estado === 'Borrador' && editar && (esAdministrador(roles) || preparadaPorMi)
   const vigente = (r.estado === 'Aprobada' || r.estado === 'Difundida') && !r.reemplazadaPorId
+  // Un evento tiene a lo sumo una versión en curso; y solo la última rechazada se corrige (si no, saldrían versiones paralelas).
+  const enCurso = cadena.find(x => x.id !== r.id && (x.estado === 'Borrador' || x.estado === 'EnRevision'))
+  const siguiente = cadena.filter(x => x.numero > r.numero).sort((a, b) => a.numero - b.numero)[0] as VersionResumen | undefined
+  const puedeCorregir = r.estado === 'Rechazada' && editar && !siguiente
+  const puedeDerivar = vigente && editar && r.tipo !== 'Cancel' && !enCurso
   const ruta = `/api/versiones/${r.id}`
 
   // Con protocolo vinculado, las instrucciones son las del protocolo: no se envían para no pisarlas.
@@ -187,7 +194,10 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
       <h3 ref={titulo} tabIndex={-1}>{r.titular ?? r.evento}</h3>
       <div className="fila-chips"><EstadoChip estado={r.estado} /></div>
       {r.esPrueba && <Alert tone="warning">Aviso de prueba o simulacro: no se publica en la web pública y el SMS real se bloquea.</Alert>}
-      {r.reemplazadaPorId && <Alert tone="info">Esta versión fue reemplazada por una actualización o cancelación aprobada.</Alert>}
+      {r.reemplazadaPorId && (() => {
+        const por = cadena.find(x => x.id === r.reemplazadaPorId)
+        return <Alert tone="info">{por?.tipo === 'Cancel' ? 'El evento fue cancelado' : 'Esta versión fue reemplazada por una actualización'}{por ? <> en la versión {por.numero}. <button type="button" className="row-link" onClick={() => abrir(por.id)}>Abrir versión {por.numero}</button></> : '.'}</Alert>
+      })()}
       {r.estado === 'Rechazada' && <Alert tone="danger"><b>Rechazada</b> el {fecha(r.revisadoEn)}: {r.motivoRechazo}</Alert>}
       {d.motivoDevolucion && r.estado === 'Borrador' && <Alert tone="warning"><b>Volvió con este motivo:</b> {d.motivoDevolucion}</Alert>}
       {r.estado === 'Borrador' && r.faltantes.length > 0 && <Alert tone="warning"><b>Queda como borrador hasta completar:</b><ul>{r.faltantes.map(f => <li key={f}>{f}</li>)}</ul></Alert>}
@@ -260,10 +270,15 @@ function DetalleVersion({ v, roles, accion, eliminar, cerrar, numeroReferencia }
       {difusion && <Alert tone={difusion.incidencias.length ? 'warning' : 'success'}>Difundida{difusion.esPrueba ? ' (prueba)' : ''}: web {difusion.publicadoEnWeb ? 'sí' : 'no'}, {difusion.trabajosSms} SMS, {difusion.tareasManuales.length} tareas manuales.{difusion.incidencias.map(i => <div key={i.canal + i.detalle}>{i.canal}: {i.detalle}</div>)}</Alert>}
       {errorDifusion && <Alert tone="danger">{errorDifusion}</Alert>}
 
+      {editar && ((vigente && r.tipo !== 'Cancel') || r.estado === 'Rechazada') && enCurso && (
+        <Alert tone="info">La versión {enCurso.numero} ({NOMBRE_ESTADO_VERSION[enCurso.estado].toLowerCase()}) ya está en curso para este evento. Termínala, recházala o elimínala antes de preparar otra. <button type="button" className="row-link" onClick={() => abrir(enCurso.id)}>Abrir versión {enCurso.numero}</button></Alert>)}
+      {r.estado === 'Rechazada' && siguiente && !enCurso && (
+        <Alert tone="info">Esta versión ya se corrigió en la versión {siguiente.numero}. <button type="button" className="row-link" onClick={() => abrir(siguiente.id)}>Abrir versión {siguiente.numero}</button></Alert>)}
+
       <div className="acciones">
         {d.xmlCap && <button className="solo-escritorio" onClick={() => descargarTexto(d.xmlCap!, 'application/xml', `${d.identificadorCap}.xml`)}>Descargar XML</button>}
-        {r.estado === 'Rechazada' && editar && <button className="primario" onClick={() => accion('Se creó una versión nueva en borrador para corregir.', () => api(`${ruta}/corregir`, { method: 'POST' }))}><Undo2 size={16} aria-hidden="true" />Corregir (nueva versión)</button>}
-        {vigente && editar && r.tipo !== 'Cancel' && <>
+        {puedeCorregir && <button className="primario" onClick={() => accion('Se creó una versión nueva en borrador para corregir.', () => api(`${ruta}/corregir`, { method: 'POST' }))}><Undo2 size={16} aria-hidden="true" />Corregir (nueva versión)</button>}
+        {puedeDerivar && <>
           <button onClick={() => accion('Actualización preparada como borrador.', () => api(`${ruta}/update`, { method: 'POST', json: {} }))}>Preparar actualización</button>
           <button className="peligro" onClick={() => setConfirmando('cancel')}>Preparar cancelación</button>
         </>}

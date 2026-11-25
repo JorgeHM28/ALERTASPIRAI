@@ -175,6 +175,11 @@ public sealed class ServicioVersiones(IAppDbContext db, IModuloCap moduloCap, Op
     {
         var rechazada = await Buscar(versionId, ct);
         await ExigirSinVersionEnCursoAsync(rechazada.CadenaId, ct);
+        // Solo se corrige la última versión del evento: corregir una anterior abriría una rama paralela.
+        var posterior = await db.VersionesMensaje.Where(v => v.CadenaId == rechazada.CadenaId && v.Numero > rechazada.Numero)
+            .OrderBy(v => v.Numero).Select(v => (int?)v.Numero).FirstOrDefaultAsync(ct);
+        if (posterior is { } n)
+            throw new ExcepcionDominio($"La versión {rechazada.Numero} ya fue seguida por la versión {n}: se corrige la más reciente.");
         var nueva = rechazada.Corregir(await SiguienteNumeroAsync(rechazada.CadenaId, ct), usuarioId);
         db.VersionesMensaje.Add(nueva);
         await db.SaveChangesAsync(ct);
