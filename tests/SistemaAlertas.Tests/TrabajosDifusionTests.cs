@@ -135,14 +135,14 @@ public class TrabajosDifusionTests
         Assert.Throws<ExcepcionDominio>(() => new TareaManual(Guid.NewGuid(), Guid.NewGuid(), null, CanalDifusion.Sms, "x", false, T0));
 
     [Fact]
-    public void Un_cap_emitido_debe_ser_valido_y_un_update_referencia_al_previo()
+    public void Un_cap_emitido_debe_ser_valido_y_un_alert_no_referencia_a_otro()
     {
         CapEmitido Cap(string tipo, bool valido, Guid? referencia) => new(Guid.NewGuid(), Guid.NewGuid(), "id", "s", T0, "Actual", tipo,
             "<alert/>", new string('0', 64), valido, referencia, T0);
 
         Assert.Throws<ExcepcionDominio>(() => Cap("Alert", false, null));
-        Assert.Throws<ExcepcionDominio>(() => Cap("Update", true, null));
-        Assert.Throws<ExcepcionDominio>(() => Cap("Cancel", true, null));
+        Assert.Throws<ExcepcionDominio>(() => Cap("Alert", true, Guid.NewGuid()));
+        Assert.Null(Cap("Cancel", true, null).ReferenciaCapId); // el previo se aprobó pero nunca se difundió
         Assert.Equal("Update", Cap("Update", true, Guid.NewGuid()).Tipo);
         Assert.Null(Cap("Alert", true, null).ReferenciaCapId);
     }

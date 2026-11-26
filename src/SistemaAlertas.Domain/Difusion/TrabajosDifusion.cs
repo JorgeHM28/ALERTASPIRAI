@@ -163,7 +163,9 @@ public class TareaManual : TrabajoDifusion
 
 /// <summary>
 /// CAP emitido (RF-04): el XML CAP 1.2 final de una versión aprobada, archivado tal cual salió, con su huella SHA-256
-/// y el resultado de la validación contra el XSD. Un Update o Cancel referencia al CAP emitido previo.
+/// y el resultado de la validación contra el XSD. Un Update o Cancel queda enlazado al CAP emitido de la versión que
+/// reemplaza. Si esa versión se aprobó pero nunca se difundió, no hay CAP previo que enlazar: el enlace queda vacío
+/// y el XML conserva igual su &lt;references&gt;.
 /// </summary>
 public class CapEmitido : Entidad
 {
@@ -188,8 +190,8 @@ public class CapEmitido : Entidad
     {
         if (string.IsNullOrWhiteSpace(xml)) throw new ExcepcionDominio("No hay XML CAP para emitir.");
         if (!valido) throw new ExcepcionDominio("Solo se emite un CAP válido.");
-        if (tipo != "Alert" && referenciaCapId is null)
-            throw new ExcepcionDominio($"Un {tipo} debe referenciar al CAP emitido previo.");
+        if (tipo == "Alert" && referenciaCapId is not null)
+            throw new ExcepcionDominio("Un Alert no referencia a otro CAP.");
         VersionId = versionId;
         AvisoId = avisoId;
         Identificador = identificador;

@@ -31,12 +31,10 @@ public sealed class ArchivoCapPersistente(IAppDbContext db, IValidadorCap valida
         if (!validacion.Valido)
             throw new ExcepcionDominio("El CAP final no es válido contra CAP 1.2 y no se difunde: " + string.Join(" ", validacion.Errores));
 
-        Guid? referencia = null;
-        if (version.ReferenciaVersionId is { } refId)
-        {
-            referencia = await db.CapsEmitidos.Where(c => c.VersionId == refId).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(ct)
-                ?? throw new ExcepcionDominio("La versión referenciada todavía no se difundió: primero hay que emitir su CAP.");
-        }
+        // El Update o Cancel se enlaza al CAP que se emitió para la versión que reemplaza (si se llegó a difundir).
+        Guid? referencia = version.ReferenciaVersionId is { } refId
+            ? await db.CapsEmitidos.Where(c => c.VersionId == refId).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(ct)
+            : null;
 
         var cap = new CapEmitido(version.Id, version.AvisoId, version.IdentificadorCap, version.Remitente,
             version.EnviadoCap ?? reloj.GetUtcNow(), version.EstadoCap.ToString(), version.Tipo.ToString(), version.XmlCap,
@@ -56,7 +54,7 @@ public sealed class PublicadorWebPersistente(IAppDbContext db, TimeProvider relo
     {
         var version = await db.VersionesMensaje.FirstAsync(x => x.Id == v.VersionId, ct);
         version.MarcarPublicadaWeb(reloj.GetUtcNow());
-        await db.SaveChangesAsync(ct);
+        await db.GuardarODescartarAsync(ct);
         return new PublicacionWeb(v.VersionId, $"/?aviso={v.VersionId}", version.PublicadaWebEn!.Value);
     }
 }
@@ -67,7 +65,7 @@ public sealed class ColaSmsPersistente(IAppDbContext db) : IColaSms
     public async Task<int> EncolarAsync(IReadOnlyCollection<EnvioSms> envios, CancellationToken ct = default)
     {
         db.TrabajosDifusion.AddRange(envios);
-        await db.SaveChangesAsync(ct);
+        await db.GuardarODescartarAsync(ct);
         return envios.Count;
     }
 }
@@ -112,14 +110,16 @@ public sealed class GestorTareasPersistente : IGestorTareasManuales
             }
         }
         _db.TrabajosDifusion.AddRange(tareas);
-        await _db.SaveChangesAsync(ct);
+        await _db.GuardarODescartarAsync(ct);
         return tareas;
     }
 
     private async Task<List<Guid>> ComunidadesDelAlcance(Guid versionId, CancellationToken ct)
     {
         var lista = await _destinos.ObtenerOGenerarAsync(versionId, ct);
-        return lista.Destinos.Select(d => d.ComunidadId).Concat(lista.Pendientes.Select(p => p.ComunidadId)).Distinct().ToList();
+        var ids = lista.Destinos.Select(d => d.ComunidadId).Concat(lista.Pendientes.Select(p => p.ComunidadId)).Distinct().ToList();
+        // La lista se guardó al aprobar: una comunidad que se borró después ya no recibe tarea.
+        return await _db.Comunidades.Where(c => ids.Contains(c.Id)).Select(c => c.Id).ToListAsync(ct);
     }
 }
 

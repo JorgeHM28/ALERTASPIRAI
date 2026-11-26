@@ -10,4 +10,8 @@ scripts:
       pm.test('responde 200', () => pm.response.to.have.status(200));
       const r = pm.response.json();
       pm.test('se publica en la web con enlace a la versión', () => pm.expect(r.urlWeb).to.include(pm.collectionVariables.get('versionUpdateId')));
-      pm.test('crea las tareas de radio, altavoz y redes', () => pm.expect(r.tareasManuales).to.have.length(3));
+      pm.test('crea las tareas de radio y redes, y de altavoz por comunidad', () => pm.expect(r.tareasManuales).to.be.at.least(2));
+      pm.test('RF-04: emite y archiva el CAP final con su SHA-256', () => {
+        pm.expect(r.capEmitidoId).to.be.a('string');
+        pm.expect(r.sha256).to.match(/^[0-9a-f]{64}$/);
+      });

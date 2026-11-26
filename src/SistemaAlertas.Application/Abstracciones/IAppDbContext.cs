@@ -24,4 +24,16 @@ public interface IAppDbContext
     DbSet<TrabajoDifusion> TrabajosDifusion { get; }
     DbSet<RegistroEventoAviso> EventosAviso { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Guarda y, si falla, deja de seguir los cambios pendientes: así un canal de difusión que falla no arrastra
+    /// su error a los canales siguientes, que comparten el mismo contexto.
+    /// </summary>
+    async Task GuardarODescartarAsync(CancellationToken ct = default)
+    {
+        try { await SaveChangesAsync(ct); }
+        catch { DescartarCambios(); throw; }
+    }
+
+    void DescartarCambios();
 }

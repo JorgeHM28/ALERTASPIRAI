@@ -25,6 +25,8 @@ public class AlertasDbContext(DbContextOptions<AlertasDbContext> options) : DbCo
     public DbSet<TrabajoDifusion> TrabajosDifusion => Set<TrabajoDifusion>();
     public DbSet<RegistroEventoAviso> EventosAviso => Set<RegistroEventoAviso>();
 
+    public void DescartarCambios() => ChangeTracker.Clear();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("postgis");

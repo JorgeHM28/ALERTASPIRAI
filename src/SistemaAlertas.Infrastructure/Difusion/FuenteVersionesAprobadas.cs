@@ -39,7 +39,12 @@ public sealed class DestinatariosDesdeLista(ServicioDestinos destinos, IAppDbCon
         var lista = await destinos.ObtenerOGenerarAsync(version.VersionId, ct);
         var sms = lista.Destinos.Where(d => d.Canal == Domain.Comunidades.TipoCanal.Sms).ToList();
         var ids = sms.Select(d => d.ContactoId).Distinct().ToList();
-        var nombres = await db.Contactos.AsNoTracking().Where(c => ids.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Nombre, ct);
-        return sms.Select(d => new DestinatarioSms(d.ContactoId, d.ComunidadId, nombres.GetValueOrDefault(d.ContactoId, "?"), d.Direccion)).ToList();
+        // La lista se guardó al aprobar. Al difundir se vuelve a mirar el contacto: si se desactivó, se le quitó la
+        // autorización o se borró (con su comunidad), ya no recibe el SMS (restricción 4 del diagrama ER).
+        var habilitados = await db.Contactos.AsNoTracking()
+            .Where(c => ids.Contains(c.Id) && c.Activo && c.Autorizado)
+            .ToDictionaryAsync(c => c.Id, c => c.Nombre, ct);
+        return sms.Where(d => habilitados.ContainsKey(d.ContactoId))
+            .Select(d => new DestinatarioSms(d.ContactoId, d.ComunidadId, habilitados[d.ContactoId], d.Direccion)).ToList();
     }
 }
