@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Comunidades;
+using SistemaAlertas.Domain.Difusion;
 using SistemaAlertas.Domain.Mensajes;
 using SistemaAlertas.Domain.Usuarios;
 using SistemaAlertas.Domain.Zonas;
@@ -223,5 +224,78 @@ public class ListaDestinosConfig : IEntityTypeConfiguration<ListaDestinos>
         });
         b.Navigation(l => l.Destinos).UsePropertyAccessMode(PropertyAccessMode.Field);
         b.Navigation(l => l.Pendientes).UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+// Sprint 3: difusión (RF-04), seguimiento (RF-08) y bitácora de avisos.
+
+public class CapEmitidoConfig : IEntityTypeConfiguration<CapEmitido>
+{
+    public void Configure(EntityTypeBuilder<CapEmitido> b)
+    {
+        b.ToTable("caps_emitidos");
+        b.Property(c => c.Identificador).HasMaxLength(200).IsRequired();
+        b.Property(c => c.Remitente).HasMaxLength(200).IsRequired();
+        b.Property(c => c.Estado).HasMaxLength(16).IsRequired();
+        b.Property(c => c.Tipo).HasMaxLength(16).IsRequired();
+        b.Property(c => c.Xml).IsRequired();
+        b.Property(c => c.Sha256).HasMaxLength(64).IsRequired();
+        b.HasIndex(c => c.VersionId).IsUnique();
+        b.HasIndex(c => c.Identificador).IsUnique();
+        b.HasOne<VersionMensaje>().WithMany().HasForeignKey(c => c.VersionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Aviso>().WithMany().HasForeignKey(c => c.AvisoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<CapEmitido>().WithMany().HasForeignKey(c => c.ReferenciaCapId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>Una sola tabla para la jerarquía (TPH): la columna "tipo" distingue el envío SMS de la tarea manual.</summary>
+public class TrabajoDifusionConfig : IEntityTypeConfiguration<TrabajoDifusion>
+{
+    public void Configure(EntityTypeBuilder<TrabajoDifusion> b)
+    {
+        b.ToTable("trabajos_difusion");
+        b.HasDiscriminator<string>("tipo").HasValue<EnvioSms>("EnvioSms").HasValue<TareaManual>("TareaManual");
+        b.Property<string>("tipo").HasMaxLength(16);
+        b.Property(t => t.Resultado).HasMaxLength(500);
+        b.Ignore(t => t.Terminado);
+        b.HasIndex(t => t.VersionId);
+        b.HasIndex(t => new { t.Estado, t.CreadoEn });
+        b.HasOne<VersionMensaje>().WithMany().HasForeignKey(t => t.VersionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Comunidad>().WithMany().HasForeignKey(t => t.ComunidadId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class EnvioSmsConfig : IEntityTypeConfiguration<EnvioSms>
+{
+    public void Configure(EntityTypeBuilder<EnvioSms> b)
+    {
+        b.Property(e => e.Destino).HasMaxLength(32);
+        b.Property(e => e.Texto).HasMaxLength(1600);
+        b.Property(e => e.CodigoProveedor).HasMaxLength(100);
+        b.Property(e => e.UltimoError).HasMaxLength(500);
+        // La cola busca los pendientes cuyo próximo intento ya llegó.
+        b.HasIndex(e => e.ProximoIntento).HasFilter("proximo_intento IS NOT NULL");
+        b.HasOne<Contacto>().WithMany().HasForeignKey(e => e.ContactoId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class TareaManualConfig : IEntityTypeConfiguration<TareaManual>
+{
+    public void Configure(EntityTypeBuilder<TareaManual> b)
+    {
+        b.Property(t => t.TextoLegible).HasMaxLength(4000);
+        b.Property(t => t.Observacion).HasMaxLength(500);
+        b.HasOne<Usuario>().WithMany().HasForeignKey(t => t.ConfirmadoPorId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class RegistroEventoAvisoConfig : IEntityTypeConfiguration<RegistroEventoAviso>
+{
+    public void Configure(EntityTypeBuilder<RegistroEventoAviso> b)
+    {
+        b.ToTable("eventos_aviso");
+        b.Property(r => r.Tipo).HasMaxLength(32).IsRequired();
+        b.Property(r => r.Detalle).HasMaxLength(1000).IsRequired();
+        b.HasIndex(r => new { r.AvisoId, r.Fecha });
     }
 }

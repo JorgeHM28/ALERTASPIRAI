@@ -46,6 +46,7 @@ public static class DependencyInjection
 
         // Facade de RF-04 e invocador de los comandos: una llamada difunde por todos los canales.
         services.AddScoped<IServicioDifusion, ServicioDifusion>();
+        services.AddScoped<ServicioSeguimiento>();
         return services;
     }
 }

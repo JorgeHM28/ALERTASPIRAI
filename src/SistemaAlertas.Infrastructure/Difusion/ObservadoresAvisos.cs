@@ -3,12 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Avisos.Eventos;
+using SistemaAlertas.Domain.Difusion;
 
 namespace SistemaAlertas.Infrastructure.Difusion;
 
 // Observadores de los eventos de aviso (patrón Observer). Ninguno es conocido por quien publica el evento.
 
-/// <summary>Bitácora de cada aviso (RNF-04): quién lo registró, aprobó, descartó o difundió y cuándo. En memoria hasta el Sprint 3.</summary>
+/// <summary>Bitácora de cada aviso en memoria. La API usa <see cref="BitacoraAvisosPersistente"/>; esta queda para las pruebas.</summary>
 public sealed class BitacoraAvisosEnMemoria : IObservadorAvisos, IBitacoraAvisos
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<EventoAviso>> _porAviso = new();
@@ -19,8 +20,29 @@ public sealed class BitacoraAvisosEnMemoria : IObservadorAvisos, IBitacoraAvisos
         return Task.CompletedTask;
     }
 
-    public IReadOnlyList<EventoAviso> De(Guid avisoId) =>
-        _porAviso.TryGetValue(avisoId, out var cola) ? cola.ToList() : [];
+    public Task<IReadOnlyList<EventoAviso>> DeAsync(Guid avisoId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<EventoAviso>>(_porAviso.TryGetValue(avisoId, out var cola) ? cola.ToList() : []);
+}
+
+/// <summary>
+/// Bitácora de cada aviso (RNF-04), guardada en la base (Sprint 3): quién lo registró, preparó, aprobó, rechazó,
+/// difundió, y las incidencias y tareas de la difusión. Sobrevive a un reinicio de la API.
+/// </summary>
+public sealed class BitacoraAvisosPersistente(IAppDbContext db) : IObservadorAvisos, IBitacoraAvisos
+{
+    public async Task AlOcurrirAsync(EventoAviso e, CancellationToken ct = default)
+    {
+        db.EventosAviso.Add(new RegistroEventoAviso(e.AvisoId, e.VersionId, e.Tipo.ToString(), e.UsuarioId, e.Detalle, e.Fecha));
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<EventoAviso>> DeAsync(Guid avisoId, CancellationToken ct = default)
+    {
+        var filas = await db.EventosAviso.AsNoTracking().Where(r => r.AvisoId == avisoId).OrderBy(r => r.Fecha).ToListAsync(ct);
+        return filas.Select(r => new EventoAviso(r.AvisoId,
+            Enum.TryParse<TipoEventoAviso>(r.Tipo, out var tipo) ? tipo : TipoEventoAviso.Incidencia,
+            r.UsuarioId, r.Detalle, r.Fecha, r.VersionId)).ToList();
+    }
 }
 
 /// <summary>Deja cada evento en el log de la API, para el monitoreo.</summary>

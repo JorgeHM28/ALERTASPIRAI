@@ -1,3 +1,4 @@
+using SistemaAlertas.Domain.Difusion;
 using Microsoft.EntityFrameworkCore;
 using SistemaAlertas.Domain.Avisos;
 using SistemaAlertas.Domain.Comunidades;
@@ -19,5 +20,8 @@ public interface IAppDbContext
     DbSet<VersionMensaje> VersionesMensaje { get; }
     DbSet<ListaDestinos> ListasDestinos { get; }
     DbSet<ProtocoloOficial> Protocolos { get; }
+    DbSet<CapEmitido> CapsEmitidos { get; }
+    DbSet<TrabajoDifusion> TrabajosDifusion { get; }
+    DbSet<RegistroEventoAviso> EventosAviso { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

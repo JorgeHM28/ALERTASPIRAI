@@ -78,16 +78,18 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IDestinatariosDifusion, DestinatariosDesdeLista>();
         services.AddScoped<IFuenteVersionesAprobadas, FuenteVersionesAprobadas>();
-        services.AddSingleton<IPublicadorWeb, PublicadorWebEnMemoria>();
-        services.AddSingleton<ColaSmsEnMemoria>();
-        services.AddSingleton<IColaSms>(sp => sp.GetRequiredService<ColaSmsEnMemoria>());
-        services.AddSingleton<IGestorTareasManuales, GestorTareasManualesEnMemoria>();
-        services.AddSingleton<IRegistroIncidencias, RegistroIncidenciasEnLog>();
+        // Sprint 3: todo lo de la difusión se guarda en la base (CAP emitido, envíos SMS, tareas, incidencias y bitácora).
+        services.AddScoped<IArchivoCap, ArchivoCapPersistente>();
+        services.AddScoped<IPublicadorWeb, PublicadorWebPersistente>();
+        services.AddScoped<IColaSms, ColaSmsPersistente>();
+        services.AddScoped<DespachadorSms>();
+        services.AddScoped<IGestorTareasManuales, GestorTareasPersistente>();
+        services.AddScoped<IRegistroIncidencias, RegistroIncidenciasPersistente>();
 
         // Observer: cada observador reacciona a los eventos de aviso por su cuenta.
-        services.AddSingleton<BitacoraAvisosEnMemoria>();
-        services.AddSingleton<IBitacoraAvisos>(sp => sp.GetRequiredService<BitacoraAvisosEnMemoria>());
-        services.AddSingleton<IObservadorAvisos>(sp => sp.GetRequiredService<BitacoraAvisosEnMemoria>());
+        services.AddScoped<BitacoraAvisosPersistente>();
+        services.AddScoped<IBitacoraAvisos>(sp => sp.GetRequiredService<BitacoraAvisosPersistente>());
+        services.AddScoped<IObservadorAvisos>(sp => sp.GetRequiredService<BitacoraAvisosPersistente>());
         services.AddSingleton<IObservadorAvisos, ObservadorLogAvisos>();
         services.AddScoped<IObservadorAvisos, MarcarAvisoDifundido>();
         return services;

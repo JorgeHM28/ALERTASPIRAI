@@ -30,19 +30,16 @@ public static class RegistroSms
 
         services.AddSingleton<IBitacoraEnvios, BitacoraEnviosEnMemoria>();
 
-        // Decorator: la cadena se arma a mano, de afuera hacia adentro:
-        // bitácora → modo prueba → reintentos → proveedor (Adapter).
-        // La bitácora va por fuera para registrar el resultado final (con el número de intentos);
-        // el modo prueba va antes de los reintentos para que un envío bloqueado no se reintente.
+        // Decorator: la cadena se arma a mano, de afuera hacia adentro: bitácora → modo prueba → proveedor (Adapter).
+        // Sprint 3: los reintentos de RNF-08 esperan 60 s entre intentos, así que ya no los hace EmisorConReintentos
+        // dentro de la misma llamada (bloquearía la cola): los agenda la cola persistente (EnvioSms.RegistrarIntento).
+        // Cada intento queda en la bitácora; el modo prueba va antes del proveedor para que un aviso de prueba no salga.
         services.AddSingleton<IEmisorSms>(sp =>
         {
             IEmisorSms proveedor = opciones.Modo == ModoSms.Twilio
                 ? sp.GetRequiredService<TwilioEmisor>()
                 : sp.GetRequiredService<SimuladorEmisor>();
-            return new EmisorConBitacora(
-                new EmisorModoPrueba(
-                    new EmisorConReintentos(proveedor, opciones.MaxReintentos, opciones.EsperaReintentoMs)),
-                sp.GetRequiredService<IBitacoraEnvios>());
+            return new EmisorConBitacora(new EmisorModoPrueba(proveedor), sp.GetRequiredService<IBitacoraEnvios>());
         });
         return services;
     }

@@ -40,6 +40,6 @@ public sealed class DestinatariosDesdeLista(ServicioDestinos destinos, IAppDbCon
         var sms = lista.Destinos.Where(d => d.Canal == Domain.Comunidades.TipoCanal.Sms).ToList();
         var ids = sms.Select(d => d.ContactoId).Distinct().ToList();
         var nombres = await db.Contactos.AsNoTracking().Where(c => ids.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Nombre, ct);
-        return sms.Select(d => new DestinatarioSms(d.ContactoId, nombres.GetValueOrDefault(d.ContactoId, "?"), d.Direccion)).ToList();
+        return sms.Select(d => new DestinatarioSms(d.ContactoId, d.ComunidadId, nombres.GetValueOrDefault(d.ContactoId, "?"), d.Direccion)).ToList();
     }
 }

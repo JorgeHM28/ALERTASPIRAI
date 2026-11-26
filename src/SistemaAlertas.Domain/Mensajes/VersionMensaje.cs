@@ -52,6 +52,8 @@ public class VersionMensaje : Entidad
     public string? MotivoRechazo { get; private set; }
 
     public DateTimeOffset? DifundidaEn { get; private set; }
+    /// <summary>Cuándo se publicó en la web pública al difundirla (RF-04, Sprint 3).</summary>
+    public DateTimeOffset? PublicadaWebEn { get; private set; }
     /// <summary>Un Update o Cancel aprobado que la reemplaza. Mientras sea null, es la versión vigente de su cadena.</summary>
     public Guid? ReemplazadaPorId { get; private set; }
 
@@ -249,6 +251,12 @@ public class VersionMensaje : Entidad
     {
         Estado = EstadoActual.Difundir(this);
         DifundidaEn ??= ahora;
+    }
+
+    public void MarcarPublicadaWeb(DateTimeOffset ahora)
+    {
+        if (!EstadoActual.PermiteDifundir) throw new ExcepcionDominio($"La versión está {Estado}: solo se publica una versión aprobada.");
+        PublicadaWebEn ??= ahora;
     }
 
     private void MarcarReemplazada(Guid nuevaId) => ReemplazadaPorId = nuevaId;

@@ -123,5 +123,5 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
 
     /// <summary>Bitácora del aviso: registrado, aprobado, descartado, vencido, difundido (Observer). Se reinicia con la API.</summary>
     [HttpGet("{id:guid}/eventos")]
-    public IReadOnlyList<EventoAviso> Eventos(Guid id) => bitacora.De(id);
+    public Task<IReadOnlyList<EventoAviso>> Eventos(Guid id, CancellationToken ct) => bitacora.DeAsync(id, ct);
 }

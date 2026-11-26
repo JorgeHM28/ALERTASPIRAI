@@ -1,10 +1,12 @@
 using SistemaAlertas.Application.Avisos.Eventos;
+using SistemaAlertas.Domain.Difusion;
 
 namespace SistemaAlertas.Application.Difusion;
 
-/// <param name="TrabajosSms">Trabajos SMS creados (uno por destinatario); el envío lo hace la cola en segundo plano.</param>
-public sealed record ResultadoDifusion(Guid VersionId, bool EsPrueba, bool PublicadoEnWeb, string? UrlWeb, int TrabajosSms,
-    IReadOnlyList<TareaManual> TareasManuales, IReadOnlyList<IncidenciaDifusion> Incidencias);
+/// <param name="TrabajosSms">Envíos SMS creados (uno por destinatario); el envío lo hace la cola en segundo plano.</param>
+/// <param name="CapEmitidoId">CAP final archivado (RF-04); su XML exacto se descarga en /api/difusion/{versionId}/cap.</param>
+public sealed record ResultadoDifusion(Guid VersionId, bool EsPrueba, Guid CapEmitidoId, string Sha256, bool PublicadoEnWeb, string? UrlWeb,
+    int TrabajosSms, int TareasManuales, IReadOnlyList<IncidenciaDifusion> Incidencias);
 
 public interface IServicioDifusion
 {
@@ -17,9 +19,11 @@ public interface IServicioDifusion
 /// en orden. Cada canal es independiente: si uno falla, se registra la incidencia y los demás siguen.
 /// Al terminar publica el evento Difundido (Observer), que pasa el aviso a ese estado (State) y queda en la bitácora.
 /// La validación previa (Chain of Responsibility) la hace la fuente de versiones al entregar la versión.
+/// Antes de los canales se emite el CAP final: si no es válido, no se difunde por ningún canal.
 /// </summary>
 public sealed class ServicioDifusion(
     IFuenteVersionesAprobadas fuente,
+    IArchivoCap archivoCap,
     IEnumerable<IComandoDifusion> comandos,
     IRegistroIncidencias incidencias,
     IPublicadorEventosAvisos? eventos = null,
@@ -31,7 +35,8 @@ public sealed class ServicioDifusion(
     {
         var version = await fuente.ObtenerAsync(versionAprobadaId, ct)
             ?? throw new KeyNotFoundException("No existe la versión aprobada indicada.");
-        var contexto = new ContextoDifusion(version);
+        CapEmitido cap = await archivoCap.EmitirAsync(version, ct);
+        var contexto = new ContextoDifusion(version, _reloj);
         var problemas = new List<IncidenciaDifusion>();
 
         foreach (var comando in comandos)
@@ -48,13 +53,13 @@ public sealed class ServicioDifusion(
                 await Incidencia(version, comando.Canal, detalle, problemas, ct);
         }
 
-        var resultado = new ResultadoDifusion(version.VersionId, version.EsPrueba, contexto.Publicacion is not null,
-            contexto.Publicacion?.Url, contexto.TrabajosSms, contexto.Tareas, problemas);
+        var resultado = new ResultadoDifusion(version.VersionId, version.EsPrueba, cap.Id, cap.Sha256, contexto.Publicacion is not null,
+            contexto.Publicacion?.Url, contexto.TrabajosSms, contexto.Tareas.Count, problemas);
 
-        var llego = resultado.PublicadoEnWeb || resultado.TrabajosSms > 0 || resultado.TareasManuales.Count > 0;
-        if (llego && eventos is not null)
+        // El CAP ya quedó emitido: la versión pasa a Difundida aunque algún canal haya fallado (las incidencias quedan a la vista).
+        if (eventos is not null)
             await eventos.PublicarAsync(new EventoAviso(version.AvisoId, TipoEventoAviso.Difundido, null,
-                $"Web: {(resultado.PublicadoEnWeb ? "sí" : "no")}, SMS: {resultado.TrabajosSms}, tareas: {resultado.TareasManuales.Count}, incidencias: {problemas.Count}.",
+                $"CAP {cap.Identificador}. Web: {(resultado.PublicadoEnWeb ? "sí" : "no")}, SMS: {resultado.TrabajosSms}, tareas: {resultado.TareasManuales}, incidencias: {problemas.Count}.",
                 _reloj.GetUtcNow(), version.VersionId), ct);
         return resultado;
     }

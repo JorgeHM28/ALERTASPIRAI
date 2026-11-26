@@ -7,7 +7,9 @@ public enum TipoEventoAviso
     Registrado, Aprobado, Descartado, Vencido, Difundido,
     // Sprint 2: versiones del mensaje (RF-02, RF-11) y destinos (RF-07).
     VersionPreparada, VersionEnviadaARevision, VersionRechazada, VersionCorregida, DestinosSeleccionados,
-    VersionEliminada
+    VersionEliminada,
+    // Sprint 3: difusión (RF-04) y seguimiento (RF-08).
+    Incidencia, TareaConfirmada, TareaNoRealizada
 }
 
 /// <summary>Algo que le pasó a un aviso. Quien lo causó puede ser null si fue un proceso del sistema (vencimiento).</summary>
@@ -30,7 +32,7 @@ public interface IPublicadorEventosAvisos
 /// <summary>Bitácora de eventos de los avisos (RNF-04): uno de los observadores.</summary>
 public interface IBitacoraAvisos
 {
-    IReadOnlyList<EventoAviso> De(Guid avisoId);
+    Task<IReadOnlyList<EventoAviso>> DeAsync(Guid avisoId, CancellationToken ct = default);
 }
 
 /// <summary>

@@ -38,6 +38,7 @@ public abstract class ReglaDifusion
     {
         var inicio = new ReglaNoDescartado();
         inicio.Luego(new ReglaAprobado())
+              .Luego(new ReglaNoDifundidaAntes())
               .Luego(new ReglaNoReemplazada())
               .Luego(new ReglaVigente())
               .Luego(new ReglaCompleto());
@@ -57,6 +58,13 @@ public sealed class ReglaAprobado : ReglaDifusion
     protected override string? Revisar(VersionMensaje version, Aviso aviso, DateTimeOffset ahora) =>
         version.EstadoActual.PermiteDifundir ? null
             : $"La versión está {version.Estado}: un aprobador debe aprobarla antes de difundirla (RF-11).";
+}
+
+/// <summary>Sprint 3: una versión se difunde una sola vez; repetirlo duplicaría los SMS y las tareas.</summary>
+public sealed class ReglaNoDifundidaAntes : ReglaDifusion
+{
+    protected override string? Revisar(VersionMensaje version, Aviso aviso, DateTimeOffset ahora) =>
+        version.DifundidaEn is { } d ? $"La versión ya se difundió el {d:yyyy-MM-dd HH:mm} UTC: mira su avance en Seguimiento." : null;
 }
 
 /// <summary>Si un Update o Cancel aprobado la reemplazó, se difunde ese, no esta.</summary>

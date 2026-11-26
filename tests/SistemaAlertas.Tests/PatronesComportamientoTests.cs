@@ -1,3 +1,4 @@
+using SistemaAlertas.Domain.Difusion;
 using NetTopologySuite.Geometries;
 using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Avisos.Importacion;
@@ -150,8 +151,8 @@ public class PatronesComportamientoTests
         await publicador.PublicarAsync(new EventoAviso(avisoId, TipoEventoAviso.Aprobado, Guid.NewGuid(), "ok", Ahora));
         await publicador.PublicarAsync(new EventoAviso(avisoId, TipoEventoAviso.Difundido, null, "ok", Ahora));
 
-        Assert.Equal([TipoEventoAviso.Aprobado, TipoEventoAviso.Difundido], bitacora.De(avisoId).Select(e => e.Tipo));
-        Assert.Empty(bitacora.De(Guid.NewGuid()));
+        Assert.Equal([TipoEventoAviso.Aprobado, TipoEventoAviso.Difundido], (await bitacora.DeAsync(avisoId)).Select(e => e.Tipo));
+        Assert.Empty(await bitacora.DeAsync(Guid.NewGuid()));
     }
 
     // ---------- Command (con Observer al final) ----------
@@ -187,7 +188,7 @@ public class PatronesComportamientoTests
         var orden = new List<string>();
         var bitacora = new BitacoraAvisosEnMemoria();
         var version = Version();
-        var servicio = new ServicioDifusion(new FuenteFija(version),
+        var servicio = new ServicioDifusion(new FuenteFija(version), new ServicioDifusionTests.ArchivoCapFalso(),
             [new ComandoEspia("WhatsApp", orden, falla: true), new ComandoEspia("Sirena", orden)],
             new SinIncidencias(), new PublicadorEventosAvisos([bitacora]));
 
@@ -196,30 +197,29 @@ public class PatronesComportamientoTests
         Assert.Equal(["WhatsApp", "Sirena"], orden);
         Assert.Equal(1, r.TrabajosSms);
         Assert.Equal("WhatsApp", Assert.Single(r.Incidencias).Canal);
-        Assert.Equal(TipoEventoAviso.Difundido, Assert.Single(bitacora.De(version.AvisoId)).Tipo);
+        Assert.Equal(TipoEventoAviso.Difundido, Assert.Single(await bitacora.DeAsync(version.AvisoId)).Tipo);
     }
 
     // ---------- Strategy ----------
 
     private sealed class RedaccionRadioCorta : IRedaccionCanal
     {
-        public CanalManual Canal => CanalManual.Radio;
+        public CanalDifusion Canal => CanalDifusion.Radio;
         public string Redactar(VersionAprobada v) => "CORTO: " + v.Titular;
     }
 
     [Fact]
-    public async Task Strategy_cada_canal_redacta_a_su_manera_y_se_puede_cambiar()
+    public void Strategy_cada_canal_redacta_a_su_manera_y_se_puede_cambiar()
     {
         var v = Version();
-        var porDefecto = await new GestorTareasManualesEnMemoria(TimeProvider.System)
-            .CrearAsync(v, CrearTareasManuales.Canales);
-        Assert.Contains("dos veces", porDefecto.Single(t => t.Canal == CanalManual.Radio).Instrucciones);
-        Assert.Contains("cada 10 minutos", porDefecto.Single(t => t.Canal == CanalManual.Altavoz).Instrucciones);
-        Assert.Contains($"/?aviso={v.VersionId}", porDefecto.Single(t => t.Canal == CanalManual.RedesSociales).Instrucciones);
+        var porDefecto = new RedactorTareas();
+        Assert.Contains("dos veces", porDefecto.Redactar(CanalDifusion.Radio, v));
+        Assert.Contains("cada 10 minutos", porDefecto.Redactar(CanalDifusion.Altavoz, v));
+        Assert.Contains($"/?aviso={v.VersionId}", porDefecto.Redactar(CanalDifusion.RedesSociales, v));
 
-        var otra = await new GestorTareasManualesEnMemoria(TimeProvider.System, [new RedaccionRadioCorta()])
-            .CrearAsync(v, [CanalManual.Radio]);
-        Assert.Equal("CORTO: Alerta roja", Assert.Single(otra).Instrucciones);
+        var otra = new RedactorTareas([new RedaccionRadioCorta()]);
+        Assert.Equal("CORTO: Alerta roja", otra.Redactar(CanalDifusion.Radio, v));
+        Assert.StartsWith("[PRUEBA] ", porDefecto.Redactar(CanalDifusion.Radio, v with { EsPrueba = true }));
     }
 
     // ---------- Template Method ----------

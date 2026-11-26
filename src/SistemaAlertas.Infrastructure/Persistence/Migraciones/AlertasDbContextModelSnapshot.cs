@@ -365,6 +365,213 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.ToTable("contacto_historial", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.CapEmitido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AvisoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("aviso_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateTimeOffset>("Enviado")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviado");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("estado");
+
+                    b.Property<string>("Identificador")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("identificador");
+
+                    b.Property<Guid?>("ReferenciaCapId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referencia_cap_id");
+
+                    b.Property<string>("Remitente")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("remitente");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sha256");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("tipo");
+
+                    b.Property<bool>("Valido")
+                        .HasColumnType("boolean")
+                        .HasColumnName("valido");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.Property<string>("Xml")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("xml");
+
+                    b.HasKey("Id")
+                        .HasName("pk_caps_emitidos");
+
+                    b.HasIndex("AvisoId")
+                        .HasDatabaseName("ix_caps_emitidos_aviso_id");
+
+                    b.HasIndex("Identificador")
+                        .IsUnique()
+                        .HasDatabaseName("ix_caps_emitidos_identificador");
+
+                    b.HasIndex("ReferenciaCapId")
+                        .HasDatabaseName("ix_caps_emitidos_referencia_cap_id");
+
+                    b.HasIndex("VersionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_caps_emitidos_version_id");
+
+                    b.ToTable("caps_emitidos", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.RegistroEventoAviso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AvisoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("aviso_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Detalle")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("detalle");
+
+                    b.Property<DateTimeOffset>("Fecha")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<Guid?>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_eventos_aviso");
+
+                    b.HasIndex("AvisoId", "Fecha")
+                        .HasDatabaseName("ix_eventos_aviso_aviso_id_fecha");
+
+                    b.ToTable("eventos_aviso", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.TrabajoDifusion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AvisoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("aviso_id");
+
+                    b.Property<string>("Canal")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("canal");
+
+                    b.Property<Guid?>("ComunidadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comunidad_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<bool>("EsPrueba")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_prueba");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("estado");
+
+                    b.Property<string>("Resultado")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("resultado");
+
+                    b.Property<DateTimeOffset?>("ResultadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resultado_en");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.Property<string>("tipo")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("tipo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_trabajos_difusion");
+
+                    b.HasIndex("ComunidadId")
+                        .HasDatabaseName("ix_trabajos_difusion_comunidad_id");
+
+                    b.HasIndex("VersionId")
+                        .HasDatabaseName("ix_trabajos_difusion_version_id");
+
+                    b.HasIndex("Estado", "CreadoEn")
+                        .HasDatabaseName("ix_trabajos_difusion_estado_creado_en");
+
+                    b.ToTable("trabajos_difusion", (string)null);
+
+                    b.HasDiscriminator<string>("tipo").HasValue("TrabajoDifusion");
+
+                    b.UseTphMappingStrategy();
+                });
+
             modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.ListaDestinos", b =>
                 {
                     b.Property<Guid>("Id")
@@ -536,6 +743,10 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("protocolo_titulo");
+
+                    b.Property<DateTimeOffset?>("PublicadaWebEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("publicada_web_en");
 
                     b.Property<Guid?>("ReemplazadaPorId")
                         .HasColumnType("uuid")
@@ -843,6 +1054,83 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.ToTable("zonas", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioSms", b =>
+                {
+                    b.HasBaseType("SistemaAlertas.Domain.Difusion.TrabajoDifusion");
+
+                    b.Property<string>("CodigoProveedor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("codigo_proveedor");
+
+                    b.Property<Guid>("ContactoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contacto_id");
+
+                    b.Property<string>("Destino")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("destino");
+
+                    b.Property<int>("Intentos")
+                        .HasColumnType("integer")
+                        .HasColumnName("intentos");
+
+                    b.Property<DateTimeOffset?>("ProximoIntento")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("proximo_intento");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(1600)
+                        .HasColumnType("character varying(1600)")
+                        .HasColumnName("texto");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("ultimo_error");
+
+                    b.HasIndex("ContactoId")
+                        .HasDatabaseName("ix_trabajos_difusion_contacto_id");
+
+                    b.HasIndex("ProximoIntento")
+                        .HasDatabaseName("ix_trabajos_difusion_proximo_intento")
+                        .HasFilter("proximo_intento IS NOT NULL");
+
+                    b.ToTable("trabajos_difusion", (string)null);
+
+                    b.HasDiscriminator().HasValue("EnvioSms");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.TareaManual", b =>
+                {
+                    b.HasBaseType("SistemaAlertas.Domain.Difusion.TrabajoDifusion");
+
+                    b.Property<Guid?>("ConfirmadoPorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("confirmado_por_id");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("observacion");
+
+                    b.Property<string>("TextoLegible")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("texto_legible");
+
+                    b.HasIndex("ConfirmadoPorId")
+                        .HasDatabaseName("ix_trabajos_difusion_confirmado_por_id");
+
+                    b.ToTable("trabajos_difusion", (string)null);
+
+                    b.HasDiscriminator().HasValue("TareaManual");
+                });
+
             modelBuilder.Entity("SistemaAlertas.Domain.Avisos.Aviso", b =>
                 {
                     b.HasOne("SistemaAlertas.Domain.Usuarios.Usuario", null)
@@ -927,6 +1215,45 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_contacto_historial_usuarios_usuario_id");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.CapEmitido", b =>
+                {
+                    b.HasOne("SistemaAlertas.Domain.Avisos.Aviso", null)
+                        .WithMany()
+                        .HasForeignKey("AvisoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_caps_emitidos_avisos_aviso_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Difusion.CapEmitido", null)
+                        .WithMany()
+                        .HasForeignKey("ReferenciaCapId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_caps_emitidos_caps_emitidos_referencia_cap_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_caps_emitidos_versiones_mensaje_version_id");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.TrabajoDifusion", b =>
+                {
+                    b.HasOne("SistemaAlertas.Domain.Comunidades.Comunidad", null)
+                        .WithMany()
+                        .HasForeignKey("ComunidadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_trabajos_difusion_comunidades_comunidad_id");
+
+                    b.HasOne("SistemaAlertas.Domain.Mensajes.VersionMensaje", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_trabajos_difusion_versiones_mensaje_version_id");
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Mensajes.ListaDestinos", b =>
@@ -1124,6 +1451,25 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         });
 
                     b.Navigation("Asignaciones");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioSms", b =>
+                {
+                    b.HasOne("SistemaAlertas.Domain.Comunidades.Contacto", null)
+                        .WithMany()
+                        .HasForeignKey("ContactoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_trabajos_difusion_contactos_contacto_id");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.TareaManual", b =>
+                {
+                    b.HasOne("SistemaAlertas.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("ConfirmadoPorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_trabajos_difusion_usuarios_confirmado_por_id");
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Comunidades.Comunidad", b =>

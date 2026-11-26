@@ -1,10 +1,11 @@
-using SistemaAlertas.Application.Difusion.Sms;
+using SistemaAlertas.Domain.Difusion;
 
 namespace SistemaAlertas.Application.Difusion;
 
 /// <summary>Lo que los comandos de un mismo envío comparten: la versión y los resultados que van dejando.</summary>
-public sealed class ContextoDifusion(VersionAprobada version)
+public sealed class ContextoDifusion(VersionAprobada version, TimeProvider? reloj = null)
 {
+    public TimeProvider Reloj { get; } = reloj ?? TimeProvider.System;
     private readonly List<string> _anotaciones = [];
 
     public VersionAprobada Version { get; } = version;
@@ -46,7 +47,7 @@ public sealed class PublicarEnWeb(IPublicadorWeb publicador) : IComandoDifusion
 
 /// <summary>
 /// Crea un trabajo SMS por destinatario de la lista de destinos de la versión (RF-07);
-/// el envío (con reintentos y bitácora) lo hace la cola.
+/// el envío (por lotes, con reintentos y bitácora) lo hace la cola en segundo plano.
 /// </summary>
 public sealed class EncolarSms(IDestinatariosDifusion destinatarios, IColaSms cola) : IComandoDifusion
 {
@@ -61,15 +62,19 @@ public sealed class EncolarSms(IDestinatariosDifusion destinatarios, IColaSms co
             c.Anotar("La lista de destinos de la versión no tiene ningún SMS (comunidades sin contactos con SMS o canal no elegido).");
             return;
         }
-        c.TrabajosSms = await cola.EncolarAsync(lista.Select(d => new TrabajoSms(Guid.NewGuid(), v.VersionId, d.ContactoId,
-            new MensajeSms(d.Telefono, v.TextoSms, v.AvisoId, v.EsPrueba))).ToList(), ct);
+        var ahora = c.Reloj.GetUtcNow();
+        c.TrabajosSms = await cola.EncolarAsync(lista.Select(d =>
+            new EnvioSms(v.VersionId, v.AvisoId, d.ComunidadId, d.ContactoId, d.Telefono, v.TextoSms, v.EsPrueba, ahora)).ToList(), ct);
     }
 }
 
-/// <summary>Radio, altavoz y redes sociales: crea una tarea por canal para que una persona la ejecute.</summary>
+/// <summary>
+/// Radio, altavoz y redes sociales: crea las tareas para que una persona las ejecute y las confirme.
+/// La radio y las redes van una vez para toda el área; el altavoz, una por comunidad del alcance.
+/// </summary>
 public sealed class CrearTareasManuales(IGestorTareasManuales gestor) : IComandoDifusion
 {
-    public static readonly IReadOnlyList<CanalManual> Canales = [CanalManual.Radio, CanalManual.Altavoz, CanalManual.RedesSociales];
+    public static readonly IReadOnlyList<CanalDifusion> Canales = [CanalDifusion.Radio, CanalDifusion.Altavoz, CanalDifusion.RedesSociales];
 
     public string Canal => "Tareas manuales";
 
