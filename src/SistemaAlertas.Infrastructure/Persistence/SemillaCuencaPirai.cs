@@ -18,6 +18,8 @@ public static class SemillaCuencaPirai
     public static readonly OrigenInstitucional Origen = new(
         "GeoBolivia (límites municipales, vía geoBoundaries)", "gbOpen BOL ADM3 · municipios 2015", new DateOnly(2015, 1, 1));
 
+    private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web);
+
     private sealed record ComunidadArchivo(string Nombre, string Municipio, int? Poblacion, double Latitud, double Longitud);
 
     public static async Task<int> CargarAsync(AlertasDbContext db, CancellationToken ct)
@@ -36,8 +38,7 @@ public static class SemillaCuencaPirai
             db.Zonas.Add(zona);
         }
 
-        var comunidades = JsonSerializer.Deserialize<List<ComunidadArchivo>>(Leer("comunidades.json"),
-            new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? [];
+        var comunidades = JsonSerializer.Deserialize<List<ComunidadArchivo>>(Leer("comunidades.json"), OpcionesJson) ?? [];
         foreach (var c in comunidades)
         {
             var zona = zonas[c.Municipio];

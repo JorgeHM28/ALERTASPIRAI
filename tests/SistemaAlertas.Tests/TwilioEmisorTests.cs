@@ -57,7 +57,7 @@ public class TwilioEmisorTests
 
         Assert.False(r.Exitoso);
         Assert.Equal(recuperable, r.Recuperable);
-        Assert.Contains(codigo.ToString(), r.Error);
+        Assert.Contains(codigo.ToString(System.Globalization.CultureInfo.InvariantCulture), r.Error);
     }
 
     [Fact]

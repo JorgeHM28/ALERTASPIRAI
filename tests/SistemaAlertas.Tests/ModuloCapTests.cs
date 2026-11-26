@@ -53,7 +53,7 @@ public class ModuloCapTests
         var r = _modulo.Validar(desordenado);
 
         Assert.False(r.Valido);
-        Assert.Contains(r.Errores, e => e.StartsWith("XSD oficial CAP 1.2"));
+        Assert.Contains(r.Errores, e => e.StartsWith("XSD oficial CAP 1.2", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class ModuloCapTests
         var r = _modulo.Validar(xml);
 
         Assert.False(r.Valido);
-        Assert.Contains(r.Errores, e => e.StartsWith("XSD oficial CAP 1.2"));
+        Assert.Contains(r.Errores, e => e.StartsWith("XSD oficial CAP 1.2", StringComparison.Ordinal));
     }
 
     [Fact]

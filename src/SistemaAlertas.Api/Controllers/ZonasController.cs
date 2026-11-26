@@ -115,7 +115,7 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
     {
         var origenArchivo = OrigenInstitucional.Desde(fuenteInstitucional, referenciaDocumento, fechaDocumento);
         var coleccion = geoJson.LeerColeccion(featureCollection);
-        var existentes = await db.Zonas.ToDictionaryAsync(z => z.Nombre.ToLower(), ct);
+        var existentes = await db.Zonas.ToDictionaryAsync(z => z.Nombre, StringComparer.OrdinalIgnoreCase, ct);
         int creadas = 0, actualizadas = 0;
         var errores = new List<string>();
 
@@ -135,7 +135,7 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
                 var origen = OrigenInstitucional.Desde(Atributo(f, "fuenteInstitucional"), Atributo(f, "referenciaDocumento"), fecha)
                     ?? origenArchivo;
 
-                if (existentes.TryGetValue(nombre.Trim().ToLower(), out var zona))
+                if (existentes.TryGetValue(nombre.Trim(), out var zona))
                 {
                     zona.Actualizar(nombre, descripcion ?? zona.Descripcion, nivel, f.Geometria!, origen);
                     actualizadas++;
@@ -145,7 +145,7 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
                     zona = new Zona(nombre, descripcion, nivel, f.Geometria!,
                         origen ?? throw new ExcepcionDominio("faltan los datos institucionales (fuente, referencia y fecha del documento)."));
                     db.Zonas.Add(zona);
-                    existentes[zona.Nombre.ToLower()] = zona;
+                    existentes[zona.Nombre] = zona;
                     creadas++;
                 }
             }
@@ -164,8 +164,10 @@ public sealed class ZonasController(IAppDbContext db, IConversorGeoJson geoJson)
 
     private async Task ValidarNombreUnico(string nombre, Guid? excepto, CancellationToken ct)
     {
-        var n = (nombre ?? string.Empty).Trim().ToLower();
+        var n = (nombre ?? string.Empty).Trim().ToLowerInvariant();
+#pragma warning disable CA1304, CA1311, CA1862 // dentro de la consulta: EF lo traduce a lower() de PostgreSQL
         if (await db.Zonas.AnyAsync(z => z.Nombre.ToLower() == n && z.Id != excepto, ct))
+#pragma warning restore CA1304, CA1311, CA1862
             throw new ExcepcionDominio($"Ya existe una zona llamada '{nombre}'.");
     }
 

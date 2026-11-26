@@ -1,0 +1,94 @@
+# Integración continua (SQA, Sprint 3). Corre en cada push y pull request:
+#  1. Backend: compila con el análisis estático como error, corre las pruebas xUnit y mide la cobertura.
+#  2. Frontend: revisa tipos (tsc), lint (ESLint) y construye.
+#  3. API real: levanta PostGIS y la API, y corre la colección Postman completa.
+name: CI
+
+on:
+  push:
+    branches: [main, sprint-1, sprint-2, sprint-3]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compilar (análisis estático como error)
+        run: dotnet build SistemaAlertas.sln -c Release -warnaserror
+      - name: Pruebas y cobertura
+        run: >
+          dotnet test tests/SistemaAlertas.Tests -c Release --no-build
+          --settings tests/cobertura.runsettings --collect:"XPlat Code Coverage" --results-directory cobertura
+          --logger "trx;LogFileName=pruebas.trx"
+      - name: Resumen de cobertura
+        run: |
+          f=$(find cobertura -name coverage.cobertura.xml | head -1)
+          python3 - "$f" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          r = ET.parse(sys.argv[1]).getroot()
+          print('### Cobertura de código')
+          print(f"Líneas: {float(r.get('line-rate'))*100:.1f} % · Ramas: {float(r.get('branch-rate'))*100:.1f} %")
+          for p in r.iter('package'):
+              print(f"- {p.get('name')}: {float(p.get('line-rate'))*100:.1f} % de líneas")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pruebas-y-cobertura
+          path: cobertura
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Tipos (tsc)
+        run: npx tsc -b
+      - name: Lint (ESLint)
+        run: npm run lint
+      - name: Construir
+        run: npx vite build
+
+  api-postman:
+    runs-on: ubuntu-latest
+    needs: backend
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: sistema_alertas
+          POSTGRES_USER: alertas
+          POSTGRES_PASSWORD: alertas_dev
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U alertas -d sistema_alertas" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Levantar la API (aplica migraciones y carga la cuenca del Piraí)
+        run: |
+          dotnet build src/SistemaAlertas.Api -c Release
+          ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5080 Sms__IntervaloColaSegundos=1 \
+            nohup dotnet run -c Release --no-build --no-launch-profile --project src/SistemaAlertas.Api > api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:5080/api/salud && break; sleep 2; done
+      - name: Instalar Postman CLI
+        run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+      - name: Colección Postman completa
+        run: postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml
+      - name: Log de la API si algo falló
+        if: failure()
+        run: tail -200 api.log

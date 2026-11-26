@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cobertura de código (SQA, Sprint 3). Comando en docs/sqa.md.
+     Se mide el código propio (Domain, Application, Infrastructure); las migraciones las genera EF Core y no cuentan. -->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[SistemaAlertas.Domain]*,[SistemaAlertas.Application]*,[SistemaAlertas.Infrastructure]*</Include>
+          <ExcludeByFile>**/Migraciones/*.cs</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

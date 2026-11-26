@@ -38,7 +38,7 @@ public static class DependencyInjection
 
         // Strategy: una redacción por canal manual.
         foreach (var redaccion in RedaccionesCanal.PorDefecto)
-            services.AddSingleton(typeof(IRedaccionCanal), redaccion);
+            services.AddSingleton<IRedaccionCanal>(redaccion);
 
         // Command: un comando por canal, en el orden en que se ejecutan. Agregar un canal es una línea más.
         services.AddScoped<IComandoDifusion, PublicarEnWeb>();

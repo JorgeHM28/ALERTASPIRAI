@@ -68,7 +68,7 @@ public class Aviso : Entidad
     public Aviso(MensajeCap mensaje, FormatoAviso formato, string xmlCap, Geometry? area, Guid registradoPorId,
         string? contenidoOriginal = null)
     {
-        var info = mensaje.Infos.FirstOrDefault()
+        var info = (mensaje.Infos.Count > 0 ? mensaje.Infos[0] : null)
             ?? throw new ExcepcionDominio("El aviso necesita al menos un bloque <info>.");
         IdentificadorCap = mensaje.Identifier;
         Remitente = mensaje.Sender;

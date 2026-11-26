@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    SQA (Sprint 3): análisis estático de .NET en todos los proyectos con el conjunto "recomendado".
+    Las reglas que no aplican a este proyecto se ajustan en .editorconfig, con su motivo.
+    En la integración continua se compila con -warnaserror: un aviso nuevo rompe la compilación.
+  -->
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+  </PropertyGroup>
+</Project>

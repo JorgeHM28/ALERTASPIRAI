@@ -59,7 +59,7 @@ public sealed class ConversorGeoJson : IConversorGeoJson
                 { "descripcion", z.Descripcion ?? string.Empty }, { "nivelRiesgo", z.NivelRiesgo.ToString() },
                 { "fuenteInstitucional", z.FuenteInstitucional ?? string.Empty },
                 { "referenciaDocumento", z.ReferenciaDocumento ?? string.Empty },
-                { "fechaDocumento", z.FechaDocumento?.ToString("yyyy-MM-dd") ?? string.Empty }
+                { "fechaDocumento", z.FechaDocumento?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty }
             }));
         }
         return JsonSerializer.SerializeToElement(coleccion, Opciones);

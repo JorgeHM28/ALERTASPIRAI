@@ -20,7 +20,7 @@ public class EjemplosSprint3Tests
     private static string Contenido(string archivo)
     {
         var ruta = Path.Combine(Ruta, archivo);
-        return archivo.EndsWith(".xlsx") ? Convert.ToBase64String(File.ReadAllBytes(ruta)) : File.ReadAllText(ruta);
+        return archivo.EndsWith(".xlsx", StringComparison.Ordinal) ? Convert.ToBase64String(File.ReadAllBytes(ruta)) : File.ReadAllText(ruta);
     }
 
     [Theory]

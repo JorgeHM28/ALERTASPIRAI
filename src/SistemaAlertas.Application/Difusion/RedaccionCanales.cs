@@ -46,7 +46,7 @@ public static class RedaccionesCanal
 /// </summary>
 public sealed class RedactorTareas
 {
-    private readonly IReadOnlyDictionary<CanalDifusion, IRedaccionCanal> _redacciones;
+    private readonly Dictionary<CanalDifusion, IRedaccionCanal> _redacciones;
 
     public RedactorTareas(IEnumerable<IRedaccionCanal>? redacciones = null)
     {

@@ -46,7 +46,7 @@ public class AvisoAptitudTests
         Assert.True(aviso.EvaluarAptitud(DateTimeOffset.UtcNow.AddHours(2)));
         Assert.True(aviso.Vencido);
         Assert.False(aviso.AptoParaDifusion);
-        Assert.Contains(aviso.MotivosNoApto, m => m.StartsWith("Vencido"));
+        Assert.Contains(aviso.MotivosNoApto, m => m.StartsWith("Vencido", StringComparison.Ordinal));
         Assert.False(aviso.EvaluarAptitud(DateTimeOffset.UtcNow.AddHours(3))); // ya estaba registrado
     }
 

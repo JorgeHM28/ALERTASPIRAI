@@ -1,0 +1,37 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{cs,csx}]
+indent_style = space
+indent_size = 4
+
+[*.{ts,tsx,js,json,yml,yaml,css,html,md}]
+indent_style = space
+indent_size = 2
+
+# --- Análisis estático (SQA, Sprint 3) ---
+# Reglas del conjunto recomendado que no aplican, con el motivo:
+
+# Los nombres de las pruebas usan guiones bajos para leerse como frases ("Un_fallo_definitivo_no_se_reintenta").
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+# En las pruebas se declara la interfaz a propósito para probar el contrato, no la clase concreta.
+dotnet_diagnostic.CA1859.severity = none
+
+[*.cs]
+# Los parámetros se llaman "ct" por brevedad aunque la interfaz diga "cancellationToken".
+dotnet_diagnostic.CA1725.severity = none
+# El código está en español: ExcepcionDominio no termina en "Exception".
+dotnet_diagnostic.CA1710.severity = none
+# LoggerMessage de alto rendimiento: el volumen de logs del sistema es bajo.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+
+# Las migraciones las genera EF Core: no se editan a mano.
+[src/SistemaAlertas.Infrastructure/Persistence/Migraciones/**.cs]
+generated_code = true
+dotnet_diagnostic.CA1861.severity = none
