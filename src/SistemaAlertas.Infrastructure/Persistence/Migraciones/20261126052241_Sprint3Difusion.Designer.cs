@@ -14,7 +14,7 @@ using SistemaAlertas.Infrastructure.Persistence;
 namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
 {
     [DbContext(typeof(AlertasDbContext))]
-    [Migration("20261126051126_Sprint3Difusion")]
+    [Migration("20261126052241_Sprint3Difusion")]
     partial class Sprint3Difusion
     {
         /// <inheritdoc />
@@ -151,8 +151,8 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasColumnName("severidad");
 
                     b.Property<string>("TipoContenidoOriginal")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("tipo_contenido_original");
 
                     b.Property<string>("TipoMensaje")

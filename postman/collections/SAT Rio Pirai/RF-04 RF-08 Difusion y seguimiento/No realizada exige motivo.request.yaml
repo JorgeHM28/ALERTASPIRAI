@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Marcar como no realizada exige el motivo'
+method: POST
+url: '{{baseUrl}}/api/difusion/tareas/{{tareaRedesId}}/no-realizada'
+order: 600
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "observacion": "" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('pide el motivo', () => pm.expect(pm.response.json().detail).to.include('por qué'));

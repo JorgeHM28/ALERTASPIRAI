@@ -1,0 +1,28 @@
+$kind: http-request
+name: 'Registro propio crea una cuenta de consulta'
+method: POST
+url: '{{baseUrl}}/api/auth/registro'
+order: 450
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "vecino{{$timestamp}}",
+      "nombreCompleto": "Vecina de El Torno",
+      "email": "vecino{{$timestamp}}@ejemplo.bo",
+      "contrasena": "Consulta123"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 201', () => pm.response.to.have.status(201));
+      const r = pm.response.json();
+      pm.test('nace solo con el rol Consulta', () => pm.expect(r.usuario.roles).to.eql(['Consulta']));
+      pm.test('devuelve la sesión iniciada', () => pm.expect(r.token).to.be.a('string'));
+      pm.collectionVariables.set('tokenRegistrado', r.token);

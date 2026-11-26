@@ -1,0 +1,25 @@
+$kind: http-request
+name: 'Confirmar la tarea de radio'
+method: POST
+url: '{{baseUrl}}/api/difusion/tareas/{{tareaRadioId}}/confirmar'
+order: 700
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "observacion": "Leído en Radio Piraí a las 14:00 y 14:30" }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200 (o 400 si ya estaba confirmada en una corrida anterior)', () => pm.expect([200, 400]).to.include(pm.response.code));
+      if (pm.response.code === 200) {
+        const t = pm.response.json();
+        pm.test('queda realizada con quién la confirmó', () => {
+          pm.expect(t.estado).to.eql('Confirmada');
+          pm.expect(t.confirmadoPor).to.be.a('string');
+          pm.expect(t.observacion).to.eql('Leído en Radio Piraí a las 14:00 y 14:30');
+        });
+      }

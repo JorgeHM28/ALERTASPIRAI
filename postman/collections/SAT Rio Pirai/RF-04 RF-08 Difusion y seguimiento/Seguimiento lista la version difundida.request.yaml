@@ -1,0 +1,16 @@
+$kind: http-request
+name: 'Seguimiento lista la versión difundida'
+method: GET
+url: '{{baseUrl}}/api/difusion/seguimiento'
+order: 100
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const fila = pm.response.json().find(r => r.versionId === pm.collectionVariables.get('versionUpdateId'));
+      pm.test('RF-08: la versión difundida aparece con su avance', () => {
+        pm.expect(fila).to.be.an('object');
+        pm.expect(fila.avance).to.be.within(0, 100);
+        pm.expect(fila.tareas.total).to.be.at.least(2);
+      });

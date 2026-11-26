@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'Una cuenta registrada no puede difundir'
+method: POST
+url: '{{baseUrl}}/api/difusion/{{versionUpdateId}}'
+order: 1200
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenRegistrado}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 403', () => pm.response.to.have.status(403));

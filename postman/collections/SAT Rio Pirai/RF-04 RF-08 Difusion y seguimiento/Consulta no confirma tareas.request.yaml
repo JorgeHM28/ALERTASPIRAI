@@ -1,0 +1,22 @@
+$kind: http-request
+name: 'Una cuenta de consulta no puede confirmar tareas'
+method: POST
+url: '{{baseUrl}}/api/difusion/tareas/{{tareaRadioId}}/confirmar'
+order: 500
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    { "observacion": "intento sin permiso" }
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenRegistrado}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 403', () => pm.response.to.have.status(403));

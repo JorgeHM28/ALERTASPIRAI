@@ -1,0 +1,13 @@
+$kind: http-request
+name: 'La bitácora del aviso guarda la difusión y la tarea'
+method: GET
+url: '{{baseUrl}}/api/avisos/{{avisoDifundidoId}}/eventos'
+order: 900
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const tipos = pm.response.json().map(e => e.tipo);
+      pm.test('registra la difusión', () => pm.expect(tipos).to.include('Difundido'));
+      pm.test('registra la tarea confirmada', () => pm.expect(tipos).to.include('TareaConfirmada'));

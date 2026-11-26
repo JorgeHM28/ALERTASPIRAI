@@ -126,7 +126,7 @@ public class AvisoConfig : IEntityTypeConfiguration<Aviso>
         b.Property(a => a.Titular).HasMaxLength(300);
         b.Property(a => a.Area).HasColumnType("geometry(Geometry, 4326)");
         b.Property(a => a.XmlCap).IsRequired();
-        b.Property(a => a.TipoContenidoOriginal).HasMaxLength(64);
+        b.Property(a => a.TipoContenidoOriginal).HasMaxLength(100);
         b.Property(a => a.HashOriginal).HasMaxLength(64);
         b.Property(a => a.Referencias).HasMaxLength(1000);
         b.HasIndex(a => a.CadenaId);

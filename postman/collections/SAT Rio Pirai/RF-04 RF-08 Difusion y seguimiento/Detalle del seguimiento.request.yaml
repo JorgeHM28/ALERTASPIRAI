@@ -1,0 +1,29 @@
+$kind: http-request
+name: 'Detalle del seguimiento por comunidad y canal'
+method: GET
+url: '{{baseUrl}}/api/difusion/seguimiento/{{versionUpdateId}}'
+order: 200
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json();
+      pm.test('RF-04: el CAP emitido es válido y tiene su SHA-256', () => {
+        pm.expect(d.cap.valido).to.eql(true);
+        pm.expect(d.cap.sha256).to.match(/^[0-9a-f]{64}$/);
+      });
+      pm.test('RF-04: quedó publicada en la web', () => pm.expect(d.publicadaWebEn).to.be.a('string'));
+      pm.test('hay tareas de radio y de redes sociales', () => {
+        const canales = d.tareas.map(t => t.canal);
+        pm.expect(canales).to.include('Radio');
+        pm.expect(canales).to.include('RedesSociales');
+      });
+      pm.test('cada SMS está pendiente, enviado, fallido o bloqueado', () =>
+        d.envios.forEach(e => pm.expect(['Pendiente', 'Enviado', 'Fallido', 'Bloqueado']).to.include(e.estado)));
+      pm.test('RF-08: trae la hora de actualización', () => pm.expect(d.actualizadoEn).to.be.a('string'));
+      const radio = d.tareas.find(t => t.canal === 'Radio' && t.estado === 'Pendiente') || d.tareas.find(t => t.canal === 'Radio');
+      pm.collectionVariables.set('tareaRadioId', radio.id);
+      const redes = d.tareas.find(t => t.canal === 'RedesSociales');
+      pm.collectionVariables.set('tareaRedesId', redes.id);
+      pm.collectionVariables.set('avisoDifundidoId', d.resumen.avisoId);

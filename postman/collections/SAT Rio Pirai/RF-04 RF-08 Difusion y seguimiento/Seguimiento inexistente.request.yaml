@@ -1,0 +1,10 @@
+$kind: http-request
+name: 'Seguimiento de una versión que no se difundió'
+method: GET
+url: '{{baseUrl}}/api/difusion/seguimiento/00000000-0000-0000-0000-000000000001'
+order: 950
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 404', () => pm.response.to.have.status(404));

@@ -148,8 +148,8 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                         .HasColumnName("severidad");
 
                     b.Property<string>("TipoContenidoOriginal")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("tipo_contenido_original");
 
                     b.Property<string>("TipoMensaje")

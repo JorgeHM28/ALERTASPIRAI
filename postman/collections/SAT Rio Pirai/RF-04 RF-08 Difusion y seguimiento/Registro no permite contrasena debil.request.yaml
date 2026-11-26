@@ -1,0 +1,25 @@
+$kind: http-request
+name: 'El registro rechaza una contraseña débil'
+method: POST
+url: '{{baseUrl}}/api/auth/registro'
+order: 460
+headers:
+  - key: Content-Type
+    value: 'application/json'
+body:
+  type: json
+  content: |-
+    {
+      "nombreUsuario": "debil{{$timestamp}}",
+      "nombreCompleto": "Débil",
+      "email": "debil{{$timestamp}}@ejemplo.bo",
+      "contrasena": "123"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 400', () => pm.response.to.have.status(400));
+      pm.test('explica la regla', () => pm.expect(pm.response.json().detail).to.include('8 caracteres'));

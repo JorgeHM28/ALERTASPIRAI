@@ -17,6 +17,17 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                 type: "timestamp with time zone",
                 nullable: true);
 
+            migrationBuilder.AlterColumn<string>(
+                name: "tipo_contenido_original",
+                table: "avisos",
+                type: "character varying(100)",
+                maxLength: 100,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "character varying(64)",
+                oldMaxLength: 64,
+                oldNullable: true);
+
             migrationBuilder.CreateTable(
                 name: "caps_emitidos",
                 columns: table => new
@@ -205,6 +216,17 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
             migrationBuilder.DropColumn(
                 name: "publicada_web_en",
                 table: "versiones_mensaje");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "tipo_contenido_original",
+                table: "avisos",
+                type: "character varying(64)",
+                maxLength: 64,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "character varying(100)",
+                oldMaxLength: 100,
+                oldNullable: true);
         }
     }
 }
