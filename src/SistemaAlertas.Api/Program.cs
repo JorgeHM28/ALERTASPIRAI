@@ -77,6 +77,8 @@ builder.Services.AddAuthorization(o =>
 builder.Services.AddHostedService<RevisionVigenciaAvisos>();
 builder.Services.AddHostedService<ProcesadorColaSms>();
 
+builder.Services.AddLimitesPeticiones(builder.Configuration);
+
 builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy
         .WithOrigins(builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() ?? ["http://localhost:5173"])
@@ -93,6 +95,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -112,6 +115,9 @@ if (app.Configuration.GetValue("BaseDeDatos:MigrarAlIniciar", true))
     var contrasenaAprobador = app.Configuration["Semilla:ContrasenaAprobador"];
     if (!string.IsNullOrWhiteSpace(contrasenaAprobador))
         await scope.ServiceProvider.GetRequiredService<ServicioUsuarios>().SembrarAprobadorDemoAsync(contrasenaAprobador, default);
+    var contrasenaOperador = app.Configuration["Semilla:ContrasenaOperador"];
+    if (!string.IsNullOrWhiteSpace(contrasenaOperador))
+        await scope.ServiceProvider.GetRequiredService<ServicioUsuarios>().SembrarOperadorDemoAsync(contrasenaOperador, default);
 }
 
 app.Run();

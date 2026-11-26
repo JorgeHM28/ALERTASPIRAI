@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SistemaAlertas.Api.Comun;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Usuarios;
@@ -7,6 +8,7 @@ using SistemaAlertas.Application.Usuarios;
 namespace SistemaAlertas.Api.Controllers;
 
 public sealed record SolicitudLogin(string NombreUsuario, string Contrasena);
+public sealed record SolicitudRegistro(string NombreUsuario, string NombreCompleto, string Email, string Contrasena);
 public sealed record SolicitudCambioContrasena(string ContrasenaActual, string ContrasenaNueva);
 
 [ApiController]
@@ -15,12 +17,24 @@ public sealed class AuthController(ServicioUsuarios servicio, IAppDbContext db, 
 {
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(LimitesPeticiones.Acceso)]
     public async Task<ActionResult<ResultadoLogin>> Login(SolicitudLogin solicitud, CancellationToken ct)
     {
         var resultado = await servicio.LoginAsync(solicitud.NombreUsuario, solicitud.Contrasena, ct);
         return resultado is null
             ? Problem(statusCode: 401, title: "Credenciales incorrectas", detail: "Usuario o contraseña incorrectos, o el usuario está desactivado.")
             : resultado;
+    }
+
+    /// <summary>Registro propio: crea una cuenta de solo lectura (rol Consulta) y devuelve la sesión iniciada.</summary>
+    [HttpPost("registro")]
+    [AllowAnonymous]
+    [EnableRateLimiting(LimitesPeticiones.Acceso)]
+    public async Task<ActionResult<ResultadoLogin>> Registrar(SolicitudRegistro solicitud, CancellationToken ct)
+    {
+        await servicio.RegistrarConsultaAsync(solicitud.NombreUsuario, solicitud.NombreCompleto, solicitud.Email, solicitud.Contrasena, ct);
+        var sesion = await servicio.LoginAsync(solicitud.NombreUsuario, solicitud.Contrasena, ct);
+        return StatusCode(201, sesion);
     }
 
     [HttpGet("yo")]

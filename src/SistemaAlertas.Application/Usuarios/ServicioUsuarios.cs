@@ -139,6 +139,21 @@ public sealed class ServicioUsuarios(IAppDbContext db, IHasherContrasena hasher,
         await CrearAsync(new CrearUsuario("aprobador", "Aprobador de la demo", "aprobador@sat-pirai.local", [Rol.Aprobador], contrasena), null, ct);
     }
 
+    /// <summary>Solo para la demo: crea el usuario "operador" (rol Operador) si no existe.</summary>
+    public async Task SembrarOperadorDemoAsync(string contrasena, CancellationToken ct)
+    {
+        if (await db.Usuarios.AnyAsync(u => u.NombreUsuario == "operador", ct)) return;
+        await CrearAsync(new CrearUsuario("operador", "Operador de la demo", "operador@sat-pirai.local", [Rol.Operador], contrasena), null, ct);
+    }
+
+    /// <summary>
+    /// Registro propio (RF-13): cualquier persona puede crear su cuenta, que siempre nace solo con el rol Consulta.
+    /// Los demás roles los asigna un Administrador.
+    /// </summary>
+    public Task<Usuario> RegistrarConsultaAsync(string nombreUsuario, string nombreCompleto, string email, string contrasena,
+        CancellationToken ct) =>
+        CrearAsync(new CrearUsuario(nombreUsuario, nombreCompleto, email, [Rol.Consulta], contrasena), null, ct);
+
     private static void ValidarContrasena(string? contrasena)
     {
         if (string.IsNullOrEmpty(contrasena) || contrasena.Length < LongitudMinimaContrasena

@@ -97,9 +97,17 @@ function Login({ alEntrar, alVolver, vencida }: { alEntrar: (s: Sesion) => void;
   const [mostrar, setMostrar] = useState(false)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  // Registro propio: la cuenta nace con el rol Consulta (solo lectura). Los demás roles los da un Administrador.
+  const [registro, setRegistro] = useState(false)
+  const [nombreCompleto, setNombreCompleto] = useState('')
+  const [email, setEmail] = useState('')
   async function entrar(e: React.FormEvent) {
     e.preventDefault(); setCargando(true); setError('')
-    try { alEntrar(await api<Sesion>('/api/auth/login', { method: 'POST', json: { nombreUsuario, contrasena } })) }
+    try {
+      alEntrar(registro
+        ? await api<Sesion>('/api/auth/registro', { method: 'POST', json: { nombreUsuario, nombreCompleto, email, contrasena } })
+        : await api<Sesion>('/api/auth/login', { method: 'POST', json: { nombreUsuario, contrasena } }))
+    }
     catch (err) { setError(err instanceof Error && err.message !== 'Failed to fetch' ? err.message : 'No se pudo conectar con la API. Intenta de nuevo.') }
     finally { setCargando(false) }
   }
@@ -115,14 +123,21 @@ function Login({ alEntrar, alVolver, vencida }: { alEntrar: (s: Sesion) => void;
     </div>
     <div className="login-access"><form onSubmit={entrar} className="tarjeta" aria-busy={cargando}>
       <span className="login-lock"><ShieldCheck size={24} aria-hidden="true" /></span>
-      <div><h1>Bienvenido de nuevo</h1><p className="tenue">Ingresa tus datos para continuar.</p></div>
+      <div>{registro
+        ? <><h1>Crear cuenta de consulta</h1><p className="tenue">Podrás ver avisos, mensajes y el seguimiento, sin cambiar nada.</p></>
+        : <><h1>Bienvenido de nuevo</h1><p className="tenue">Ingresa tus datos para continuar.</p></>}</div>
+      {registro && <>
+        <label>Nombre completo<input autoComplete="name" value={nombreCompleto} onChange={e => setNombreCompleto(e.target.value)} required /></label>
+        <label>Email<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required /></label>
+      </>}
       <label>Usuario<input autoComplete="username" placeholder="Tu nombre de usuario" value={nombreUsuario} onChange={e => setNombreUsuario(e.target.value)} autoFocus required /></label>
-      <label>Contraseña<span className="password-field"><input type={mostrar ? 'text' : 'password'} autoComplete="current-password" placeholder="Tu contraseña" value={contrasena} onChange={e => setContrasena(e.target.value)} required />
+      <label>Contraseña<span className="password-field"><input type={mostrar ? 'text' : 'password'} autoComplete={registro ? 'new-password' : 'current-password'} placeholder={registro ? 'Mínimo 8 caracteres, con letras y números' : 'Tu contraseña'} value={contrasena} onChange={e => setContrasena(e.target.value)} required />
         <button type="button" className="icon-button" aria-label={mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={mostrar} onClick={() => setMostrar(!mostrar)}>{mostrar ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>
       {vencida && !error && <Alert tone="warning">Tu sesión terminó. Vuelve a entrar para seguir.</Alert>}
       {error && <Alert key={error} tone="danger">{error}</Alert>}
-      <button className="primario login-submit" disabled={cargando}>{cargando ? 'Entrando…' : 'Entrar al sistema'}<ArrowRight size={18} aria-hidden="true" /></button>
-      <p className="login-note"><ShieldCheck size={14} aria-hidden="true" />Acceso reservado a personal autorizado.</p>
+      <button className="primario login-submit" disabled={cargando}>{cargando ? (registro ? 'Creando cuenta…' : 'Entrando…') : (registro ? 'Crear cuenta' : 'Entrar al sistema')}<ArrowRight size={18} aria-hidden="true" /></button>
+      <p className="login-note"><ShieldCheck size={14} aria-hidden="true" />{registro ? 'Las cuentas nuevas son de solo lectura.' : 'Operar y aprobar está reservado a personal autorizado.'}</p>
+      <button type="button" className="row-link" onClick={() => { setRegistro(!registro); setError('') }}>{registro ? '¿Ya tienes cuenta? Entrar' : '¿No tienes cuenta? Crear una de consulta'}</button>
     </form><p className="login-credit"><button type="button" className="row-link" onClick={alVolver}><ArrowLeft size={14} aria-hidden="true" />Volver a los avisos públicos</button></p></div>
   </div>
 }
