@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>SENAMHI-SIM-2026-1202-003</identifier>
+  <sender>senamhi-simulado@sat-pirai.local</sender>
+  <sent>2026-12-02T09:00:00-04:00</sent>
+  <status>Actual</status>
+  <msgType>Cancel</msgType>
+  <scope>Public</scope>
+  <note>Aviso simulado para pruebas del SAT Río Piraí. No es un aviso oficial.</note>
+  <references>senamhi-simulado@sat-pirai.local,SENAMHI-SIM-2026-1201-002,2026-12-01T13:00:00-04:00</references>
+  <info>
+    <language>es-BO</language>
+    <category>Met</category>
+    <event>Crecida del río Piraí</event>
+    <urgency>Past</urgency>
+    <severity>Minor</severity>
+    <certainty>Observed</certainty>
+    <effective>2026-12-02T09:00:00-04:00</effective>
+    <expires>2026-12-31T23:00:00-04:00</expires>
+    <senderName>SENAMHI Santa Cruz (simulado)</senderName>
+    <headline>Fin de la alerta por crecida del río Piraí en El Torno</headline>
+    <description>El nivel del río bajó por debajo de la cota de alerta en todo el tramo.</description>
+    <instruction>Puede volver a su vivienda con precaución. Revise daños antes de reconectar la energía.</instruction>
+    <area>
+      <areaDesc>Río Piraí, tramo El Torno (La Angostura a Junta Piraí)</areaDesc>
+      <polygon>-17.95,-63.53 -17.95,-63.34 -18.18,-63.34 -18.18,-63.53 -17.95,-63.53</polygon>
+    </area>
+  </info>
+</alert>

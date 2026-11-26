@@ -1,0 +1,36 @@
+{
+  "identifier": "SENAMHI-SIM-2026-1203-004",
+  "sender": "senamhi-simulado@sat-pirai.local",
+  "sent": "2026-12-03T08:00:00-04:00",
+  "status": "Actual",
+  "msgType": "Alert",
+  "scope": "Public",
+  "note": "Aviso simulado para pruebas del SAT Río Piraí. No es un aviso oficial.",
+  "references": null,
+  "info": [
+    {
+      "language": "es-BO",
+      "category": [
+        "Met"
+      ],
+      "event": "Crecida del río Piraí",
+      "urgency": "Future",
+      "severity": "Moderate",
+      "certainty": "Possible",
+      "senderName": "SENAMHI Santa Cruz (simulado)",
+      "headline": "Alerta amarilla por posible crecida del río Piraí en el norte integrado",
+      "description": "El caudal aguas arriba sigue alto. Podría subir el nivel en Montero, Portachuelo, General Saavedra y Mineros en las próximas 48 horas.",
+      "instruction": "Esté atento a los avisos oficiales. Aleje a niños y animales de la orilla y no saque áridos del cauce.",
+      "effective": "2026-12-03T08:00:00-04:00",
+      "expires": "2026-12-31T23:00:00-04:00",
+      "area": [
+        {
+          "areaDesc": "Río Piraí, tramo norte (Montero, Portachuelo, General Saavedra y Mineros)",
+          "polygon": [
+            "-17.0,-63.42 -17.0,-63.19 -17.45,-63.19 -17.45,-63.42 -17.0,-63.42"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -60,6 +60,8 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
         if (a.ContenidoOriginal is null)
             return Problem(statusCode: 404, title: "Sin documento original", detail: "El aviso se registró a mano: no hay documento importado.");
         Response.Headers["X-Contenido-Sha256"] = a.HashOriginal;
+        if (a.TipoContenidoOriginal == Aviso.TipoExcel)
+            return File(Convert.FromBase64String(a.ContenidoOriginal.Trim()), Aviso.TipoExcel, $"{a.IdentificadorCap}.original.xlsx");
         var extension = a.TipoContenidoOriginal == "application/json" ? "json" : "xml";
         Response.Headers.ContentDisposition = $"inline; filename=\"{a.IdentificadorCap}.original.{extension}\"";
         return Content(a.ContenidoOriginal, $"{a.TipoContenidoOriginal}; charset=utf-8");
@@ -92,6 +94,7 @@ public sealed class AvisosController(IAppDbContext db, ServicioAvisos servicio, 
     [HttpPost("importar")]
     [Authorize(Politicas.Edicion)]
     [Consumes("application/xml", "text/xml", "application/json", "text/plain")]
+    // Excel (.xlsx): llega como texto en base64 (text/plain); el formato se detecta por su firma.
     public async Task<ActionResult<AvisoResumen>> Importar([FromQuery] FormatoAviso? formato, CancellationToken ct)
     {
         using var lector = new StreamReader(Request.Body);

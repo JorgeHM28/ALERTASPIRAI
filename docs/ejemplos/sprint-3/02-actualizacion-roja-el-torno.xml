@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>SENAMHI-SIM-2026-1201-002</identifier>
+  <sender>senamhi-simulado@sat-pirai.local</sender>
+  <sent>2026-12-01T13:00:00-04:00</sent>
+  <status>Actual</status>
+  <msgType>Update</msgType>
+  <scope>Public</scope>
+  <note>Aviso simulado para pruebas del SAT Río Piraí. No es un aviso oficial.</note>
+  <references>senamhi-simulado@sat-pirai.local,SENAMHI-SIM-2026-1201-001,2026-12-01T07:00:00-04:00</references>
+  <info>
+    <language>es-BO</language>
+    <category>Met</category>
+    <event>Crecida del río Piraí</event>
+    <urgency>Immediate</urgency>
+    <severity>Extreme</severity>
+    <certainty>Observed</certainty>
+    <effective>2026-12-01T13:00:00-04:00</effective>
+    <expires>2026-12-31T23:00:00-04:00</expires>
+    <senderName>SENAMHI Santa Cruz (simulado)</senderName>
+    <headline>Alerta roja: desborde del río Piraí en El Torno</headline>
+    <description>El río superó la cota de desborde en Jorochito y Limoncito. Se espera que el agua llegue a Santa Rita y Junta Piraí en 3 a 5 horas.</description>
+    <instruction>Evacúe de inmediato hacia la zona alta o al punto de encuentro de su comunidad. No cruce el río ni zonas inundadas.</instruction>
+    <area>
+      <areaDesc>Río Piraí, tramo El Torno (La Angostura a Junta Piraí)</areaDesc>
+      <polygon>-17.95,-63.53 -17.95,-63.34 -18.18,-63.34 -18.18,-63.53 -17.95,-63.53</polygon>
+    </area>
+  </info>
+</alert>

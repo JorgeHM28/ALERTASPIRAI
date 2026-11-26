@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>SENAMHI-SIM-INVALIDO-1</identifier>
+  <sender>senamhi-simulado@sat-pirai.local</sender>
+  <sent>2026-12-01T07:00:00-04:00</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <scope>Public</scope>
+</alert>

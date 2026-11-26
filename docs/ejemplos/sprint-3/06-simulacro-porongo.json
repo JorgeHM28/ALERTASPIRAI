@@ -1,0 +1,36 @@
+{
+  "identifier": "SENAMHI-SIM-2026-1205-006",
+  "sender": "senamhi-simulado@sat-pirai.local",
+  "sent": "2026-12-05T10:00:00-04:00",
+  "status": "Exercise",
+  "msgType": "Alert",
+  "scope": "Public",
+  "note": "Aviso simulado para pruebas del SAT Río Piraí. No es un aviso oficial.",
+  "references": null,
+  "info": [
+    {
+      "language": "es-BO",
+      "category": [
+        "Met"
+      ],
+      "event": "Crecida del río Piraí",
+      "urgency": "Expected",
+      "severity": "Severe",
+      "certainty": "Likely",
+      "senderName": "SENAMHI Santa Cruz (simulado)",
+      "headline": "SIMULACRO: alerta naranja en Porongo y La Guardia",
+      "description": "Ejercicio de evacuación coordinado con las comunidades ribereñas. No hay crecida real.",
+      "instruction": "Participe del simulacro: diríjase al punto de encuentro de su comunidad.",
+      "effective": "2026-12-05T10:00:00-04:00",
+      "expires": "2026-12-31T23:00:00-04:00",
+      "area": [
+        {
+          "areaDesc": "Río Piraí, tramo Porongo y La Guardia",
+          "polygon": [
+            "-17.74,-63.38 -17.74,-63.22 -17.95,-63.22 -17.95,-63.38 -17.74,-63.38"
+          ]
+        }
+      ]
+    }
+  ]
+}

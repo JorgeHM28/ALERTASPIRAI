@@ -45,10 +45,12 @@ public class Aviso : Entidad
 
     /// <summary>Documento tal como llegó, byte a byte (XML oficial o JSON exacto). Null en los avisos manuales.</summary>
     public string? ContenidoOriginal { get; private set; }
-    /// <summary>Tipo MIME del original: application/xml o application/json.</summary>
+    /// <summary>Tipo MIME del original: application/xml, application/json o el de Excel (.xlsx, guardado en base64).</summary>
     public string? TipoContenidoOriginal { get; private set; }
     /// <summary>SHA-256 del original en UTF-8, para comprobar que no se alteró.</summary>
     public string? HashOriginal { get; private set; }
+
+    public const string TipoExcel = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     // Aptitud para difusión: se evalúa al registrar el aviso y cada vez que vence.
     public bool Incompleto { get; private set; }
@@ -93,8 +95,15 @@ public class Aviso : Entidad
         if (contenidoOriginal is not null)
         {
             ContenidoOriginal = contenidoOriginal;
-            TipoContenidoOriginal = formato == FormatoAviso.CapJson ? "application/json" : "application/xml";
-            HashOriginal = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(contenidoOriginal)));
+            TipoContenidoOriginal = formato switch
+            {
+                FormatoAviso.CapJson => "application/json",
+                FormatoAviso.Excel => TipoExcel,
+                _ => "application/xml"
+            };
+            // El hash del Excel se calcula sobre el archivo (los bytes), no sobre su texto en base64.
+            var bytes = formato == FormatoAviso.Excel ? Convert.FromBase64String(contenidoOriginal.Trim()) : Encoding.UTF8.GetBytes(contenidoOriginal);
+            HashOriginal = Convert.ToHexStringLower(SHA256.HashData(bytes));
         }
         EvaluarAptitud(DateTimeOffset.UtcNow);
     }

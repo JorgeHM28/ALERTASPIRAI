@@ -1,0 +1,36 @@
+{
+  "identifier": "SENAMHI-SIM-INVALIDO-2",
+  "sender": "senamhi-simulado@sat-pirai.local",
+  "sent": "2026-12-01T07:00:00-04:00",
+  "status": "Actual",
+  "msgType": "Update",
+  "scope": "Public",
+  "note": "Aviso simulado para pruebas del SAT Río Piraí. No es un aviso oficial.",
+  "references": null,
+  "info": [
+    {
+      "language": "es-BO",
+      "category": [
+        "Met"
+      ],
+      "event": "Crecida del río Piraí",
+      "urgency": "Expected",
+      "severity": "Severe",
+      "certainty": "Likely",
+      "senderName": "SENAMHI Santa Cruz (simulado)",
+      "headline": "x",
+      "description": "x",
+      "instruction": "x",
+      "effective": "2026-12-01T07:00:00-04:00",
+      "expires": "2026-12-31T23:00:00-04:00",
+      "area": [
+        {
+          "areaDesc": "Río Piraí, tramo norte (Montero, Portachuelo, General Saavedra y Mineros)",
+          "polygon": [
+            "-17.0,-63.42 -17.0,-63.19 -17.45,-63.19 -17.45,-63.42 -17.0,-63.42"
+          ]
+        }
+      ]
+    }
+  ]
+}

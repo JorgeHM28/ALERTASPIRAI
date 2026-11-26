@@ -17,6 +17,7 @@ public static class DependencyInjection
         // El contenedor garantiza una única instancia sin el Singleton clásico (constructor privado + Instance estático).
         services.AddSingleton<IImportadorAviso, ImportadorCapXml>();
         services.AddSingleton<IImportadorAviso, ImportadorCapJson>();
+        services.AddSingleton<IImportadorAviso, ImportadorCapExcel>();
         services.AddSingleton<IFabricaImportadores, FabricaImportadores>();
 
         // Facade del subsistema CAP: importar, generar y validar.

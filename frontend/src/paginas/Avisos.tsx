@@ -144,9 +144,9 @@ export default function Avisos({ roles, alPreparar }: { roles: Rol[]; alPreparar
                   {detalle.resumen.referencias && <><dt>Referencias</dt><dd className="codigo-linea">{detalle.resumen.referencias}</dd></>}
                 </dl>) },
               ...(detalle.contenidoOriginal ? [{ id: 'original', nombre: 'Original', contenido: <>
-                <p className="tenue">{detalle.tipoContenidoOriginal === 'application/json' ? 'JSON' : 'XML'} exacto, tal como llegó · SHA-256 {detalle.hashOriginal?.slice(0, 16)}…</p>
-                <div className="acciones"><button onClick={() => descargarTexto(detalle.contenidoOriginal!, detalle.tipoContenidoOriginal ?? 'text/plain', `${detalle.resumen.identificadorCap}.original.${detalle.tipoContenidoOriginal === 'application/json' ? 'json' : 'xml'}`)}>Descargar original</button></div>
-                <pre>{detalle.contenidoOriginal}</pre>
+                <p className="tenue">{detalle.tipoContenidoOriginal === TIPO_EXCEL ? 'Excel (.xlsx)' : detalle.tipoContenidoOriginal === 'application/json' ? 'JSON' : 'XML'} exacto, tal como llegó · SHA-256 {detalle.hashOriginal?.slice(0, 16)}…</p>
+                <div className="acciones"><button onClick={() => descargarOriginal(detalle.contenidoOriginal!, detalle.tipoContenidoOriginal, detalle.resumen.identificadorCap)}>Descargar original</button></div>
+                {detalle.tipoContenidoOriginal === TIPO_EXCEL ? <p className="tenue">El original es una planilla: descárgala para verla.</p> : <pre>{detalle.contenidoOriginal}</pre>}
               </> }] : []),
               { id: 'tecnico', nombre: 'Técnico', contenido: <>
                 <p className="tenue">Mensaje en formato CAP 1.2 · {detalle.contenidoOriginal ? 'XML normalizado por el sistema' : 'XML generado por el sistema'}</p>
@@ -156,8 +156,7 @@ export default function Avisos({ roles, alPreparar }: { roles: Rol[]; alPreparar
             ]} />
             <div className="acciones">
               <button className="solo-escritorio" onClick={() => descargarTexto(detalle.xmlCap, 'application/xml', `${detalle.resumen.identificadorCap}.xml`)}>Descargar XML</button>
-              {detalle.contenidoOriginal && <button className="solo-escritorio" onClick={() => descargarTexto(detalle.contenidoOriginal!, detalle.tipoContenidoOriginal ?? 'text/plain',
-                `${detalle.resumen.identificadorCap}.original.${detalle.tipoContenidoOriginal === 'application/json' ? 'json' : 'xml'}`)}>Descargar original</button>}
+              {detalle.contenidoOriginal && <button className="solo-escritorio" onClick={() => descargarOriginal(detalle.contenidoOriginal!, detalle.tipoContenidoOriginal, detalle.resumen.identificadorCap)}>Descargar original</button>}
               {editar && detalle.resumen.preparable && <button className="primario" onClick={() => preparar(detalle.resumen.id)}>Preparar mensaje</button>}
               {editar && detalle.resumen.estado !== 'Descartado' && <button className="peligro" onClick={() => descartar(detalle.resumen.id)}>Descartar</button>}
             </div>
@@ -169,19 +168,49 @@ export default function Avisos({ roles, alPreparar }: { roles: Rol[]; alPreparar
   )
 }
 
+const TIPO_EXCEL = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+/** El original de un Excel está guardado en base64: se descarga como .xlsx. */
+function descargarOriginal(contenido: string, tipo: string | null, identificador: string) {
+  if (tipo === TIPO_EXCEL) {
+    const bytes = Uint8Array.from(atob(contenido.trim()), c => c.charCodeAt(0))
+    const url = URL.createObjectURL(new Blob([bytes], { type: TIPO_EXCEL }))
+    Object.assign(document.createElement('a'), { href: url, download: `${identificador}.original.xlsx` }).click()
+    URL.revokeObjectURL(url)
+    return
+  }
+  descargarTexto(contenido, tipo ?? 'text/plain', `${identificador}.original.${tipo === 'application/json' ? 'json' : 'xml'}`)
+}
+
 function EtiquetaAptitud({ aviso }: { aviso: AvisoResumen }) {
   if (aviso.aptoParaDifusion) return <span className="etiqueta" style={{ background: '#2e7d32' }}>Apto</span>
   const texto = aviso.vencido ? 'Vencido' : aviso.incompleto ? 'Incompleto' : 'No apto'
   return <span className="etiqueta gris" title={aviso.motivosNoApto.join(' ')}>{texto}</span>
 }
 
+/** Un .xlsx se manda como texto en base64: la API lo reconoce por su firma (UEsDB, los bytes "PK" del ZIP). */
+async function aBase64(f: File): Promise<string> {
+  const bytes = new Uint8Array(await f.arrayBuffer())
+  let binario = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(binario)
+}
+
 function ImportarCap({ alRegistrar, alCancelar }: { alRegistrar: (a: AvisoResumen) => void; alCancelar: () => void }) {
   const [contenido, setContenido] = useState('')
+  const [excel, setExcel] = useState<string | null>(null)
   const [error, setError] = useState('')
+
+  async function elegir(f: File | undefined) {
+    setError('')
+    if (!f) return
+    if (f.name.toLowerCase().endsWith('.xlsx')) { setExcel(f.name); setContenido(await aBase64(f)) }
+    else { setExcel(null); setContenido(await f.text()) }
+  }
 
   async function enviar() {
     setError('')
-    const tipo = contenido.trimStart().startsWith('{') ? 'application/json' : 'application/xml'
+    const tipo = excel ? 'text/plain' : contenido.trimStart().startsWith('{') ? 'application/json' : 'application/xml'
     try { alRegistrar(await api<AvisoResumen>('/api/avisos/importar', { method: 'POST', body: contenido, headers: { 'Content-Type': tipo } })) }
     catch (e) { setError((e as Error).message) }
   }
@@ -189,9 +218,11 @@ function ImportarCap({ alRegistrar, alCancelar }: { alRegistrar: (a: AvisoResume
   return (
     <div className="tarjeta">
       <h3>Importar mensaje CAP 1.2</h3>
-      <p className="tenue">Pega el XML o JSON, o elige un archivo. El sistema detecta el formato, valida el mensaje contra el estándar y guarda el documento original exacto. Si le falta información o ya venció, se registra igual pero queda marcado como no apto para difusión.</p>
-      <input type="file" accept=".xml,.json,.cap" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setContenido(await f.text()) }} />
-      <textarea rows={10} value={contenido} onChange={(e) => setContenido(e.target.value)} placeholder='<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">…' className="codigo" />
+      <p className="tenue">Pega el XML o JSON, o elige un archivo XML, JSON o Excel (.xlsx con la plantilla de avisos). El sistema detecta el formato, valida el mensaje contra el estándar y guarda el documento original exacto. Si le falta información o ya venció, se registra igual pero queda marcado como no apto para difusión.</p>
+      <input type="file" accept=".xml,.json,.cap,.xlsx" onChange={(e) => elegir(e.target.files?.[0])} />
+      {excel
+        ? <p>Excel elegido: <b>{excel}</b>. <button className="row-link" onClick={() => { setExcel(null); setContenido('') }}>Quitar</button></p>
+        : <textarea rows={10} value={contenido} onChange={(e) => setContenido(e.target.value)} placeholder='<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">…' className="codigo" />}
       {error && <p className="error" role="status">{error}</p>}
       <div className="acciones">
         <button className="primario" disabled={!contenido.trim()} onClick={enviar}>Importar</button>
