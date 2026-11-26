@@ -1,0 +1,434 @@
+[
+ {
+  "nombre": "Buena Vista",
+  "municipio": "Buena Vista",
+  "poblacion": 4405,
+  "latitud": -17.460126,
+  "longitud": -63.660622,
+  "distanciaRioKm": 37.4,
+  "osmId": 1129657890
+ },
+ {
+  "nombre": "Colonia Rivas Palacios",
+  "municipio": "Cabezas",
+  "poblacion": 5152,
+  "latitud": -18.166138,
+  "longitud": -62.997756,
+  "distanciaRioKm": 45.7,
+  "osmId": 5172134684
+ },
+ {
+  "nombre": "La Bélgica",
+  "municipio": "Colpa Bélgica",
+  "poblacion": 4575,
+  "latitud": -17.565028,
+  "longitud": -63.225177,
+  "distanciaRioKm": 1.8,
+  "osmId": 795601548
+ },
+ {
+  "nombre": "Nueva Cuba",
+  "municipio": "Colpa Bélgica",
+  "poblacion": 477,
+  "latitud": -17.500798,
+  "longitud": -63.240911,
+  "distanciaRioKm": 2.2,
+  "osmId": 5362758267
+ },
+ {
+  "nombre": "El Torno",
+  "municipio": "El Torno",
+  "poblacion": 21005,
+  "latitud": -17.991806,
+  "longitud": -63.382613,
+  "distanciaRioKm": 0.5,
+  "osmId": 794364281
+ },
+ {
+  "nombre": "Jorochito",
+  "municipio": "El Torno",
+  "poblacion": 3259,
+  "latitud": -18.056198,
+  "longitud": -63.427465,
+  "distanciaRioKm": 0.9,
+  "osmId": 3808787091
+ },
+ {
+  "nombre": "Junta Pirai",
+  "municipio": "El Torno",
+  "poblacion": 558,
+  "latitud": -17.976667,
+  "longitud": -63.383444,
+  "distanciaRioKm": 0.3,
+  "osmId": 5236796447
+ },
+ {
+  "nombre": "La Angostura",
+  "municipio": "El Torno",
+  "poblacion": 1809,
+  "latitud": -18.162367,
+  "longitud": -63.505524,
+  "distanciaRioKm": 0.2,
+  "osmId": 3808787092
+ },
+ {
+  "nombre": "La Elvira",
+  "municipio": "El Torno",
+  "poblacion": 281,
+  "latitud": -18.052197,
+  "longitud": -63.454207,
+  "distanciaRioKm": 1.3,
+  "osmId": 5835294575
+ },
+ {
+  "nombre": "Limoncito",
+  "municipio": "El Torno",
+  "poblacion": 2943,
+  "latitud": -18.027474,
+  "longitud": -63.403173,
+  "distanciaRioKm": 0.9,
+  "osmId": 494323205
+ },
+ {
+  "nombre": "San Luis",
+  "municipio": "El Torno",
+  "poblacion": 1596,
+  "latitud": -18.142009,
+  "longitud": -63.480373,
+  "distanciaRioKm": 1.2,
+  "osmId": 3926980453
+ },
+ {
+  "nombre": "Santa Martha",
+  "municipio": "El Torno",
+  "poblacion": 1825,
+  "latitud": -17.9649,
+  "longitud": -63.362779,
+  "distanciaRioKm": 0.8,
+  "osmId": 3595617664
+ },
+ {
+  "nombre": "Santa Rita",
+  "municipio": "El Torno",
+  "poblacion": 3377,
+  "latitud": -17.979587,
+  "longitud": -63.370968,
+  "distanciaRioKm": 0.7,
+  "osmId": 3595617665
+ },
+ {
+  "nombre": "Taruma",
+  "municipio": "El Torno",
+  "poblacion": 1208,
+  "latitud": -18.117565,
+  "longitud": -63.4617,
+  "distanciaRioKm": 0.9,
+  "osmId": 4030776754
+ },
+ {
+  "nombre": "Tiquipaya",
+  "municipio": "El Torno",
+  "poblacion": 1883,
+  "latitud": -18.083841,
+  "longitud": -63.450212,
+  "distanciaRioKm": 0.7,
+  "osmId": 4030776755
+ },
+ {
+  "nombre": "Fernández Alonso",
+  "municipio": "Fernández Alonso",
+  "poblacion": 5363,
+  "latitud": -17.009795,
+  "longitud": -63.23234,
+  "distanciaRioKm": 5.9,
+  "osmId": 795493658
+ },
+ {
+  "nombre": "Cruz Soleto",
+  "municipio": "General Saavedra",
+  "poblacion": 342,
+  "latitud": -17.219789,
+  "longitud": -63.277929,
+  "distanciaRioKm": 2.4,
+  "osmId": 5471605313
+ },
+ {
+  "nombre": "General Saavedra",
+  "municipio": "General Saavedra",
+  "poblacion": 5267,
+  "latitud": -17.225078,
+  "longitud": -63.214352,
+  "distanciaRioKm": 9.1,
+  "osmId": 4112429475
+ },
+ {
+  "nombre": "Naico",
+  "municipio": "General Saavedra",
+  "poblacion": 354,
+  "latitud": -17.23382,
+  "longitud": -63.293914,
+  "distanciaRioKm": 0.9,
+  "osmId": 5471605314
+ },
+ {
+  "nombre": "La Guardia",
+  "municipio": "La Guardia",
+  "poblacion": 135150,
+  "latitud": -17.891935,
+  "longitud": -63.331081,
+  "distanciaRioKm": 1.2,
+  "osmId": 794507239
+ },
+ {
+  "nombre": "Quebrada Seca",
+  "municipio": "La Guardia",
+  "poblacion": 280,
+  "latitud": -17.920019,
+  "longitud": -63.345597,
+  "distanciaRioKm": 0.5,
+  "osmId": 5849651379
+ },
+ {
+  "nombre": "San Jose",
+  "municipio": "La Guardia",
+  "poblacion": 2491,
+  "latitud": -17.938873,
+  "longitud": -63.351637,
+  "distanciaRioKm": 1.1,
+  "osmId": 3595581170
+ },
+ {
+  "nombre": "Mairana",
+  "municipio": "Mairana",
+  "poblacion": 6756,
+  "latitud": -18.119338,
+  "longitud": -63.956362,
+  "distanciaRioKm": 44.7,
+  "osmId": 10770359963
+ },
+ {
+  "nombre": "Los Naranjos",
+  "municipio": "Mineros",
+  "poblacion": 267,
+  "latitud": -17.140783,
+  "longitud": -63.324649,
+  "distanciaRioKm": 2.9,
+  "osmId": 5839051100
+ },
+ {
+  "nombre": "Mineros",
+  "municipio": "Mineros",
+  "poblacion": 18340,
+  "latitud": -17.117558,
+  "longitud": -63.233273,
+  "distanciaRioKm": 5.2,
+  "osmId": 494327421
+ },
+ {
+  "nombre": "Pueblo Nuevo",
+  "municipio": "Mineros",
+  "poblacion": 978,
+  "latitud": -17.077449,
+  "longitud": -63.277995,
+  "distanciaRioKm": 1.1,
+  "osmId": 5195203040
+ },
+ {
+  "nombre": "Guabira",
+  "municipio": "Montero",
+  "poblacion": 1691,
+  "latitud": -17.316336,
+  "longitud": -63.269024,
+  "distanciaRioKm": 5.3,
+  "osmId": 4112411758
+ },
+ {
+  "nombre": "Okinawa",
+  "municipio": "Okinawa Uno",
+  "poblacion": 6446,
+  "latitud": -17.218717,
+  "longitud": -62.894644,
+  "distanciaRioKm": 43.4,
+  "osmId": 795601547
+ },
+ {
+  "nombre": "Buen Retiro",
+  "municipio": "Porongo",
+  "poblacion": 216,
+  "latitud": -17.786958,
+  "longitud": -63.24736,
+  "distanciaRioKm": 1.6,
+  "osmId": 5298720834
+ },
+ {
+  "nombre": "Limon",
+  "municipio": "Porongo",
+  "poblacion": 291,
+  "latitud": -17.844295,
+  "longitud": -63.299848,
+  "distanciaRioKm": 1.8,
+  "osmId": 5838748361
+ },
+ {
+  "nombre": "Los Batos",
+  "municipio": "Porongo",
+  "poblacion": 736,
+  "latitud": -17.769597,
+  "longitud": -63.242694,
+  "distanciaRioKm": 2.2,
+  "osmId": 4022207743
+ },
+ {
+  "nombre": "Porongo",
+  "municipio": "Porongo",
+  "poblacion": 11360,
+  "latitud": -17.85291,
+  "longitud": -63.308348,
+  "distanciaRioKm": 2.4,
+  "osmId": 3808787160
+ },
+ {
+  "nombre": "San Jose de Potrerito",
+  "municipio": "Porongo",
+  "poblacion": 310,
+  "latitud": -17.856751,
+  "longitud": -63.325336,
+  "distanciaRioKm": 2.0,
+  "osmId": 5583676789
+ },
+ {
+  "nombre": "Sombrerito",
+  "municipio": "Porongo",
+  "poblacion": 382,
+  "latitud": -17.888447,
+  "longitud": -63.367534,
+  "distanciaRioKm": 2.5,
+  "osmId": 5487167492
+ },
+ {
+  "nombre": "Urubo",
+  "municipio": "Porongo",
+  "poblacion": 544,
+  "latitud": -17.748623,
+  "longitud": -63.235123,
+  "distanciaRioKm": 2.7,
+  "osmId": 5241055417
+ },
+ {
+  "nombre": "Villa Guadalupe",
+  "municipio": "Porongo",
+  "poblacion": 533,
+  "latitud": -17.853837,
+  "longitud": -63.323139,
+  "distanciaRioKm": 2.3,
+  "osmId": 4143905296
+ },
+ {
+  "nombre": "Portachuelo",
+  "municipio": "Portachuelo",
+  "poblacion": 16330,
+  "latitud": -17.354595,
+  "longitud": -63.394648,
+  "distanciaRioKm": 6.3,
+  "osmId": 495946027
+ },
+ {
+  "nombre": "Postrervalle",
+  "municipio": "Postrervalle",
+  "poblacion": 1259,
+  "latitud": -18.49095,
+  "longitud": -63.83518,
+  "distanciaRioKm": 45.5,
+  "osmId": 1728291666
+ },
+ {
+  "nombre": "Quirusillas",
+  "municipio": "Quirusillas",
+  "poblacion": 1539,
+  "latitud": -18.334886,
+  "longitud": -63.946134,
+  "distanciaRioKm": 45.9,
+  "osmId": 2868436585
+ },
+ {
+  "nombre": "Samaipata",
+  "municipio": "Samaipata",
+  "poblacion": 5321,
+  "latitud": -18.179666,
+  "longitud": -63.875914,
+  "distanciaRioKm": 35.1,
+  "osmId": 319738849
+ },
+ {
+  "nombre": "Santa Fe de Yapacani",
+  "municipio": "San Carlos",
+  "poblacion": 8478,
+  "latitud": -17.399323,
+  "longitud": -63.827234,
+  "distanciaRioKm": 54.6,
+  "osmId": 13606753827
+ },
+ {
+  "nombre": "San Juan de Yapacaní",
+  "municipio": "San Juan de Yapacaní",
+  "poblacion": 5401,
+  "latitud": -17.291552,
+  "longitud": -63.847084,
+  "distanciaRioKm": 56.9,
+  "osmId": 497265814
+ },
+ {
+  "nombre": "Sagrado Corazon",
+  "municipio": "San Pedro",
+  "poblacion": 1906,
+  "latitud": -16.847744,
+  "longitud": -63.431631,
+  "distanciaRioKm": 2.8,
+  "osmId": 5189836785
+ },
+ {
+  "nombre": "San Pedro",
+  "municipio": "San Pedro",
+  "poblacion": 4094,
+  "latitud": -16.826022,
+  "longitud": -63.482406,
+  "distanciaRioKm": 4.4,
+  "osmId": 5175706525
+ },
+ {
+  "nombre": "Santa Cruz de la Sierra",
+  "municipio": "Santa Cruz de la Sierra",
+  "poblacion": 2251627,
+  "latitud": -17.783422,
+  "longitud": -63.182085,
+  "distanciaRioKm": 4.0,
+  "osmId": 415163462
+ },
+ {
+  "nombre": "Cuatro Ojos Pirai",
+  "municipio": "Santa Rosa del Sara",
+  "poblacion": 279,
+  "latitud": -16.839629,
+  "longitud": -63.57815,
+  "distanciaRioKm": 2.9,
+  "osmId": 5833610416
+ },
+ {
+  "nombre": "Santa Rosa del Sara",
+  "municipio": "Santa Rosa del Sara",
+  "poblacion": 5238,
+  "latitud": -17.109677,
+  "longitud": -63.599034,
+  "distanciaRioKm": 28.7,
+  "osmId": 795663056
+ },
+ {
+  "nombre": "Warnes",
+  "municipio": "Warnes",
+  "poblacion": 124497,
+  "latitud": -17.510082,
+  "longitud": -63.164718,
+  "distanciaRioKm": 5.1,
+  "osmId": 494856597
+ }
+]

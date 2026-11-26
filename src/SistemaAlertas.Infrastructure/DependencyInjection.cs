@@ -32,6 +32,13 @@ public static class DependencyInjection
                    .UseAsyncSeeding(async (context, _, ct) =>
                    {
                        var db = (AlertasDbContext)context;
+                       // Datos reales de la cuenca del Piraí: 22 municipios (zonas) y sus localidades (comunidades).
+                       if (configuration["Semilla:CuencaPirai"] == "true" && !await db.Zonas.AnyAsync(ct))
+                       {
+                           var connection = (Npgsql.NpgsqlConnection)db.Database.GetDbConnection();
+                           await connection.ReloadTypesAsync(ct);
+                           await SemillaCuencaPirai.CargarAsync(db, ct);
+                       }
                        if (configuration["Semilla:DatosDemo"] != "true") return;
                        // RF-05: dos protocolos de ejemplo (ficticios) para poder vincular instrucciones en la demo.
                        if (!await db.Protocolos.AnyAsync(ct))
@@ -44,15 +51,6 @@ public static class DependencyInjection
                                "Datos de demostración", "DEMO-PROT-02", new DateOnly(2026, 1, 15)));
                            await db.SaveChangesAsync(ct);
                        }
-                       if (await db.Zonas.AnyAsync(ct)) return;
-                       var connection = (Npgsql.NpgsqlConnection)db.Database.GetDbConnection();
-                       await connection.ReloadTypesAsync(ct);
-                       var area = new NetTopologySuite.IO.WKTReader().Read("POLYGON ((-63.2 -17.8, -63.1 -17.8, -63.1 -17.7, -63.2 -17.8))");
-                       var zona = new Zona("Zona de prueba Pirai", "Datos ficticios", NivelRiesgo.Medio, area,
-                           new OrigenInstitucional("Equipo de pruebas", "DEMO-01", new DateOnly(2026, 1, 1)));
-                       db.Zonas.Add(zona);
-                       db.Comunidades.Add(new Comunidad("Comunidad de prueba", "Santa Cruz", 100, null, zona.Id));
-                       await db.SaveChangesAsync(ct);
                    }));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AlertasDbContext>());
 

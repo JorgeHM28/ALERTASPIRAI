@@ -9,6 +9,7 @@ COPY src/SistemaAlertas.Infrastructure/*.csproj src/SistemaAlertas.Infrastructur
 COPY src/SistemaAlertas.Api/*.csproj src/SistemaAlertas.Api/
 RUN dotnet restore src/SistemaAlertas.Api/SistemaAlertas.Api.csproj
 COPY src/ src/
+COPY datos/ datos/
 RUN dotnet publish src/SistemaAlertas.Api/SistemaAlertas.Api.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
