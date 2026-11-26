@@ -267,7 +267,7 @@ function DetalleVersion({ v, roles, accion, eliminar, abrir, cadena, cerrar, num
         </> },
       ]} />
 
-      {difusion && <Alert tone={difusion.incidencias.length ? 'warning' : 'success'}>Difundida{difusion.esPrueba ? ' (prueba)' : ''}: web {difusion.publicadoEnWeb ? 'sí' : 'no'}, {difusion.trabajosSms} SMS, {difusion.tareasManuales.length} tareas manuales.{difusion.incidencias.map(i => <div key={i.canal + i.detalle}>{i.canal}: {i.detalle}</div>)}</Alert>}
+      {difusion && <Alert tone={difusion.incidencias.length ? 'warning' : 'success'}>Difundida{difusion.esPrueba ? ' (prueba)' : ''}: web {difusion.publicadoEnWeb ? 'sí' : 'no'}, {difusion.trabajosSms} SMS, {difusion.tareasManuales} tareas manuales. El avance se ve en Seguimiento.{difusion.incidencias.map(i => <div key={i.canal + i.detalle}>{i.canal}: {i.detalle}</div>)}</Alert>}
       {errorDifusion && <Alert tone="danger">{errorDifusion}</Alert>}
 
       {editar && ((vigente && r.tipo !== 'Cancel') || r.estado === 'Rechazada') && enCurso && (

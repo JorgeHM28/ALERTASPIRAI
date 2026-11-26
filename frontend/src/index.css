@@ -633,3 +633,21 @@ h3[tabindex="-1"]:focus-visible { outline: 3px solid var(--primario); outline-of
 .publico-zonas .zonas-canceladas { border-top: 0; padding-top: 0; margin-bottom: .8rem; }
 .zonas-canceladas li { font-size: 1rem; }
 .cancelados-texto { color: var(--tenue); font-weight: 400; text-wrap: pretty; }
+
+/* Sprint 3 · RF-08: seguimiento de la difusión. El estado siempre va escrito; el color solo acompaña. */
+.estado-trabajo { display: inline-block; padding: .1rem .5rem; border-radius: 6px; font-size: .75rem; font-weight: 700; border: 1px solid var(--borde); background: var(--fondo); }
+.estado-trabajo-Pendiente { color: var(--estado-revision-fg); border-color: var(--estado-revision-borde); background: var(--estado-revision-bg); }
+.estado-trabajo-Enviado, .estado-trabajo-Confirmada { color: var(--estado-aprobada-fg); border-color: var(--estado-aprobada-borde); background: var(--estado-aprobada-bg); }
+.estado-trabajo-Fallido, .estado-trabajo-NoRealizada, .estado-trabajo-Bloqueado { color: var(--estado-rechazada-fg); border-color: var(--estado-rechazada-borde); background: var(--estado-rechazada-bg); }
+.avance { position: relative; min-width: 120px; height: 1.35rem; border-radius: 999px; background: var(--fondo); border: 1px solid var(--borde); overflow: hidden; }
+.avance > span { position: absolute; inset: 0 auto 0 0; background: var(--estado-aprobada-borde); }
+.avance > b { position: relative; display: block; text-align: center; font-size: .75rem; line-height: 1.3rem; color: var(--texto); }
+.seguimiento { margin-top: 1.25rem; display: grid; gap: .75rem; }
+.seguimiento h4 { margin: .75rem 0 .25rem; }
+.datos-seguimiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem 1.25rem; margin: 0; }
+.datos-seguimiento dt { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-suave, inherit); opacity: .8; }
+.datos-seguimiento dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
+.lista-tareas { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.lista-tareas > li { border: 1px solid var(--borde); border-radius: 12px; padding: .75rem 1rem; }
+.texto-tarea { margin: .5rem 0 0; white-space: pre-wrap; }
+tr[aria-selected="true"] td { background: color-mix(in srgb, var(--estado-aprobada-bg) 60%, transparent); }

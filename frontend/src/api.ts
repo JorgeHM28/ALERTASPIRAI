@@ -84,8 +84,31 @@ export interface ListaDestinos {
   destinos: DestinoVista[]; pendientes: { comunidadId: string; comunidad: string; motivo: string }[]
 }
 export interface ResultadoDifusion {
-  versionId: string; esPrueba: boolean; publicadoEnWeb: boolean; urlWeb: string | null; trabajosSms: number
-  tareasManuales: { canal: string }[]; incidencias: { canal: string; detalle: string }[]
+  versionId: string; esPrueba: boolean; capEmitidoId: string; sha256: string; publicadoEnWeb: boolean; urlWeb: string | null
+  trabajosSms: number; tareasManuales: number; incidencias: { canal: string; detalle: string }[]
+}
+// RF-08: seguimiento de la difusión.
+export type EstadoTrabajo = 'Pendiente' | 'Enviado' | 'Fallido' | 'Bloqueado' | 'Confirmada' | 'NoRealizada'
+export type CanalDifusion = 'Sms' | 'Radio' | 'Altavoz' | 'RedesSociales'
+export interface ConteoEstados { total: number; pendientes: number; enviados: number; fallidos: number; bloqueados: number; confirmadas: number; noRealizadas: number; terminados: number }
+export interface SeguimientoResumen {
+  versionId: string; avisoId: string; numero: number; tipo: string; titular: string; esPrueba: boolean; difundidaEn: string
+  sms: ConteoEstados; tareas: ConteoEstados; avance: number; completo: boolean
+}
+export interface TareaVista {
+  id: string; canal: CanalDifusion; comunidadId: string | null; comunidad: string | null; estado: EstadoTrabajo; textoLegible: string
+  observacion: string | null; confirmadoPor: string | null; creadaEn: string; resultadoEn: string | null
+}
+export interface EnvioSmsVista {
+  id: string; comunidad: string | null; destino: string; estado: EstadoTrabajo; intentos: number; codigoProveedor: string | null
+  ultimoError: string | null; proximoIntento: string | null; resultadoEn: string | null
+}
+export interface SeguimientoDetalle {
+  resumen: SeguimientoResumen
+  cap: { id: string; identificador: string; tipo: string; estado: string; enviado: string; sha256: string; valido: boolean; emitidoEn: string } | null
+  publicadaWebEn: string | null
+  comunidades: { comunidadId: string | null; comunidad: string; municipio: string | null; sms: ConteoEstados; altavoz: EstadoTrabajo | null }[]
+  tareas: TareaVista[]; envios: EnvioSmsVista[]; smsTerminadosEn: string | null; dentroDeMeta: boolean | null; actualizadoEn: string
 }
 export interface AvisoPublico {
   id: string; numero: number; tipo: TipoMensaje; nivel: Nivel; evento: string; titular: string | null

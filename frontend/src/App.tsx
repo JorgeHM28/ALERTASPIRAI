@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Bell, BookOpenCheck, Eye, EyeOff, LogOut, Map, MapPin, MessageSquareText, ShieldCheck, Users, Waves } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, Bell, BookOpenCheck, Eye, EyeOff, LogOut, Map, MapPin, MessageSquareText, ShieldCheck, Users, Waves } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 import { api, esAdministrador, guardarSesion, leerSesion, marcarSesionVencida, sesionVencidaPendiente, type Sesion } from './api'
@@ -12,12 +12,14 @@ const Avisos = lazy(() => import('./paginas/Avisos'))
 const Usuarios = lazy(() => import('./paginas/Usuarios'))
 const Mensajes = lazy(() => import('./paginas/Mensajes'))
 const Protocolos = lazy(() => import('./paginas/Protocolos'))
+const Seguimiento = lazy(() => import('./paginas/Seguimiento'))
 const Landing = lazy(() => import('./paginas/Landing'))
 
-type Pagina = 'avisos' | 'mensajes' | 'protocolos' | 'zonas' | 'comunidades' | 'usuarios'
+type Pagina = 'avisos' | 'mensajes' | 'seguimiento' | 'protocolos' | 'zonas' | 'comunidades' | 'usuarios'
 const paginas: { id: Pagina; nombre: string; Icon: typeof Bell }[] = [
   { id: 'avisos', nombre: 'Avisos', Icon: Bell },
   { id: 'mensajes', nombre: 'Mensajes', Icon: MessageSquareText },
+  { id: 'seguimiento', nombre: 'Seguimiento', Icon: Activity },
   { id: 'protocolos', nombre: 'Protocolos', Icon: BookOpenCheck },
   { id: 'zonas', nombre: 'Zonas de riesgo', Icon: Map },
   { id: 'comunidades', nombre: 'Comunidades', Icon: MapPin },
@@ -80,6 +82,7 @@ export default function App() {
         <Suspense fallback={<Esqueleto etiqueta="Cargando sección" />}>
         {pagina === 'avisos' && <Avisos roles={usuario.roles} alPreparar={(id) => { setVersionAbierta(id); setPagina('mensajes') }} />}
         {pagina === 'mensajes' && <Mensajes roles={usuario.roles} versionInicial={versionAbierta} />}
+        {pagina === 'seguimiento' && <Seguimiento roles={usuario.roles} />}
         {pagina === 'protocolos' && <Protocolos roles={usuario.roles} />}
         {pagina === 'zonas' && <Zonas roles={usuario.roles} />}
         {pagina === 'comunidades' && <Comunidades roles={usuario.roles} />}
