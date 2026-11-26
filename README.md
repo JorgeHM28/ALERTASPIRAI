@@ -42,7 +42,7 @@ dotnet user-secrets remove "ConnectionStrings:Alertas" --project src/SistemaAler
 dotnet user-secrets remove "BaseDeDatos:MigrarAlIniciar" --project src/SistemaAlertas.Api
 ```
 
-El perfil de desarrollo usa la conexión de Docker incluida y aplica automáticamente `Sprint1Inicial`, `Sprint1CierreRequisitos` y `Sprint2VersionesMensaje`. Crea el administrador inicial y, cuando la tabla de zonas está vacía, una zona y una comunidad de prueba. Para otro servidor configura tu propia cadena. Ejemplo sin credenciales reales:
+El perfil de desarrollo usa la conexión de Docker incluida y aplica automáticamente las migraciones, hasta `Sprint3Difusion`. Crea los usuarios iniciales y, cuando la tabla de zonas está vacía, carga los datos reales de la cuenca: los 22 municipios como zonas y 48 localidades como comunidades (ver `datos/cuenca-pirai/README.md`). Para otro servidor configura tu propia cadena. Ejemplo sin credenciales reales:
 
 ```text
 Host=HOST;Port=5432;Database=BASE;Username=USUARIO;Password=CLAVE;SSL Mode=VerifyFull;Search Path=public,extensions
@@ -83,17 +83,20 @@ cd frontend && npm install && npm run dev             # Web en http://localhost:
 
 No mezcles las dos opciones: si la API de Docker está corriendo, ocupa el puerto 5080.
 
-Usuarios iniciales (solo en Development): **admin / Admin12345** y **aprobador / Aprobador12345** (rol Aprobador: quien prepara un mensaje no puede aprobarlo, así que la aprobación la hace otra persona). Cámbiales la contraseña después de entrar.
+Usuarios iniciales (solo en Development): **admin / Admin12345**, **operador / Operador12345** y **aprobador / Aprobador12345**. Quien prepara un mensaje no puede aprobarlo, así que la aprobación la hace otra persona. Las cuentas de solo lectura las crea cada persona desde el login (**Crear una de consulta**). Cámbiales la contraseña después de entrar.
 
-Para probar rápido en la web:
-1. **Zonas → Importar GeoJSON** con `docs/ejemplos/zonas-pirai.geojson`.
-2. **Comunidades → Nueva comunidad** dentro de una zona, y agrégale contactos con sus canales.
-3. **Avisos → Importar CAP** con `docs/ejemplos/aviso-senamhi.xml` o `docs/ejemplos/aviso-cap.json`, o **Registrar a mano**.
+Para probar rápido en la web (el detalle está en [docs/sprint-3.md](docs/sprint-3.md)):
+1. **Comunidades:** elige una localidad (por ejemplo, El Torno) y agrégale tu contacto con el canal SMS.
+2. **Avisos → Importar CAP** con un archivo de `docs/ejemplos/sprint-3` (XML, JSON o Excel), o **Registrar a mano**.
+3. **Mensajes:** prepara la versión, envíala a revisión, apruébala con otro usuario y difúndela.
+4. **Seguimiento:** mira el avance por comunidad y confirma las tareas de radio, altavoz y redes.
 
 ## Pruebas
 
-- **Unitarias:** `dotnet test` ejecuta las pruebas xUnit del dominio, la aplicación y los patrones (144 en esta entrega).
-- **API con Postman:** la colección `postman/collections/SAT Rio Pirai` tiene una carpeta por requisito (RF-13, RF-09, RF-12 y RF-01), con 32 peticiones y 50 tests. Incluye los casos de error y de permisos, por ejemplo "Consulta no puede crear zonas → 403".
+Plan, matriz de trazabilidad y defectos corregidos: [docs/sqa.md](docs/sqa.md).
+
+- **Unitarias:** `dotnet test` ejecuta las pruebas xUnit del dominio, la aplicación, la cola SMS y los datos de la cuenca (194 en esta entrega, 80 % de cobertura de líneas).
+- **API con Postman:** la colección `postman/collections/SAT Rio Pirai` tiene una carpeta por requisito, con 143 peticiones y 315 aserciones. Incluye los casos de error y de permisos, por ejemplo "Consulta no puede crear zonas → 403".
   - En la app de Postman, abre esta carpeta del repo (Local View) o impórtala con **Import**, elige el entorno **Local** y ejecuta la colección completa con **Run**. El login guarda el token solo.
   - Por consola: `postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml`
 
@@ -126,8 +129,13 @@ src/SistemaAlertas.Api             Controladores REST, autorización por rol, ma
 tests/SistemaAlertas.Tests         Pruebas xUnit
 postman/                           Colección y entorno de Postman (formato v3, YAML)
 frontend/                          SPA React + Leaflet
-docs/patrones.md                   Patrones creacionales usados y descartados
-docs/ejemplos/                     GeoJSON y mensajes CAP de ejemplo
+docs/patrones.md                   Patrones usados y descartados, y cómo encajan
+docs/sprint-2.md, docs/sprint-3.md Qué hace cada sprint
+docs/sqa.md                        Aseguramiento de la calidad
+docs/ejemplos/sprint-3/            Avisos simulados (XML, JSON y Excel) y la plantilla Excel
+datos/cuenca-pirai/                Municipios y localidades reales de la cuenca
+scripts/                           Limpieza de la base y generación de datos y ejemplos
+.github/workflows/ci.yml           Integración continua
 ```
 
 ## Patrones de diseño

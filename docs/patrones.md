@@ -65,7 +65,7 @@ Mismo criterio: se usan los que resuelven un problema real. Cuatro se usan y tre
 |---|---|---|---|
 | Adapter | Se usa | Proveedor SMS (Twilio), XML CAP 1.2, geometrías PostGIS a GeoJSON | RF-04, RF-01, RF-09 |
 | Facade | Se usa | `ServicioDifusion` (difusión multicanal) y `ModuloCap` (importar, generar, validar CAP) | RF-04, RF-01 |
-| Decorator | Se usa | Reintentos, bitácora y modo prueba sobre `IEmisorSms` | RNF-08, RNF-04 |
+| Decorator | Se usa | Bitácora y modo prueba sobre `IEmisorSms` (y reintentos inmediatos, disponibles) | RNF-08, RNF-04 |
 | Proxy (protección) | Se usa | `ProxyRepositorioContactos` enmascara los números | RF-12 |
 | Bridge | Se descarta | — | — |
 | Composite | Se descarta | — | — |
@@ -100,6 +100,7 @@ Pruebas: `ConversorGeoJsonTests`, `ImportadorCapAdapterTests` (en `ImportadoresT
 **Problema:** el envío SMS necesita reintentos ante fallos pasajeros (RNF-08), bitácora de cada acción (RNF-04) y protección para que un aviso de prueba no llegue a la población. Meter todo eso en cada proveedor lo duplicaría.
 **Solución:** decoradores que implementan `IEmisorSms` y envuelven a otro. Cadena: `EmisorConBitacora` → `EmisorModoPrueba` → `EmisorConReintentos` → proveedor. Los reintentos son como máximo 2 adicionales y solo ante un fallo recuperable. La bitácora va por fuera para registrar el resultado final; el modo prueba va antes de los reintentos para que un envío bloqueado no se reintente.
 **Beneficio:** cada responsabilidad está en una clase pequeña y probada por separado, y sirve igual para Twilio o el simulador.
+**Cambio en el Sprint 3:** RNF-08 pide esperar 60 s entre reintentos. Esperar dentro de la misma llamada bloquearía la cola, así que la cadena que usa la API quedó en `EmisorConBitacora` → `EmisorModoPrueba` → proveedor, y el reintento lo agenda la cola persistente: `EnvioSms.RegistrarIntento` guarda el próximo intento 60 s después, solo si el fallo es recuperable y como máximo 2 veces. `EmisorConReintentos` sigue en el código y en las pruebas para reintentos inmediatos.
 
 ### Proxy de protección
 **Problema:** los teléfonos de los contactos (RF-12) son datos personales. Un usuario de consulta o aprobador no necesita verlos completos, y la web pública nunca debe recibirlos.
@@ -168,22 +169,22 @@ Pruebas: `PatronesComportamientoTests` (State, cadena, Observer, Command, Strate
 ### Observer
 **Problema:** cuando un aviso se registra, aprueba, descarta, vence o difunde, hay que dejarlo en la bitácora (RNF-04), escribir en el log y, al difundirse, cambiar su estado. Hacerlo dentro de cada caso de uso los acopla a todas esas reacciones.
 **Solución:** los casos de uso publican un `EventoAviso`. `PublicadorEventosAvisos` avisa a cada `IObservadorAvisos` registrado. Si un observador falla, los demás reciben igual el evento y la acción principal no se deshace.
-**Beneficio:** una reacción nueva (por ejemplo, un correo al COED en el Sprint 3) es otro observador. La bitácora es en memoria, como la cola SMS del Sprint 2, y pasará a una tabla en el Sprint 3 detrás de la misma interfaz.
+**Beneficio:** una reacción nueva (por ejemplo, un correo al COED) es otro observador. En el Sprint 3 la bitácora pasó a la tabla `eventos_aviso` (`BitacoraAvisosPersistente`) detrás de la misma interfaz: los casos de uso no cambiaron.
 
 ### Strategy
 **Problema:** cada canal manual necesita un texto distinto: la radio lee el texto completo, el altavoz necesita una frase corta y repetible y las redes llevan el enlace. Era un `switch` dentro del gestor de tareas.
 **Solución:** una estrategia de redacción por canal (`IRedaccionCanal`). El gestor elige la estrategia por canal en tiempo de ejecución.
-**Beneficio:** cambiar cómo se redacta un canal no toca al gestor; las pruebas inyectan una estrategia distinta.
+**Beneficio:** cambiar cómo se redacta un canal no toca al gestor; las pruebas inyectan una estrategia distinta. En el Sprint 3 la elección quedó en `RedactorTareas` (el contexto de la estrategia), que usa el gestor persistente.
 
 ### Template Method
 **Problema:** los importadores XML y JSON repetían el mismo algoritmo (leer, llenar el encabezado, llenar cada `info`, construir) y nada impedía que uno nuevo se saltara la validación del Builder.
 **Solución:** `ImportadorCapBase<TAlerta, TInfo>.Importar` fija el orden de los pasos y no se puede redefinir. Cada formato implementa solo `Leer`, `LlenarEncabezado`, `Infos` y `LlenarInfo`. `Reconoce` es un gancho con una implementación por defecto.
-**Beneficio:** un formato nuevo (por ejemplo, un feed RSS de SENAMHI) escribe solo lo que cambia y siempre termina en la validación CAP.
+**Beneficio:** un formato nuevo escribe solo lo que cambia y siempre termina en la validación CAP. Así entró el Excel en el Sprint 3: `ImportadorCapExcel` solo implementa los cuatro pasos y redefine el gancho `Reconoce` (un .xlsx en base64 empieza con `UEsDB`).
 
 ### Iterator (nativo de C#)
 **Problema:** la cola SMS, la lista de comandos de canal y la de observadores son colecciones distintas que hay que recorrer sin depender de cómo están guardadas.
-**Solución:** se usa el Iterator que trae el lenguaje: `IEnumerable<T>` y `foreach`, y para la cola `IAsyncEnumerable<T>` con `await foreach` sobre `ReadAllAsync`. No se escribe una implementación propia, igual que el Singleton se usa vía DI y no en su forma clásica.
-**Beneficio:** `ProcesadorColaSms` no sabe que la cola es un `Channel`; cuando pase a una cola persistente en el Sprint 3, el procesador no cambia.
+**Solución:** se usa el Iterator que trae el lenguaje: `IEnumerable<T>` y `foreach`. No se escribe una implementación propia, igual que el Singleton se usa vía DI y no en su forma clásica.
+**Beneficio:** quien recorre no depende de cómo se guarda la colección. En el Sprint 3 la cola SMS pasó de un `Channel` en memoria a la tabla `trabajos_difusion`: `DespachadorSms` recorre cada lote con el mismo `foreach`.
 
 ## Patrones que se descartan
 
@@ -199,17 +200,18 @@ Los 15 patrones que se usan (4 creacionales, 4 estructurales y 7 de comportamien
 
 | Etapa | Qué pasa | Patrones |
 |---|---|---|
-| 1. Llega el aviso (RF-01) | `ModuloCap` recibe el XML o JSON, la fábrica elige el importador, este sigue los pasos fijos y traduce el formato ajeno, y el Builder valida el CAP 1.2 | Facade → Factory Method → Template Method → Adapter → Builder |
+| 1. Llega el aviso (RF-01) | `ModuloCap` recibe el XML, JSON o Excel, la fábrica elige el importador, este sigue los pasos fijos y traduce el formato ajeno, y el Builder valida el CAP 1.2 | Facade → Factory Method → Template Method → Adapter → Builder |
 | 2. Se registra | `ServicioAvisos` guarda el aviso en estado Registrado y publica el evento | State, Observer |
 | 3. Se prepara (RF-02) | `ServicioVersiones` crea la versión Alert, Update o Cancel desde el aviso; el Builder arma el XML CAP 1.2 y el módulo CAP lo valida al enviar a revisión; corregir clona la versión | State, Prototype, Builder, Facade |
 | 4. Se aprueba (RF-11) | El estado de la versión decide si se puede aprobar o rechazar; la bitácora lo registra | State, Observer |
-| 5. Se difunde (RF-04) | La fachada pide la versión; la cadena de reglas la verifica; ejecuta los comandos de canal; cada canal manual redacta con su estrategia | Facade, Chain of Responsibility, Command, Strategy |
-| 6. Sale el SMS | El trabajo SMS (comando) se encola y el procesador lo recorre; el emisor está decorado con bitácora, modo prueba y reintentos, y adapta Twilio o el simulador | Command, Iterator, Decorator, Adapter, Factory Method |
-| 7. Cierre | El evento Difundido pasa la versión y el aviso a ese estado y queda en la bitácora | Observer, State |
+| 5. Se difunde (RF-04) | La fachada pide la versión; la cadena de reglas la verifica (también que no se haya difundido antes); emite y archiva el CAP final; ejecuta los comandos de canal; cada canal manual redacta con su estrategia | Facade, Chain of Responsibility, Command, Strategy |
+| 6. Sale el SMS | Cada envío SMS queda en la tabla de trabajos; el despachador recorre los lotes; el emisor está decorado con bitácora y modo prueba, y adapta Twilio o el simulador; el reintento lo agenda el propio envío | Command, Iterator, Decorator, Adapter, Factory Method |
+| 7. Cierre y seguimiento (RF-08) | El evento Difundido pasa la versión y el aviso a ese estado y queda en la bitácora; el panel de seguimiento muestra el avance y las tareas confirmadas | Observer, State |
 | Transversal | Datos de contacto protegidos, objetos de una sola instancia, geometrías a GeoJSON | Proxy, Singleton vía DI, Adapter |
 
 Reglas que mantienen el equilibrio:
 - **Un patrón, un problema.** Ninguna clase combina dos patrones sin necesidad. Donde dos se tocan, uno usa al otro por su interfaz: la cadena consulta al State (`PermiteDifundir`), la fachada invoca comandos y publica al Observer, el Template Method termina en el Builder.
 - **Todo pasa por DI.** Las fábricas, la cadena, las estrategias, los comandos, los decoradores y los observadores se arman en `DependencyInjection.cs` y `RegistroSms.cs`. Cambiar una pieza es cambiar un registro, no el código que la usa.
+- **La persistencia no cambió la difusión (Sprint 3).** La cola SMS, las tareas, la publicación web y la bitácora pasaron de memoria a la base detrás de las mismas interfaces (`IColaSms`, `IGestorTareasManuales`, `IPublicadorWeb`, `IBitacoraAvisos`). La fachada solo sumó un paso: emitir el CAP antes de los canales.
 - **Las versiones no cambiaron la difusión.** Al llegar las versiones del mensaje (Sprint 2), solo se reemplazó la fuente de versiones (`FuenteVersionesAprobadas`) y los destinos (`DestinatariosDesdeLista`, RF-07): la fachada, los comandos y las estrategias quedaron igual.
 - **Lo que no resuelve nada se descarta y se dice por qué:** Abstract Factory, Singleton clásico, Object Pool, Bridge, Composite, Flyweight, Mediator y Memento.
