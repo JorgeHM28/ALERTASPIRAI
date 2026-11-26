@@ -87,8 +87,11 @@ jobs:
           for i in $(seq 1 60); do curl -sf http://localhost:5080/api/salud && break; sleep 2; done
       - name: Instalar Postman CLI
         run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+      # La contraseña del admin se pasa explícita: el Postman CLI más nuevo no toma del archivo los valores de tipo "secret".
       - name: Colección Postman completa
-        run: postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml
+        run: >
+          postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml
+          --env-var adminContrasena=Admin12345
       - name: Log de la API si algo falló
         if: failure()
         run: tail -200 api.log

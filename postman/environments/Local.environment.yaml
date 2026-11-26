@@ -12,5 +12,5 @@ values:
   - key: adminContrasena
     value: Admin12345
     enabled: true
-    type: secret
+    type: default
     description: Contraseña semilla de desarrollo (appsettings.Development.json)
