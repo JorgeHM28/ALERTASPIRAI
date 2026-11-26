@@ -83,7 +83,7 @@ cd frontend && npm install && npm run dev             # Web en http://localhost:
 
 No mezcles las dos opciones: si la API de Docker está corriendo, ocupa el puerto 5080.
 
-Usuarios iniciales (solo en Development): **admin / Admin12345**, **operador / Operador12345** y **aprobador / Aprobador12345**. Quien prepara un mensaje no puede aprobarlo, así que la aprobación la hace otra persona. Las cuentas de solo lectura las crea cada persona desde el login (**Crear una de consulta**). Cámbiales la contraseña después de entrar.
+Usuarios iniciales (solo en Development): **admin / Admin12345**, **operador / operador12345** y **aprobador / Aprobador12345**. Quien prepara un mensaje no puede aprobarlo, así que la aprobación la hace otra persona. Las cuentas de solo lectura las crea cada persona desde el login (**Crear una de consulta**). Cámbiales la contraseña después de entrar.
 
 Para probar rápido en la web (el detalle está en [docs/sprint-3.md](docs/sprint-3.md)):
 1. **Comunidades:** elige una localidad (por ejemplo, El Torno) y agrégale tu contacto con el canal SMS.
