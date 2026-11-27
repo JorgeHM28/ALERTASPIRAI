@@ -1,5 +1,7 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
+import { motion, useReducedMotion } from 'framer-motion'
+
 /** `mantener`: el contenido sigue montado (oculto) al cambiar de pestaña, para no perder lo escrito o marcado en él. */
 export interface Pestana { id: string; nombre: string; contenido: ReactNode; mantener?: boolean }
 
@@ -10,6 +12,7 @@ export interface Pestana { id: string; nombre: string; contenido: ReactNode; man
 export function Pestanas({ pestanas, etiqueta }: { pestanas: Pestana[]; etiqueta: string }) {
   const [activa, setActiva] = useState(pestanas[0].id)
   const base = useId()
+  const reducir = useReducedMotion()
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const actual = pestanas.find(p => p.id === activa) ?? pestanas[0]
 
@@ -28,7 +31,12 @@ export function Pestanas({ pestanas, etiqueta }: { pestanas: Pestana[]; etiqueta
         {pestanas.map((p, i) => (
           <button key={p.id} ref={el => { refs.current[p.id] = el }} role="tab" id={`${base}-${p.id}`}
             aria-selected={p.id === actual.id} aria-controls={p.id === actual.id ? `${base}-panel-${p.id}` : undefined} tabIndex={p.id === actual.id ? 0 : -1}
-            onClick={() => setActiva(p.id)} onKeyDown={e => mover(e, i)}>{p.nombre}</button>
+            onClick={() => setActiva(p.id)} onKeyDown={e => mover(e, i)}>
+            {p.id === actual.id && <motion.span aria-hidden="true" className="pestana-capsula"
+              layoutId={reducir ? undefined : base + '-capsula'} initial={false}
+              transition={{ type: 'spring', stiffness: 360, damping: 34, mass: 0.85 }} />}
+            <span className="pestana-nombre">{p.nombre}</span>
+          </button>
         ))}
       </div>
       {pestanas.map(p => (p.id === actual.id || p.mantener) && (

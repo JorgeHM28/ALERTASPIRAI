@@ -1,0 +1,103 @@
+/* Los materiales toman los colores de la pantalla. La web pública mantiene su tema claro. */
+.optica-vidrio { position: absolute; pointer-events: none; }
+:root {
+  --vidrio-luz: rgb(255 255 255 / .75);
+  --vidrio-ribete: rgb(90 153 172 / .28);
+  --vidrio-sombra: rgb(23 56 74 / .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --vidrio-luz: rgb(207 238 246 / .24);
+    --vidrio-ribete: rgb(154 214 224 / .22);
+    --vidrio-sombra: rgb(2 12 18 / .30);
+  }
+}
+.publico {
+  --vidrio-luz: rgb(255 255 255 / .75);
+  --vidrio-sombra: rgb(23 56 74 / .12);
+}
+.pestanas-lista button { position: relative; }
+.pestana-nombre { position: relative; }
+.pestana-capsula {
+  position: absolute;
+  inset: 2px 0 3px;
+  pointer-events: none;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--primario) 13%, var(--superficie));
+  box-shadow: inset 0 0 0 1px var(--vidrio-ribete), inset 0 2px 2px var(--vidrio-luz);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  @media screen and (not (prefers-reduced-transparency: reduce)) and (not (prefers-contrast: more)) and (not (forced-colors: active)) {
+    :root, .publico {
+      --vidrio-brillo: linear-gradient(140deg, rgb(255 255 255 / .25), transparent 22%, transparent 76%, rgb(137 212 228 / .12));
+      --vidrio-volumen: inset 0 1px 1px var(--vidrio-luz), inset 0 -1px 2px var(--vidrio-ribete), 0 5px 18px -8px var(--vidrio-sombra);
+      --vidrio-claro: color-mix(in srgb, var(--superficie) 77%, transparent);
+    }
+
+    /* Los reflejos nacen del fondo de cada pantalla y continúan por debajo de los controles. */
+    :is(.workspace, .publico) {
+      background-image: radial-gradient(ellipse at 95% 30%, #53b8c32b, transparent 43%),
+                        radial-gradient(ellipse at 12% 72%, #7083d21a, transparent 38%);
+      background-size: 100% 96vh;
+    }
+    :is(.sidebar, .publico-header, .estado, .cabecera-panel, .login) {
+      background-image: radial-gradient(ellipse at 85% 0%, #427c926b, transparent 55%),
+                        linear-gradient(114deg, transparent 32%, #28677845 57%, #727ab131 74%, transparent 88%);
+    }
+    :is(.tarjeta, .tarjeta.interior, .list-panel, .detail-empty, .ayuda, .dialogo, .ui-accordion, .login .tarjeta) {
+      background: var(--vidrio-brillo), var(--vidrio-claro);
+      box-shadow: var(--vidrio-volumen);
+      -webkit-backdrop-filter: blur(10px) saturate(125%);
+      backdrop-filter: blur(10px) saturate(125%);
+    }
+    .login .tarjeta, .estado-hacer {
+      background: var(--vidrio-brillo), color-mix(in srgb, var(--superficie) 88%, transparent);
+      box-shadow: var(--vidrio-volumen);
+    }
+    :is(.estado-hacer, .estado-datos, .publico-header button.primario, .estado-pie button, .ep-enlace,
+        .marca-simbolo, .access-badge, .sidebar nav button.activo, .pestana-capsula) {
+      -webkit-backdrop-filter: blur(4px) saturate(135%);
+      backdrop-filter: blur(4px) saturate(135%);
+    }
+    /* El desplazamiento se aplica al fondo. Etiquetas, iconos y contornos de foco siguen nítidos. */
+    @supports (backdrop-filter: url("#vidrio-bisel")) {
+      :is(.estado-hacer, .estado-datos, .publico-header button.primario, .estado-pie button, .ep-enlace,
+          .marca-simbolo, .access-badge, .sidebar nav button.activo, .pestana-capsula) {
+        backdrop-filter: url("#vidrio-bisel") saturate(135%) blur(.7px);
+      }
+    }
+    :is(.estado-datos, .publico-header button.primario, .estado-pie button, .ep-enlace, .access-badge, .marca-simbolo) {
+      background: linear-gradient(135deg, #d7f6ff27, #98c2de09 45%, #b4dcf415);
+      box-shadow: inset 0 1px 1px #ffffff75, inset 0 -1px 1px #9fd5f34d, 0 4px 14px #05161f26;
+    }
+    .sidebar nav button.activo {
+      background: linear-gradient(135deg, #d5f7efdf, #9de4e7d4);
+      box-shadow: var(--vidrio-volumen);
+    }
+    :is(.primario, .boton, .acciones button, .pagination button, .filter-tabs button, .icon-button, .dialogo-pie button, .login-lock) {
+      background-image: var(--vidrio-brillo);
+      box-shadow: var(--vidrio-volumen);
+    }
+    .detail-panel > .acciones, .ui-accordion > button { background-color: var(--vidrio-claro); }
+    .dialogo::backdrop { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(.primario, .acciones button, .ep-enlace, .sidebar nav button, .icon-button):active:not(:disabled) {
+    scale: .985;
+  }
+  @supports (animation-timeline: view()) {
+    /* Solo los primeros píxeles de entrada. El foco y las instrucciones urgentes siempre están disponibles. */
+    :is(.publico-lista > article, .publico-zonas, .nivel-col, .workspace main .tarjeta, .list-panel, .ayuda):not(:focus-within) {
+      animation: vidrio-entrada linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 72px;
+    }
+  }
+}
+@keyframes vidrio-entrada {
+  from { opacity: .86; translate: 0 6px; }
+  to { opacity: 1; translate: none; }
+}
