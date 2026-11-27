@@ -11,6 +11,8 @@ public sealed class ContextoDifusion(VersionAprobada version, TimeProvider? relo
     public VersionAprobada Version { get; } = version;
     public PublicacionWeb? Publicacion { get; set; }
     public int TrabajosSms { get; set; }
+    public int EnviosWhatsApp { get; set; }
+    public int EnviosEmail { get; set; }
     /// <summary>Trabajos pendientes de versiones anteriores que se cancelaron (RF-04).</summary>
     public int TrabajosDetenidos { get; set; }
     public List<TareaManual> Tareas { get; } = [];
@@ -79,6 +81,42 @@ public sealed class EncolarSms(IDestinatariosDifusion destinatarios, IColaSms co
         var ahora = c.Reloj.GetUtcNow();
         c.TrabajosSms = await cola.EncolarAsync(lista.Select(d =>
             new EnvioSms(v.VersionId, v.AvisoId, d.ComunidadId, d.ContactoId, d.Telefono, v.TextoSms, v.EsPrueba, ahora)).ToList(), ct);
+    }
+}
+
+/// <summary>
+/// WhatsApp (RF-04): un mensaje por grupo configurado, con el texto completo y el nivel en palabras. Si el canal no está
+/// configurado (sin WAHA o sin grupos) no hace nada.
+/// </summary>
+public sealed class EncolarWhatsApp(Canales.OpcionesWhatsApp opciones, IColaSms cola) : IComandoDifusion
+{
+    public string Canal => "WhatsApp";
+
+    public async Task EjecutarAsync(ContextoDifusion c, CancellationToken ct = default)
+    {
+        if (!opciones.Habilitado) return;
+        var v = c.Version;
+        var ahora = c.Reloj.GetUtcNow();
+        c.EnviosWhatsApp = await cola.EncolarAsync(opciones.GruposValidos
+            .Select(g => new EnvioWhatsApp(v.VersionId, v.AvisoId, g.Id, g.Nombre, v.TextoCompleto, v.EsPrueba, ahora)).ToList(), ct);
+    }
+}
+
+/// <summary>Email (RF-04): un correo por contacto con correo en la lista de destinos. Si el canal no está configurado, no hace nada.</summary>
+public sealed class EncolarEmail(Canales.OpcionesEmail opciones, IDestinatariosDifusion destinatarios, IColaSms cola) : IComandoDifusion
+{
+    public string Canal => "Email";
+
+    public async Task EjecutarAsync(ContextoDifusion c, CancellationToken ct = default)
+    {
+        if (!opciones.Habilitado) return;
+        var v = c.Version;
+        var lista = await destinatarios.ObtenerEmailAsync(v, ct);
+        if (lista.Count == 0) return;
+        var ahora = c.Reloj.GetUtcNow();
+        var asunto = (v.EsPrueba ? "[PRUEBA] " : string.Empty) + v.Titular;
+        c.EnviosEmail = await cola.EncolarAsync(lista.Select(d =>
+            new EnvioEmail(v.VersionId, v.AvisoId, d.ComunidadId, d.ContactoId, d.Correo, asunto, v.TextoCompleto, v.EsPrueba, ahora)).ToList(), ct);
     }
 }
 

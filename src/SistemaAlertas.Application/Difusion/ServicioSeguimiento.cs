@@ -25,7 +25,8 @@ public sealed record CapEmitidoVista(Guid Id, string Identificador, string Tipo,
 /// <summary>Una fila del resumen de seguimiento (RF-08).</summary>
 /// <param name="Avance">Porcentaje de trabajos terminados (enviados, fallidos, confirmados...), de 0 a 100.</param>
 public sealed record SeguimientoResumen(Guid VersionId, Guid AvisoId, int Numero, string Tipo, string Titular, bool EsPrueba,
-    DateTimeOffset DifundidaEn, ConteoEstados Sms, ConteoEstados Tareas, int Avance, bool Completo);
+    DateTimeOffset DifundidaEn, ConteoEstados Sms, ConteoEstados Tareas, int Avance, bool Completo,
+    ConteoEstados? WhatsApp = null, ConteoEstados? Email = null);
 
 public sealed record SeguimientoComunidad(Guid? ComunidadId, string Comunidad, string? Municipio, ConteoEstados Sms,
     EstadoTrabajo? Altavoz);
@@ -34,9 +35,11 @@ public sealed record TareaVista(Guid Id, CanalDifusion Canal, Guid? ComunidadId,
     string TextoLegible, string? Observacion, string? ConfirmadoPor, DateTimeOffset CreadaEn, DateTimeOffset? ResultadoEn,
     string? Resultado = null);
 
+/// <summary>Un envío automático (SMS, WhatsApp o Email) en el seguimiento.</summary>
+/// <param name="Destino">Teléfono o correo (enmascarado sin permiso de edición) o nombre del grupo de WhatsApp.</param>
 public sealed record EnvioSmsVista(Guid Id, Guid? ComunidadId, string? Comunidad, string Destino, EstadoTrabajo Estado, int Intentos,
     string? CodigoProveedor, string? UltimoError, DateTimeOffset? ProximoIntento, DateTimeOffset CreadoEn, DateTimeOffset? ResultadoEn,
-    string? Resultado = null);
+    string? Resultado = null, CanalDifusion Canal = CanalDifusion.Sms);
 
 /// <param name="SmsTerminadosEn">Cuándo terminó el último SMS (enviado, fallido o bloqueado), si ya no queda ninguno pendiente.</param>
 /// <param name="DentroDeMeta">RNF-02: todos los SMS terminaron dentro de los 5 minutos desde la difusión. Null mientras falten.</param>
@@ -66,8 +69,7 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
         {
             var propios = trabajos.Where(t => t.VersionId == v.Id).ToList();
             return Resumen(v.Id, v.AvisoId, v.Numero, v.Tipo.ToString(), v.Contenido.Titular ?? v.Contenido.Evento, v.EsPrueba,
-                v.DifundidaEn!.Value, propios.Where(t => t.Canal == CanalDifusion.Sms).Select(t => t.Estado),
-                propios.Where(t => t.Canal != CanalDifusion.Sms).Select(t => t.Estado));
+                v.DifundidaEn!.Value, propios.Select(t => (t.Canal, t.Estado)));
         }).ToList();
     }
 
@@ -79,7 +81,8 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
         var cap = await db.CapsEmitidos.AsNoTracking().Where(c => c.VersionId == versionId)
             .Select(c => new CapEmitidoVista(c.Id, c.Identificador, c.Tipo, c.Estado, c.Enviado, c.Sha256, c.Valido, c.ReferenciaCapId, c.CreadoEn))
             .FirstOrDefaultAsync(ct);
-        var envios = await db.TrabajosDifusion.AsNoTracking().OfType<EnvioSms>().Where(e => e.VersionId == versionId).ToListAsync(ct);
+        var envios = await db.TrabajosDifusion.AsNoTracking().OfType<EnvioAutomatico>().Where(e => e.VersionId == versionId).ToListAsync(ct);
+        var sms = envios.Where(e => e.Canal == CanalDifusion.Sms).ToList();
         var tareas = await db.TrabajosDifusion.AsNoTracking().OfType<TareaManual>().Where(t => t.VersionId == versionId).ToListAsync(ct);
 
         var comunidadIds = envios.Select(e => e.ComunidadId).Concat(tareas.Select(t => t.ComunidadId)).OfType<Guid>().Distinct().ToList();
@@ -92,14 +95,14 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
 
         var porComunidad = comunidadIds.Select(id => new SeguimientoComunidad(id, comunidades.GetValueOrDefault(id).Nombre ?? "?",
                 comunidades.GetValueOrDefault(id).Municipio,
-                ConteoEstados.De(envios.Where(e => e.ComunidadId == id).Select(e => e.Estado)),
+                ConteoEstados.De(sms.Where(e => e.ComunidadId == id).Select(e => e.Estado)),
                 tareas.FirstOrDefault(t => t.ComunidadId == id && t.Canal == CanalDifusion.Altavoz)?.Estado))
             .OrderBy(c => c.Municipio).ThenBy(c => c.Comunidad).ToList();
 
         var resumen = Resumen(v.Id, v.AvisoId, v.Numero, v.Tipo.ToString(), v.Contenido.Titular ?? v.Contenido.Evento, v.EsPrueba,
-            v.DifundidaEn.Value, envios.Select(e => e.Estado), tareas.Select(t => t.Estado));
+            v.DifundidaEn.Value, envios.Select(e => (e.Canal, e.Estado)).Concat(tareas.Select(t => (t.Canal, t.Estado))));
 
-        DateTimeOffset? smsTerminados = envios.Count > 0 && envios.All(e => e.Terminado) ? envios.Max(e => e.ResultadoEn) : null;
+        DateTimeOffset? smsTerminados = sms.Count > 0 && sms.All(e => e.Terminado) ? sms.Max(e => e.ResultadoEn) : null;
         bool? dentroDeMeta = smsTerminados is { } fin ? fin - v.DifundidaEn.Value <= MetaLote : null;
 
         var mostrarDestino = usuario.Tiene(Domain.Usuarios.Permiso.Edicion);
@@ -107,9 +110,10 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
             tareas.OrderBy(t => t.Canal).ThenBy(t => Nombre(t.ComunidadId)).Select(t => new TareaVista(t.Id, t.Canal, t.ComunidadId,
                 Nombre(t.ComunidadId), t.Estado, t.TextoLegible, t.Observacion,
                 t.ConfirmadoPorId is { } u ? usuarios.GetValueOrDefault(u) : null, t.CreadoEn, t.ResultadoEn, t.Resultado)).ToList(),
-            envios.OrderBy(e => Nombre(e.ComunidadId)).Select(e => new EnvioSmsVista(e.Id, e.ComunidadId, Nombre(e.ComunidadId),
-                mostrarDestino ? e.Destino : Enmascarar(e.Destino), e.Estado, e.Intentos, e.CodigoProveedor, e.UltimoError,
-                e.ProximoIntento, e.CreadoEn, e.ResultadoEn, e.Resultado)).ToList(),
+            envios.OrderBy(e => e.Canal).ThenBy(e => Nombre(e.ComunidadId)).Select(e => new EnvioSmsVista(e.Id, e.ComunidadId, Nombre(e.ComunidadId),
+                e.Canal == CanalDifusion.WhatsApp ? e.NombreDestino ?? "Grupo de WhatsApp"
+                    : mostrarDestino ? e.Destino : e.Canal == CanalDifusion.Email ? EnmascararCorreo(e.Destino) : Enmascarar(e.Destino),
+                e.Estado, e.Intentos, e.CodigoProveedor, e.UltimoError, e.ProximoIntento, e.CreadoEn, e.ResultadoEn, e.Resultado, e.Canal)).ToList(),
             smsTerminados, dentroDeMeta, reloj.GetUtcNow());
     }
 
@@ -137,16 +141,26 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
             nombre, tarea.CreadoEn, tarea.ResultadoEn, tarea.Resultado);
     }
 
+    private static readonly CanalDifusion[] Automaticos = [CanalDifusion.Sms, CanalDifusion.WhatsApp, CanalDifusion.Email];
+
     private static SeguimientoResumen Resumen(Guid versionId, Guid avisoId, int numero, string tipo, string titular, bool esPrueba,
-        DateTimeOffset difundidaEn, IEnumerable<EstadoTrabajo> sms, IEnumerable<EstadoTrabajo> tareas)
+        DateTimeOffset difundidaEn, IEnumerable<(CanalDifusion Canal, EstadoTrabajo Estado)> trabajos)
     {
-        var s = ConteoEstados.De(sms);
-        var t = ConteoEstados.De(tareas);
-        var total = s.Total + t.Total;
-        var avance = total == 0 ? 100 : (int)Math.Floor(100.0 * (s.Terminados + t.Terminados) / total);
+        var lista = trabajos.ToList();
+        ConteoEstados De(CanalDifusion canal) => ConteoEstados.De(lista.Where(t => t.Canal == canal).Select(t => t.Estado));
+        var s = De(CanalDifusion.Sms);
+        var w = De(CanalDifusion.WhatsApp);
+        var e = De(CanalDifusion.Email);
+        var t = ConteoEstados.De(lista.Where(x => !Automaticos.Contains(x.Canal)).Select(x => x.Estado));
+        var total = lista.Count;
+        var terminados = lista.Count(x => x.Estado != EstadoTrabajo.Pendiente);
+        var avance = total == 0 ? 100 : (int)Math.Floor(100.0 * terminados / total);
         return new SeguimientoResumen(versionId, avisoId, numero, tipo, titular, esPrueba, difundidaEn, s, t, avance,
-            s.Pendientes == 0 && t.Pendientes == 0);
+            terminados == total, w, e);
     }
+
+    public static string EnmascararCorreo(string correo) =>
+        correo.IndexOf('@', StringComparison.Ordinal) is var i and > 0 ? correo[0] + new string('*', Math.Max(1, i - 1)) + correo[i..] : "****";
 
     public static string Enmascarar(string telefono) =>
         telefono.Length <= 4 ? "****" : new string('*', telefono.Length - 4) + telefono[^4..];

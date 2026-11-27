@@ -6,7 +6,7 @@ Sprint 3. Cómo se prueba el sistema, qué cubre cada prueba, cómo se mide y qu
 
 | Control | Herramienta | Resultado (27/11/2026) |
 |---|---|---|
-| Pruebas unitarias y de integración | xUnit, EF Core en memoria | 205 pruebas, todas pasan |
+| Pruebas unitarias y de integración | xUnit, EF Core en memoria | 232 pruebas, todas pasan |
 | Pruebas de la API real | Colección Postman (CLI) contra PostgreSQL/PostGIS | 145 peticiones y 322 aserciones, 0 fallas. Se puede correr dos veces seguidas: la segunda da 321, porque dos pruebas aceptan "ya estaba hecho" |
 | Cobertura de código | coverlet (`tests/cobertura.runsettings`) | 81,4 % de líneas y 76,5 % de ramas (Domain 87,2 %, Application 81,0 %, Infrastructure 72,3 %) |
 | Análisis estático .NET | Analizadores de .NET, conjunto recomendado (`Directory.Build.props`) | 0 avisos; en CI se compila con `-warnaserror` |
@@ -56,7 +56,7 @@ postman collection run "postman/collections/SAT Rio Pirai" -e postman/environmen
 |---|---|---|
 | RF-01 Registro e importación de avisos | `ImportadoresTests`, `AvisoAptitudTests`, `ModuloCapTests`, `EjemplosSprint3Tests` | RF-01 Avisos CAP; RF-04 RF-08 (Excel) |
 | RF-02 Versiones Alert, Update y Cancel (un Cancel no lleva instrucciones de evacuación) | `VersionesMensajeTests`, `MensajeCapBuilderTests` | RF-02 RF-11 Mensajes y aprobación; RF-06 (Preparar Cancel) |
-| RF-04 Difusión multicanal y CAP emitido; un Update o Cancel detiene lo pendiente de la versión anterior | `ServicioDifusionTests`, `TrabajosDifusionTests`, `ColaSmsTests`, `PatronesComportamientoTests` | RF-06 Web pública y difusión; RF-04 RF-08 |
+| RF-04 Difusión multicanal (SMS, WhatsApp a grupos, Email) y CAP emitido; un Update o Cancel detiene lo pendiente de la versión anterior | `ServicioDifusionTests`, `TrabajosDifusionTests`, `ColaSmsTests`, `CanalesAutomaticosTests`, `SmsGatewayEmisorTests`, `PatronesComportamientoTests` | RF-06 Web pública y difusión; RF-04 RF-08 |
 | RF-05 Protocolos oficiales | `VersionesMensajeTests` | RF-02 RF-11 Mensajes y aprobación |
 | RF-06 Texto y nivel en palabras | `VersionesMensajeTests` | RF-06 Web pública y difusión |
 | RF-07 Destinos por comunidad | `VersionesMensajeTests` | RF-07 Destinos por comunidad |
@@ -107,4 +107,6 @@ Un integrante del equipo probó el Sprint 3 por la interfaz y por la API y encon
 
 - **Twilio no se probó con una cuenta real.** El adaptador está probado con un cliente simulado; los SMS de la demo los "envía" el simulador.
 - **El nivel de riesgo de cada municipio es un criterio propio**, no un dato oficial (ver `datos/cuenca-pirai/README.md`).
+- **WhatsApp y Email se probaron contra servidores locales falsos** (un WAHA de prueba y un servidor SMTP de depuración) y con pruebas unitarias. Faltan las pruebas con WAHA y Gmail reales.
+- **WAHA no es la API oficial de WhatsApp**: el número vinculado podría ser bloqueado. Para la demo se usa un número de prueba.
 - **Reintento real de SMS con Twilio** (fallo del proveedor, 60 s, máximo 2): probado solo con proveedores falsos en `ColaSmsTests`, porque el simulador nunca falla.

@@ -62,7 +62,7 @@ public sealed class PublicadorWebPersistente(IAppDbContext db, TimeProvider relo
 /// <summary>La cola SMS es la tabla de trabajos: encolar es guardar los envíos en estado Pendiente.</summary>
 public sealed class ColaSmsPersistente(IAppDbContext db) : IColaSms
 {
-    public async Task<int> EncolarAsync(IReadOnlyCollection<EnvioSms> envios, CancellationToken ct = default)
+    public async Task<int> EncolarAsync(IReadOnlyCollection<EnvioAutomatico> envios, CancellationToken ct = default)
     {
         db.TrabajosDifusion.AddRange(envios);
         await db.GuardarODescartarAsync(ct);

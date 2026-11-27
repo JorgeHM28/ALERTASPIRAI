@@ -63,7 +63,7 @@ Mismo criterio: se usan los que resuelven un problema real. Cuatro se usan y tre
 
 | Patrón | Decisión | Dónde | RF |
 |---|---|---|---|
-| Adapter | Se usa | Proveedor SMS (Twilio y SMS Gateway for Android), XML CAP 1.2, geometrías PostGIS a GeoJSON | RF-04, RF-01, RF-09 |
+| Adapter | Se usa | Proveedores SMS (Twilio y SMS Gateway for Android), WhatsApp (WAHA) y Email (SMTP), XML CAP 1.2, geometrías PostGIS a GeoJSON | RF-04, RF-01, RF-09 |
 | Facade | Se usa | `ServicioDifusion` (difusión multicanal) y `ModuloCap` (importar, generar, validar CAP) | RF-04, RF-01 |
 | Decorator | Se usa | Bitácora y modo prueba sobre `IEmisorSms` (y reintentos inmediatos, disponibles) | RNF-08, RNF-04 |
 | Proxy (protección) | Se usa | `ProxyRepositorioContactos` enmascara los números | RF-12 |
@@ -82,7 +82,7 @@ Mismo criterio: se usan los que resuelven un problema real. Cuatro se usan y tre
 | Decorator | `Infrastructure/Sms/Decoradores/`: `EmisorSmsDecorador` (base), `EmisorConReintentos`, `EmisorConBitacora`, `EmisorModoPrueba`. Cadena armada en `RegistroSms.AddCanalSms`. |
 | Proxy | `Application/Comunidades/IRepositorioContactos.cs` (sujeto), `Infrastructure/Persistence/Repositorios/RepositorioContactos.cs` (real), `ProxyRepositorioContactos.cs` (proxy), `Application/Comunidades/EnmascaradorDatos.cs`, `Api/Comun/UsuarioActualHttp.cs`. |
 
-Pruebas: `ConversorGeoJsonTests`, `ImportadorCapAdapterTests` (en `ImportadoresTests.cs`), `TwilioEmisorTests`, `SmsGatewayEmisorTests`, `DecoradoresSmsTests`, `ProxyRepositorioContactosTests`, `ModuloCapTests` y `ServicioDifusionTests`.
+Pruebas: `ConversorGeoJsonTests`, `ImportadorCapAdapterTests` (en `ImportadoresTests.cs`), `TwilioEmisorTests`, `SmsGatewayEmisorTests`, `CanalesAutomaticosTests`, `DecoradoresSmsTests`, `ProxyRepositorioContactosTests`, `ModuloCapTests` y `ServicioDifusionTests`.
 
 ## Patrones que se usan
 

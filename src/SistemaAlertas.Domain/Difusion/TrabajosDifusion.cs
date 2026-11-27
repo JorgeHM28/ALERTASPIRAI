@@ -2,8 +2,11 @@ using SistemaAlertas.Domain.Comun;
 
 namespace SistemaAlertas.Domain.Difusion;
 
-/// <summary>Canales de difusión de RF-04. El SMS es automático; radio, altavoz y redes los ejecuta una persona.</summary>
-public enum CanalDifusion { Sms, Radio, Altavoz, RedesSociales }
+/// <summary>
+/// Canales de difusión de RF-04. SMS, WhatsApp (a grupos) y Email son automáticos; radio, altavoz y redes los ejecuta
+/// una persona.
+/// </summary>
+public enum CanalDifusion { Sms, Radio, Altavoz, RedesSociales, WhatsApp, Email }
 
 /// <summary>
 /// Estado de un trabajo de difusión.
@@ -14,7 +17,7 @@ public enum EstadoTrabajo { Pendiente, Enviado, Fallido, Bloqueado, Confirmada, 
 
 /// <summary>
 /// Trabajo de difusión (RF-04, RF-08): lo que hay que hacer por un canal para una versión aprobada.
-/// Se especializa en <see cref="EnvioSms"/> y <see cref="TareaManual"/> (herencia disjunta y total del diagrama ER).
+/// Se especializa en <see cref="EnvioAutomatico"/> (SMS, WhatsApp, Email) y <see cref="TareaManual"/> (herencia disjunta y total del diagrama ER).
 /// </summary>
 public abstract class TrabajoDifusion : Entidad
 {
@@ -69,31 +72,36 @@ public abstract class TrabajoDifusion : Entidad
 }
 
 /// <summary>
-/// Un SMS a un contacto (RF-04). Lo envía la cola en segundo plano. RNF-08: ante un fallo recuperable se reintenta
-/// como máximo 2 veces más, esperando 60 s entre intentos; un fallo definitivo (número inválido) no se reintenta.
+/// Un envío que hace el sistema solo (SMS, WhatsApp o Email). Lo manda la cola en segundo plano. RNF-08: ante un fallo
+/// recuperable se reintenta como máximo 2 veces más, esperando 60 s entre intentos; un fallo definitivo no se reintenta.
 /// </summary>
-public class EnvioSms : TrabajoDifusion
+public abstract class EnvioAutomatico : TrabajoDifusion
 {
     public const int MaxReintentos = 2;
     public static readonly TimeSpan EsperaReintento = TimeSpan.FromSeconds(60);
 
-    public Guid ContactoId { get; private set; }
-    /// <summary>Teléfono en formato internacional. Solo lo usa el sistema; hacia afuera se muestra enmascarado.</summary>
-    public string Destino { get; private set; } = null!;
-    public string Texto { get; private set; } = null!;
+    /// <summary>Contacto que recibe. Null en un envío a un grupo de WhatsApp.</summary>
+    public Guid? ContactoId { get; protected set; }
+    /// <summary>Teléfono, id del grupo de WhatsApp o correo. Solo lo usa el sistema; hacia afuera se muestra enmascarado.</summary>
+    public string Destino { get; protected set; } = null!;
+    /// <summary>Nombre legible del destino, por ejemplo el nombre del grupo de WhatsApp.</summary>
+    public string? NombreDestino { get; protected set; }
+    /// <summary>Asunto del correo. Null en SMS y WhatsApp.</summary>
+    public string? Asunto { get; protected set; }
+    public string Texto { get; protected set; } = null!;
     public int Intentos { get; private set; }
     public string? CodigoProveedor { get; private set; }
     public string? UltimoError { get; private set; }
     /// <summary>Cuándo toca el próximo intento. Null cuando el envío terminó.</summary>
     public DateTimeOffset? ProximoIntento { get; private set; }
 
-    private EnvioSms() { }
+    protected EnvioAutomatico() { }
 
-    public EnvioSms(Guid versionId, Guid avisoId, Guid? comunidadId, Guid contactoId, string destino, string texto, bool esPrueba,
-        DateTimeOffset ahora) : base(versionId, avisoId, comunidadId, CanalDifusion.Sms, esPrueba, ahora)
+    protected EnvioAutomatico(Guid versionId, Guid avisoId, Guid? comunidadId, CanalDifusion canal, Guid? contactoId, string destino,
+        string texto, bool esPrueba, DateTimeOffset ahora) : base(versionId, avisoId, comunidadId, canal, esPrueba, ahora)
     {
-        if (string.IsNullOrWhiteSpace(destino)) throw new ExcepcionDominio("El SMS necesita un teléfono de destino.");
-        if (string.IsNullOrWhiteSpace(texto)) throw new ExcepcionDominio("El SMS necesita un texto.");
+        if (string.IsNullOrWhiteSpace(destino)) throw new ExcepcionDominio($"El envío por {canal} necesita un destino.");
+        if (string.IsNullOrWhiteSpace(texto)) throw new ExcepcionDominio($"El envío por {canal} necesita un texto.");
         ContactoId = contactoId;
         Destino = destino.Trim();
         Texto = texto;
@@ -139,6 +147,44 @@ public class EnvioSms : TrabajoDifusion
     }
 }
 
+/// <summary>Un SMS a un contacto (RF-04).</summary>
+public class EnvioSms : EnvioAutomatico
+{
+    private EnvioSms() { }
+
+    public EnvioSms(Guid versionId, Guid avisoId, Guid? comunidadId, Guid contactoId, string telefono, string texto, bool esPrueba,
+        DateTimeOffset ahora) : base(versionId, avisoId, comunidadId, CanalDifusion.Sms, contactoId, telefono, texto, esPrueba, ahora) { }
+}
+
+/// <summary>
+/// Un mensaje a un grupo de WhatsApp (RF-04). Un solo envío por grupo en vez de uno por número: los vecinos se suman al
+/// grupo de su comunidad o municipio. Lleva el texto completo, con el nivel en palabras.
+/// </summary>
+public class EnvioWhatsApp : EnvioAutomatico
+{
+    private EnvioWhatsApp() { }
+
+    public EnvioWhatsApp(Guid versionId, Guid avisoId, string grupoId, string? nombreGrupo, string texto, bool esPrueba, DateTimeOffset ahora)
+        : base(versionId, avisoId, null, CanalDifusion.WhatsApp, null, grupoId, texto, esPrueba, ahora)
+    {
+        NombreDestino = string.IsNullOrWhiteSpace(nombreGrupo) ? null : nombreGrupo.Trim();
+    }
+}
+
+/// <summary>Un correo a un contacto (RF-04).</summary>
+public class EnvioEmail : EnvioAutomatico
+{
+    private EnvioEmail() { }
+
+    public EnvioEmail(Guid versionId, Guid avisoId, Guid? comunidadId, Guid contactoId, string correo, string asunto, string texto,
+        bool esPrueba, DateTimeOffset ahora)
+        : base(versionId, avisoId, comunidadId, CanalDifusion.Email, contactoId, correo, texto, esPrueba, ahora)
+    {
+        if (string.IsNullOrWhiteSpace(asunto)) throw new ExcepcionDominio("El correo necesita un asunto.");
+        Asunto = asunto.Trim();
+    }
+}
+
 /// <summary>Resultado de un intento de envío, tal como lo informa el proveedor.</summary>
 public sealed record ResultadoIntento(bool Exitoso, string? CodigoProveedor, string? Error, bool Recuperable, bool Bloqueado);
 
@@ -157,7 +203,8 @@ public class TareaManual : TrabajoDifusion
     public TareaManual(Guid versionId, Guid avisoId, Guid? comunidadId, CanalDifusion canal, string textoLegible, bool esPrueba,
         DateTimeOffset ahora) : base(versionId, avisoId, comunidadId, canal, esPrueba, ahora)
     {
-        if (canal == CanalDifusion.Sms) throw new ExcepcionDominio("El SMS no es una tarea manual.");
+        if (canal is CanalDifusion.Sms or CanalDifusion.WhatsApp or CanalDifusion.Email)
+            throw new ExcepcionDominio($"{canal} es un envío automático, no una tarea manual.");
         if (string.IsNullOrWhiteSpace(textoLegible)) throw new ExcepcionDominio("La tarea necesita el texto a difundir.");
         TextoLegible = textoLegible;
     }

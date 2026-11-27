@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using SistemaAlertas.Application.Difusion;
+using SistemaAlertas.Application.Difusion.Canales;
 using SistemaAlertas.Domain.Cap;
 using SistemaAlertas.Domain.Mensajes;
 using SistemaAlertas.Application.Difusion.Sms;
@@ -96,8 +97,9 @@ public class ColaSmsTests
 
     private readonly VersionesFalsas _versiones = new();
 
-    private DespachadorSms Despachador(AlertasDbContext db, IEmisorSms emisor, OpcionesSms opciones, TimeProvider reloj) =>
-        new(db, _versiones, emisor, opciones, reloj);
+    private DespachadorEnvios Despachador(AlertasDbContext db, IEmisorSms emisor, OpcionesSms opciones, TimeProvider reloj,
+        params IEmisorCanal[] otros) =>
+        new(db, _versiones, [new CanalSms(emisor), .. otros], opciones, reloj);
 
     private VersionMensaje Encolar(AlertasDbContext db, int cantidad, bool esPrueba = false, VersionMensaje? version = null)
     {
@@ -116,7 +118,7 @@ public class ColaSmsTests
     private static OpcionesSms Opciones(int lote = 200, int simultaneos = 10) =>
         new() { TamanoLote = lote, EnviosSimultaneos = simultaneos, MaxReintentos = 2, EsperaReintentoSegundos = 60 };
 
-    private static async Task<int> VaciarAsync(DespachadorSms d)
+    private static async Task<int> VaciarAsync(DespachadorEnvios d)
     {
         int total = 0, n;
         while ((n = await d.ProcesarLoteAsync()) > 0) total += n;

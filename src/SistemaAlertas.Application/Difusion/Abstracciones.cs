@@ -12,6 +12,8 @@ public sealed record PublicacionWeb(Guid VersionId, string Url, DateTimeOffset P
 
 public sealed record DestinatarioSms(Guid ContactoId, Guid ComunidadId, string Nombre, string Telefono);
 
+public sealed record DestinatarioEmail(Guid ContactoId, Guid ComunidadId, string Nombre, string Correo);
+
 public sealed record IncidenciaDifusion(Guid VersionId, string Canal, string Detalle, DateTimeOffset Fecha);
 
 /// <summary>Obtiene la versión aprobada que se va a difundir. Null si no existe.</summary>
@@ -33,15 +35,19 @@ public interface IPublicadorWeb
 public interface IDestinatariosDifusion
 {
     Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(VersionAprobada version, CancellationToken ct = default);
+
+    /// <summary>Contactos con correo de la lista de destinos (canal Email).</summary>
+    Task<IReadOnlyList<DestinatarioEmail>> ObtenerEmailAsync(VersionAprobada version, CancellationToken ct = default);
 }
 
 /// <summary>
-/// Cola de envíos SMS (RF-04): la difusión guarda un <see cref="EnvioSms"/> por destinatario y un proceso
-/// en segundo plano los envía por lotes, con los reintentos de RNF-08. La cola vive en la base: sobrevive a un reinicio.
+/// Cola de envíos automáticos (RF-04): la difusión guarda un <see cref="EnvioAutomatico"/> por destinatario (SMS, correo)
+/// o por grupo (WhatsApp) y un proceso en segundo plano los envía por lotes, con los reintentos de RNF-08.
+/// La cola vive en la base: sobrevive a un reinicio.
 /// </summary>
 public interface IColaSms
 {
-    Task<int> EncolarAsync(IReadOnlyCollection<EnvioSms> envios, CancellationToken ct = default);
+    Task<int> EncolarAsync(IReadOnlyCollection<EnvioAutomatico> envios, CancellationToken ct = default);
 }
 
 /// <summary>Crea las tareas de los canales manuales (radio, altavoz, redes sociales) y las guarda.</summary>

@@ -46,12 +46,15 @@ public class ServicioDifusionTests
     {
         public Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(VersionAprobada version, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<DestinatarioSms>>(lista);
+        public Task<IReadOnlyList<DestinatarioEmail>> ObtenerEmailAsync(VersionAprobada version, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<DestinatarioEmail>>(lista.Select(d => new DestinatarioEmail(d.ContactoId, d.ComunidadId, d.Nombre,
+                $"{d.Nombre.ToLowerInvariant()}@ejemplo.bo")).ToList());
     }
 
     private sealed class ColaFalsa : IColaSms
     {
-        public List<EnvioSms> Envios { get; } = [];
-        public Task<int> EncolarAsync(IReadOnlyCollection<EnvioSms> envios, CancellationToken ct = default)
+        public List<EnvioAutomatico> Envios { get; } = [];
+        public Task<int> EncolarAsync(IReadOnlyCollection<EnvioAutomatico> envios, CancellationToken ct = default)
         { Envios.AddRange(envios); return Task.FromResult(envios.Count); }
     }
 

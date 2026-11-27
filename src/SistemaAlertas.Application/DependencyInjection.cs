@@ -44,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<IComandoDifusion, DetenerDespachosAnteriores>();
         services.AddScoped<IComandoDifusion, PublicarEnWeb>();
         services.AddScoped<IComandoDifusion, EncolarSms>();
+        services.AddScoped<IComandoDifusion, EncolarWhatsApp>();
+        services.AddScoped<IComandoDifusion, EncolarEmail>();
         services.AddScoped<IComandoDifusion, CrearTareasManuales>();
 
         // Facade de RF-04 e invocador de los comandos: una llamada difunde por todos los canales.

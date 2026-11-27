@@ -37,6 +37,16 @@ services:
       Sms__SmsGateway__Url: ${SMS_GATEWAY_URL:-}
       Sms__SmsGateway__Usuario: ${SMS_GATEWAY_USUARIO:-}
       Sms__SmsGateway__Contrasena: ${SMS_GATEWAY_CONTRASENA:-}
+      # WhatsApp a un grupo (WAHA) y Email (SMTP): apagados si faltan datos. Ver docs/whatsapp-email.md.
+      WhatsApp__Url: ${WHATSAPP_URL:-}
+      WhatsApp__ApiKey: ${WAHA_API_KEY:-}
+      WhatsApp__Grupos__0__Nombre: ${WHATSAPP_GRUPO_NOMBRE:-Alertas río Piraí}
+      WhatsApp__Grupos__0__Id: ${WHATSAPP_GRUPO_ID:-}
+      Email__Servidor: ${EMAIL_SERVIDOR:-}
+      Email__Puerto: ${EMAIL_PUERTO:-587}
+      Email__Usuario: ${EMAIL_USUARIO:-}
+      Email__Contrasena: ${EMAIL_CONTRASENA:-}
+      Email__Remitente: ${EMAIL_REMITENTE:-}
     ports:
       - "5080:8080"
 
@@ -51,5 +61,21 @@ services:
     ports:
       - "5173:80"
 
+  # WhatsApp HTTP API (https://waha.devlike.pro). Solo arranca con: docker compose --profile whatsapp up -d
+  # Se vincula a un número escaneando un QR en http://localhost:3000/dashboard.
+  waha:
+    image: ${WAHA_IMAGEN:-devlikeapro/waha:arm}
+    container_name: sistema_alertas_waha
+    profiles: [whatsapp]
+    environment:
+      WAHA_API_KEY: ${WAHA_API_KEY:-}
+      WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USUARIO:-admin}
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_CONTRASENA:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - waha_sesiones:/app/.sessions
+
 volumes:
   pgdata:
+  waha_sesiones:

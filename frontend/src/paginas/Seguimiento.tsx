@@ -9,7 +9,9 @@ import { Alert } from '../components/ui/Alert'
 /** RF-08 pide que el panel se actualice en menos de 1 minuto: se vuelve a pedir cada 10 s. */
 const REFRESCO_MS = 10_000
 
-const NOMBRE_CANAL: Record<CanalDifusion, string> = { Sms: 'SMS', Radio: 'Radio', Altavoz: 'Altavoz', RedesSociales: 'Redes sociales' }
+const NOMBRE_CANAL: Record<CanalDifusion, string> = {
+  Sms: 'SMS', Radio: 'Radio', Altavoz: 'Altavoz', RedesSociales: 'Redes sociales', WhatsApp: 'WhatsApp', Email: 'Email',
+}
 const NOMBRE_ESTADO: Record<EstadoTrabajo, string> = {
   Pendiente: 'Pendiente', Enviado: 'Enviado', Fallido: 'Fallido', Bloqueado: 'Bloqueado', Confirmada: 'Realizada', NoRealizada: 'No realizada',
   Cancelado: 'Cancelado',
@@ -71,12 +73,13 @@ export default function Seguimiento({ roles }: { roles: Rol[] }) {
     {!cargando && lista.length === 0 && !error && <Alert tone="info">Todavía no se difundió ningún mensaje. Cuando un aprobador difunda una versión, su avance aparece aquí.</Alert>}
 
     {lista.length > 0 && <div className="table-scroll"><table>
-      <thead><tr><th>Mensaje</th><th>Difundido</th><th>SMS</th><th>Tareas</th><th>Avance</th></tr></thead>
+      <thead><tr><th>Mensaje</th><th>Difundido</th><th>SMS</th><th>WhatsApp y email</th><th>Tareas</th><th>Avance</th></tr></thead>
       <tbody>{lista.map(r => <tr key={r.versionId} aria-selected={r.versionId === elegida}>
         <td><button className="row-link" onClick={() => setElegida(r.versionId)}>
           {r.tipo} v{r.numero}: {r.titular}{r.esPrueba ? ' (prueba)' : ''}</button></td>
         <td>{fecha(r.difundidaEn)}</td>
         <td><TextoConteo c={r.sms} /></td>
+        <td>{r.whatsApp?.total ? <>WhatsApp: <TextoConteo c={r.whatsApp} /></> : null}{r.whatsApp?.total && r.email?.total ? <br /> : null}{r.email?.total ? <>Email: <TextoConteo c={r.email} /></> : null}{!r.whatsApp?.total && !r.email?.total && <span className="tenue">ninguno</span>}</td>
         <td><TextoConteo c={r.tareas} tareas /></td>
         <td><Barra avance={r.avance} />{r.completo && <span className="tenue"> completo</span>}</td>
       </tr>)}</tbody>
@@ -104,6 +107,8 @@ function Detalle({ d, editar, alCambiar }: { d: SeguimientoDetalle; editar: bool
         : '—'}</dd></div>
       <div><dt>Web pública</dt><dd>{d.publicadaWebEn ? `Publicado ${fecha(d.publicadaWebEn)}` : 'No publicado'}</dd></div>
       <div><dt>SMS</dt><dd><TextoConteo c={r.sms} /></dd></div>
+      <div><dt>WhatsApp (grupos)</dt><dd>{r.whatsApp ? <TextoConteo c={r.whatsApp} /> : <span className="tenue">ninguno</span>}</dd></div>
+      <div><dt>Email</dt><dd>{r.email ? <TextoConteo c={r.email} /> : <span className="tenue">ninguno</span>}</dd></div>
       <div><dt>Meta de 5 minutos (RNF-02)</dt><dd>{d.dentroDeMeta === null
         ? (r.sms.total === 0 ? 'Sin SMS' : 'En curso')
         : d.dentroDeMeta ? `Cumplida: terminó ${fecha(d.smsTerminadosEn)}` : `No cumplida: terminó ${fecha(d.smsTerminadosEn)}`}</dd></div>
@@ -121,11 +126,11 @@ function Detalle({ d, editar, alCambiar }: { d: SeguimientoDetalle; editar: bool
     <Tareas tareas={d.tareas} editar={editar} alCambiar={alCambiar} />
 
     {d.envios.length > 0 && <>
-      <h4>Envíos SMS</h4>
+      <h4>Envíos automáticos</h4>
       <div className="table-scroll"><table>
-        <thead><tr><th>Comunidad</th><th>Teléfono</th><th>Estado</th><th>Intentos</th><th>Detalle</th></tr></thead>
+        <thead><tr><th>Canal</th><th>Comunidad</th><th>Destino</th><th>Estado</th><th>Intentos</th><th>Detalle</th></tr></thead>
         <tbody>{d.envios.map(e => <tr key={e.id}>
-          <td>{e.comunidad ?? '—'}</td><td>{e.destino}</td><td><Estado estado={e.estado} /></td><td>{e.intentos}</td>
+          <td>{NOMBRE_CANAL[e.canal]}</td><td>{e.comunidad ?? '—'}</td><td>{e.destino}</td><td><Estado estado={e.estado} /></td><td>{e.intentos}</td>
           <td>{e.estado === 'Pendiente' && e.proximoIntento ? `Próximo intento ${fecha(e.proximoIntento)}` : e.estado === 'Cancelado' ? e.resultado ?? '' : e.ultimoError ?? e.codigoProveedor ?? ''}</td>
         </tr>)}</tbody></table></div>
     </>}

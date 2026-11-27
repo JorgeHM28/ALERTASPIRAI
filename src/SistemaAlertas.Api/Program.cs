@@ -8,6 +8,7 @@ using SistemaAlertas.Api.Comun;
 using SistemaAlertas.Application;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Avisos;
+using SistemaAlertas.Application.Difusion.Canales;
 using SistemaAlertas.Application.Mensajes;
 using SistemaAlertas.Application.Usuarios;
 using SistemaAlertas.Infrastructure;
@@ -50,7 +51,12 @@ builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton(builder.Configuration.GetSection(OpcionesCap.Seccion).Get<OpcionesCap>() ?? new OpcionesCap());
-builder.Services.AddSingleton(builder.Configuration.GetSection(OpcionesDestinos.Seccion).Get<OpcionesDestinos>() ?? new OpcionesDestinos());
+var opcionesDestinos = builder.Configuration.GetSection(OpcionesDestinos.Seccion).Get<OpcionesDestinos>() ?? new OpcionesDestinos();
+// El correo es un canal aprobado cuando el servidor tiene configurado el envío por SMTP.
+var opcionesEmail = builder.Configuration.GetSection(OpcionesEmail.Seccion).Get<OpcionesEmail>() ?? new OpcionesEmail();
+if (opcionesEmail.Habilitado && !opcionesDestinos.CanalesAprobados.Contains(SistemaAlertas.Domain.Comunidades.TipoCanal.Email))
+    opcionesDestinos.CanalesAprobados.Add(SistemaAlertas.Domain.Comunidades.TipoCanal.Email);
+builder.Services.AddSingleton(opcionesDestinos);
 
 // RF-13: autenticación con JWT y autorización por rol.
 var jwt = builder.Configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()!;

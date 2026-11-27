@@ -7,7 +7,8 @@ namespace SistemaAlertas.Application.Difusion;
 /// <param name="CapEmitidoId">CAP final archivado (RF-04); su XML exacto se descarga en /api/difusion/{versionId}/cap.</param>
 /// <param name="TrabajosDetenidos">Trabajos pendientes de versiones anteriores del evento que se cancelaron (RF-04).</param>
 public sealed record ResultadoDifusion(Guid VersionId, bool EsPrueba, Guid CapEmitidoId, string Sha256, bool PublicadoEnWeb, string? UrlWeb,
-    int TrabajosSms, int TareasManuales, IReadOnlyList<IncidenciaDifusion> Incidencias, int TrabajosDetenidos = 0);
+    int TrabajosSms, int TareasManuales, IReadOnlyList<IncidenciaDifusion> Incidencias, int TrabajosDetenidos = 0,
+    int EnviosWhatsApp = 0, int EnviosEmail = 0);
 
 public interface IServicioDifusion
 {
@@ -55,12 +56,13 @@ public sealed class ServicioDifusion(
         }
 
         var resultado = new ResultadoDifusion(version.VersionId, version.EsPrueba, cap.Id, cap.Sha256, contexto.Publicacion is not null,
-            contexto.Publicacion?.Url, contexto.TrabajosSms, contexto.Tareas.Count, problemas, contexto.TrabajosDetenidos);
+            contexto.Publicacion?.Url, contexto.TrabajosSms, contexto.Tareas.Count, problemas, contexto.TrabajosDetenidos,
+            contexto.EnviosWhatsApp, contexto.EnviosEmail);
 
         // El CAP ya quedó emitido: la versión pasa a Difundida aunque algún canal haya fallado (las incidencias quedan a la vista).
         if (eventos is not null)
             await eventos.PublicarAsync(new EventoAviso(version.AvisoId, TipoEventoAviso.Difundido, null,
-                $"CAP {cap.Identificador}. Web: {(resultado.PublicadoEnWeb ? "sí" : "no")}, SMS: {resultado.TrabajosSms}, tareas: {resultado.TareasManuales}, pendientes anteriores detenidos: {resultado.TrabajosDetenidos}, incidencias: {problemas.Count}.",
+                $"CAP {cap.Identificador}. Web: {(resultado.PublicadoEnWeb ? "sí" : "no")}, SMS: {resultado.TrabajosSms}, WhatsApp: {resultado.EnviosWhatsApp}, email: {resultado.EnviosEmail}, tareas: {resultado.TareasManuales}, pendientes anteriores detenidos: {resultado.TrabajosDetenidos}, incidencias: {problemas.Count}.",
                 _reloj.GetUtcNow(), version.VersionId), ct);
         return resultado;
     }

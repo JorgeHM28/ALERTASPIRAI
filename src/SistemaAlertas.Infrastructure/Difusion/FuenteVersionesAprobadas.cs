@@ -31,20 +31,29 @@ public sealed class FuenteVersionesAprobadas(IAppDbContext db, ReglaDifusion reg
     }
 }
 
-/// <summary>Los SMS salen de la lista de destinos de la versión (RF-07): sin duplicados y solo del alcance.</summary>
+/// <summary>Los SMS y los correos salen de la lista de destinos de la versión (RF-07): sin duplicados y solo del alcance.</summary>
 public sealed class DestinatariosDesdeLista(ServicioDestinos destinos, IAppDbContext db) : IDestinatariosDifusion
 {
-    public async Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(VersionAprobada version, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DestinatarioSms>> ObtenerSmsAsync(VersionAprobada version, CancellationToken ct = default) =>
+        (await HabilitadosAsync(version, Domain.Comunidades.TipoCanal.Sms, ct))
+            .Select(d => new DestinatarioSms(d.ContactoId, d.ComunidadId, d.Nombre, d.Direccion)).ToList();
+
+    public async Task<IReadOnlyList<DestinatarioEmail>> ObtenerEmailAsync(VersionAprobada version, CancellationToken ct = default) =>
+        (await HabilitadosAsync(version, Domain.Comunidades.TipoCanal.Email, ct))
+            .Select(d => new DestinatarioEmail(d.ContactoId, d.ComunidadId, d.Nombre, d.Direccion)).ToList();
+
+    private async Task<List<(Guid ContactoId, Guid ComunidadId, string Nombre, string Direccion)>> HabilitadosAsync(
+        VersionAprobada version, Domain.Comunidades.TipoCanal canal, CancellationToken ct)
     {
         var lista = await destinos.ObtenerOGenerarAsync(version.VersionId, ct);
-        var sms = lista.Destinos.Where(d => d.Canal == Domain.Comunidades.TipoCanal.Sms).ToList();
-        var ids = sms.Select(d => d.ContactoId).Distinct().ToList();
+        var delCanal = lista.Destinos.Where(d => d.Canal == canal).ToList();
+        var ids = delCanal.Select(d => d.ContactoId).Distinct().ToList();
         // La lista se guardó al aprobar. Al difundir se vuelve a mirar el contacto: si se desactivó, se le quitó la
-        // autorización o se borró (con su comunidad), ya no recibe el SMS (restricción 4 del diagrama ER).
+        // autorización o se borró (con su comunidad), ya no recibe (restricción 4 del diagrama ER).
         var habilitados = await db.Contactos.AsNoTracking()
             .Where(c => ids.Contains(c.Id) && c.Activo && c.Autorizado)
             .ToDictionaryAsync(c => c.Id, c => c.Nombre, ct);
-        return sms.Where(d => habilitados.ContainsKey(d.ContactoId))
-            .Select(d => new DestinatarioSms(d.ContactoId, d.ComunidadId, habilitados[d.ContactoId], d.Direccion)).ToList();
+        return delCanal.Where(d => habilitados.ContainsKey(d.ContactoId))
+            .Select(d => (d.ContactoId, d.ComunidadId, habilitados[d.ContactoId], d.Direccion)).ToList();
     }
 }

@@ -20,7 +20,7 @@ public sealed class ProcesadorColaSms(IServiceScopeFactory scopes, OpcionesSms o
                 do
                 {
                     using var scope = scopes.CreateScope();
-                    procesados = await scope.ServiceProvider.GetRequiredService<DespachadorSms>().ProcesarLoteAsync(stoppingToken);
+                    procesados = await scope.ServiceProvider.GetRequiredService<DespachadorEnvios>().ProcesarLoteAsync(stoppingToken);
                 } while (procesados > 0 && !stoppingToken.IsCancellationRequested);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

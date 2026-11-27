@@ -17,7 +17,7 @@ Entrega: 4/12/2026. Requisitos: RF-04, RF-08, RNF-02, RNF-04 y RNF-08, más los 
 1. **Reglas** (Chain of Responsibility): el aviso no está descartado, la versión está aprobada, **no se difundió antes**, no fue reemplazada, está vigente y está completa.
 2. **CAP emitido:** se toma el XML CAP 1.2 aprobado, se valida contra el XSD oficial, se calcula su SHA-256 y se archiva tal cual en `caps_emitidos`. Un Update o Cancel queda enlazado al CAP emitido de la versión que reemplaza. **Si el XML no es válido, no sale nada por ningún canal.**
 3. **Web:** la versión queda marcada como publicada (`publicada_web_en`) y aparece en la página pública.
-4. **SMS:** un envío por contacto habilitado de la lista de destinos (RF-07). Al difundir se vuelve a mirar cada contacto: si se desactivó o perdió la autorización después de aprobar, ya no recibe.
+4. **SMS, WhatsApp y Email:** un SMS por contacto habilitado de la lista de destinos (RF-07), un mensaje por **grupo de WhatsApp** configurado y un correo por contacto con canal Email. WhatsApp y Email se activan cuando están configurados (ver `docs/whatsapp-email.md`). Al difundir se vuelve a mirar cada contacto: si se desactivó o perdió la autorización después de aprobar, ya no recibe.
 5. **Tareas manuales:** radio y redes sociales, una para toda el área; altavoz, una por comunidad del alcance (también las comunidades sin contactos). Cada tarea lleva el texto listo para leer o publicar.
 6. **Bitácora:** el evento Difundido pasa la versión y el aviso a "Difundido" y queda guardado en `eventos_aviso`.
 
@@ -25,7 +25,7 @@ Cada canal es independiente: si uno falla, queda una incidencia en la bitácora 
 
 **Update y Cancel.** Al difundir un Update o un Cancel, antes que nada se detiene lo que seguía pendiente de las versiones anteriores del mismo evento: los SMS en cola y las tareas sin hacer quedan como **Cancelado**, con el motivo. Lo ya enviado o confirmado no se toca. Un Cancel nunca lleva las instrucciones de la alerta. Usa la instrucción del Cancel oficial o un texto de cierre ("El aviso anterior queda cancelado…"), y no se le vincula protocolo. Un aviso Cancel es apto para difundirse, porque la población debe saber que la alerta terminó.
 
-## Cola SMS (RNF-02 y RNF-08)
+## Cola de envíos: SMS, WhatsApp y Email (RNF-02 y RNF-08)
 
 - La cola es la tabla `trabajos_difusion`: sobrevive a un reinicio de la API.
 - Un servicio en segundo plano revisa la cola cada 5 s (`Sms:IntervaloColaSegundos`). Toma lotes de 200 (`Sms:TamanoLote`) y manda 10 SMS a la vez (`Sms:EnviosSimultaneos`). En las pruebas, 1000 SMS con 20 ms de red cada uno terminan en unos 2 s.

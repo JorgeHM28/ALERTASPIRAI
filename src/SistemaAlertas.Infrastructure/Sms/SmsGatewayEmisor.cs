@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using SistemaAlertas.Application.Difusion.Sms;
@@ -24,7 +23,9 @@ public sealed class SmsGatewayEmisor(HttpClient http, OpcionesSmsGateway opcione
     {
         using var solicitud = new HttpRequestMessage(HttpMethod.Post, $"{opciones.Url.TrimEnd('/')}/message")
         {
-            Content = JsonContent.Create(new { textMessage = new { text = mensaje.Texto }, phoneNumbers = new[] { mensaje.Destino } }, options: Json)
+            // Cuerpo con Content-Length (no "chunked"): el servidor de la app en el celular es pequeño.
+            Content = new StringContent(JsonSerializer.Serialize(new { textMessage = new { text = mensaje.Texto }, phoneNumbers = new[] { mensaje.Destino } }, Json),
+                Encoding.UTF8, "application/json")
         };
         solicitud.Headers.Authorization = new AuthenticationHeaderValue("Basic",
             Convert.ToBase64String(Encoding.UTF8.GetBytes($"{opciones.Usuario}:{opciones.Contrasena}")));

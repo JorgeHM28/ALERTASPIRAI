@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using SistemaAlertas.Application.Abstracciones;
 using SistemaAlertas.Application.Avisos.Eventos;
 using SistemaAlertas.Application.Difusion;
+using SistemaAlertas.Infrastructure.Canales;
 using SistemaAlertas.Infrastructure.Difusion;
 using SistemaAlertas.Infrastructure.Geo;
 using SistemaAlertas.Application.Comunidades;
@@ -84,7 +85,8 @@ public static class DependencyInjection
         services.AddScoped<IDetenedorDespachosAnteriores, DetenedorDespachosAnteriores>();
         services.AddScoped<IPublicadorWeb, PublicadorWebPersistente>();
         services.AddScoped<IColaSms, ColaSmsPersistente>();
-        services.AddScoped<DespachadorSms>();
+        services.AddScoped<DespachadorEnvios>();
+        services.AddCanalesAutomaticos(configuration);
         services.AddScoped<IGestorTareasManuales, GestorTareasPersistente>();
         services.AddScoped<IRegistroIncidencias, RegistroIncidenciasPersistente>();
 

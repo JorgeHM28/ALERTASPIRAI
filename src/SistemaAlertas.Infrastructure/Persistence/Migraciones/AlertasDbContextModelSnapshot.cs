@@ -1054,28 +1054,38 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.ToTable("zonas", (string)null);
                 });
 
-            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioSms", b =>
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioAutomatico", b =>
                 {
                     b.HasBaseType("SistemaAlertas.Domain.Difusion.TrabajoDifusion");
+
+                    b.Property<string>("Asunto")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("asunto");
 
                     b.Property<string>("CodigoProveedor")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("codigo_proveedor");
 
-                    b.Property<Guid>("ContactoId")
+                    b.Property<Guid?>("ContactoId")
                         .HasColumnType("uuid")
                         .HasColumnName("contacto_id");
 
                     b.Property<string>("Destino")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("destino");
 
                     b.Property<int>("Intentos")
                         .HasColumnType("integer")
                         .HasColumnName("intentos");
+
+                    b.Property<string>("NombreDestino")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre_destino");
 
                     b.Property<DateTimeOffset?>("ProximoIntento")
                         .HasColumnType("timestamp with time zone")
@@ -1083,8 +1093,8 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
 
                     b.Property<string>("Texto")
                         .IsRequired()
-                        .HasMaxLength(1600)
-                        .HasColumnType("character varying(1600)")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
                         .HasColumnName("texto");
 
                     b.Property<string>("UltimoError")
@@ -1101,7 +1111,7 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
 
                     b.ToTable("trabajos_difusion", (string)null);
 
-                    b.HasDiscriminator().HasValue("EnvioSms");
+                    b.HasDiscriminator().HasValue("EnvioAutomatico");
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Difusion.TareaManual", b =>
@@ -1129,6 +1139,33 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.ToTable("trabajos_difusion", (string)null);
 
                     b.HasDiscriminator().HasValue("TareaManual");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioEmail", b =>
+                {
+                    b.HasBaseType("SistemaAlertas.Domain.Difusion.EnvioAutomatico");
+
+                    b.ToTable("trabajos_difusion", (string)null);
+
+                    b.HasDiscriminator().HasValue("EnvioEmail");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioSms", b =>
+                {
+                    b.HasBaseType("SistemaAlertas.Domain.Difusion.EnvioAutomatico");
+
+                    b.ToTable("trabajos_difusion", (string)null);
+
+                    b.HasDiscriminator().HasValue("EnvioSms");
+                });
+
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioWhatsApp", b =>
+                {
+                    b.HasBaseType("SistemaAlertas.Domain.Difusion.EnvioAutomatico");
+
+                    b.ToTable("trabajos_difusion", (string)null);
+
+                    b.HasDiscriminator().HasValue("EnvioWhatsApp");
                 });
 
             modelBuilder.Entity("SistemaAlertas.Domain.Avisos.Aviso", b =>
@@ -1453,13 +1490,12 @@ namespace SistemaAlertas.Infrastructure.Persistence.Migraciones
                     b.Navigation("Asignaciones");
                 });
 
-            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioSms", b =>
+            modelBuilder.Entity("SistemaAlertas.Domain.Difusion.EnvioAutomatico", b =>
                 {
                     b.HasOne("SistemaAlertas.Domain.Comunidades.Contacto", null)
                         .WithMany()
                         .HasForeignKey("ContactoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_trabajos_difusion_contactos_contacto_id");
                 });
 

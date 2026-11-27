@@ -248,13 +248,14 @@ public class CapEmitidoConfig : IEntityTypeConfiguration<CapEmitido>
     }
 }
 
-/// <summary>Una sola tabla para la jerarquía (TPH): la columna "tipo" distingue el envío SMS de la tarea manual.</summary>
+/// <summary>Una sola tabla para la jerarquía (TPH): la columna "tipo" distingue los envíos (SMS, WhatsApp, Email) de la tarea manual.</summary>
 public class TrabajoDifusionConfig : IEntityTypeConfiguration<TrabajoDifusion>
 {
     public void Configure(EntityTypeBuilder<TrabajoDifusion> b)
     {
         b.ToTable("trabajos_difusion");
-        b.HasDiscriminator<string>("tipo").HasValue<EnvioSms>("EnvioSms").HasValue<TareaManual>("TareaManual");
+        b.HasDiscriminator<string>("tipo").HasValue<EnvioSms>("EnvioSms").HasValue<EnvioWhatsApp>("EnvioWhatsApp")
+            .HasValue<EnvioEmail>("EnvioEmail").HasValue<TareaManual>("TareaManual");
         b.Property<string>("tipo").HasMaxLength(16);
         b.Property(t => t.Resultado).HasMaxLength(500);
         b.Ignore(t => t.Terminado);
@@ -265,12 +266,14 @@ public class TrabajoDifusionConfig : IEntityTypeConfiguration<TrabajoDifusion>
     }
 }
 
-public class EnvioSmsConfig : IEntityTypeConfiguration<EnvioSms>
+public class EnvioAutomaticoConfig : IEntityTypeConfiguration<EnvioAutomatico>
 {
-    public void Configure(EntityTypeBuilder<EnvioSms> b)
+    public void Configure(EntityTypeBuilder<EnvioAutomatico> b)
     {
-        b.Property(e => e.Destino).HasMaxLength(32);
-        b.Property(e => e.Texto).HasMaxLength(1600);
+        b.Property(e => e.Destino).HasMaxLength(200);
+        b.Property(e => e.NombreDestino).HasMaxLength(200);
+        b.Property(e => e.Asunto).HasMaxLength(300);
+        b.Property(e => e.Texto).HasMaxLength(4000);
         b.Property(e => e.CodigoProveedor).HasMaxLength(100);
         b.Property(e => e.UltimoError).HasMaxLength(500);
         // La cola busca los pendientes cuyo próximo intento ya llegó.
