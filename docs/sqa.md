@@ -4,14 +4,14 @@ Sprint 3. Cómo se prueba el sistema, qué cubre cada prueba, cómo se mide y qu
 
 ## Resumen
 
-| Control | Herramienta | Resultado (26/11/2026) |
+| Control | Herramienta | Resultado (27/11/2026) |
 |---|---|---|
-| Pruebas unitarias y de integración | xUnit, EF Core en memoria | 194 pruebas, todas pasan |
-| Pruebas de la API real | Colección Postman (CLI) contra PostgreSQL/PostGIS | 143 peticiones, 315 aserciones, 0 fallas; se puede correr dos veces seguidas |
-| Cobertura de código | coverlet (`tests/cobertura.runsettings`) | 80 % de líneas y 75 % de ramas (Domain 87 %, Application 80 %, Infrastructure 70 %) |
+| Pruebas unitarias y de integración | xUnit, EF Core en memoria | 205 pruebas, todas pasan |
+| Pruebas de la API real | Colección Postman (CLI) contra PostgreSQL/PostGIS | 145 peticiones y 322 aserciones, 0 fallas. Se puede correr dos veces seguidas: la segunda da 321, porque dos pruebas aceptan "ya estaba hecho" |
+| Cobertura de código | coverlet (`tests/cobertura.runsettings`) | 81,4 % de líneas y 76,5 % de ramas (Domain 87,2 %, Application 81,0 %, Infrastructure 72,3 %) |
 | Análisis estático .NET | Analizadores de .NET, conjunto recomendado (`Directory.Build.props`) | 0 avisos; en CI se compila con `-warnaserror` |
-| Análisis estático frontend | TypeScript estricto (`tsc -b`) y ESLint | 0 errores |
-| Integración continua | GitHub Actions (`.github/workflows/ci.yml`) | Backend, frontend y Postman en cada push |
+| Análisis estático frontend | TypeScript estricto (`tsc -b`) y ESLint | 0 errores, 2 advertencias de estilo de React (`Comunidades.tsx` y `Mapa.tsx`) |
+| Integración continua | GitHub Actions (`.github/workflows/ci.yml`) | Backend, frontend y Postman en verde en GitHub |
 
 ## Cómo correr cada control
 
@@ -55,8 +55,8 @@ postman collection run "postman/collections/SAT Rio Pirai" -e postman/environmen
 | Requisito | Pruebas xUnit | Carpeta Postman |
 |---|---|---|
 | RF-01 Registro e importación de avisos | `ImportadoresTests`, `AvisoAptitudTests`, `ModuloCapTests`, `EjemplosSprint3Tests` | RF-01 Avisos CAP; RF-04 RF-08 (Excel) |
-| RF-02 Versiones Alert, Update y Cancel | `VersionesMensajeTests`, `MensajeCapBuilderTests` | RF-02 RF-11 Mensajes y aprobación |
-| RF-04 Difusión multicanal y CAP emitido | `ServicioDifusionTests`, `TrabajosDifusionTests`, `PatronesComportamientoTests` | RF-06 Web pública y difusión; RF-04 RF-08 |
+| RF-02 Versiones Alert, Update y Cancel (un Cancel no lleva instrucciones de evacuación) | `VersionesMensajeTests`, `MensajeCapBuilderTests` | RF-02 RF-11 Mensajes y aprobación; RF-06 (Preparar Cancel) |
+| RF-04 Difusión multicanal y CAP emitido; un Update o Cancel detiene lo pendiente de la versión anterior | `ServicioDifusionTests`, `TrabajosDifusionTests`, `ColaSmsTests`, `PatronesComportamientoTests` | RF-06 Web pública y difusión; RF-04 RF-08 |
 | RF-05 Protocolos oficiales | `VersionesMensajeTests` | RF-02 RF-11 Mensajes y aprobación |
 | RF-06 Texto y nivel en palabras | `VersionesMensajeTests` | RF-06 Web pública y difusión |
 | RF-07 Destinos por comunidad | `VersionesMensajeTests` | RF-07 Destinos por comunidad |
@@ -67,7 +67,7 @@ postman collection run "postman/collections/SAT Rio Pirai" -e postman/environmen
 | RF-13 Usuarios, roles y registro propio | `DominioTests` | RF-13 Usuarios y permisos; RF-04 RF-08 (registro) |
 | RNF-02 Lote SMS en menos de 5 minutos | `ColaSmsTests` (1000 SMS, envío en paralelo) | — |
 | RNF-04 Bitácora | `DecoradoresSmsTests`, `PatronesComportamientoTests` | RF-04 RF-08 (bitácora del aviso) |
-| RNF-08 Reintentos solo ante fallos recuperables | `TrabajosDifusionTests`, `ColaSmsTests`, `DecoradoresSmsTests` | — |
+| RNF-08 Reintentos solo ante fallos recuperables, revisando antes que la versión siga vigente | `TrabajosDifusionTests`, `ColaSmsTests`, `DecoradoresSmsTests` | — |
 
 ## Reglas de análisis estático que no se aplican
 
@@ -92,8 +92,19 @@ Están en `.editorconfig`, cada una con su motivo:
 | 7 | El login y el registro aceptaban intentos sin límite (fuerza bruta, cuentas masivas). | Revisión de seguridad | Límite por IP (`LimiteAcceso:PorMinuto`, 10 por defecto). |
 | 8 | La cola SMS reintentaba dentro de la misma llamada con esperas de medio segundo; con los 60 s que pide RNF-08 habría bloqueado la cola. | Revisión de RNF-08 | El reintento lo agenda la cola persistente (`EnvioSms.ProximoIntento`). |
 
+### Defectos del informe de pruebas del equipo (27/11/2026)
+
+Un integrante del equipo probó el Sprint 3 por la interfaz y por la API y encontró estos cuatro. Están corregidos y cada uno tiene su prueba.
+
+| # | Defecto | Corrección | Prueba |
+|---|---|---|---|
+| 9 | **RF-04:** un Update o Cancel no detenía los SMS ni las tareas pendientes de la versión anterior: el mensaje viejo podía salir después del nuevo. | Al difundir un Update o Cancel, el primer comando (`DetenerDespachosAnteriores`) cierra como **Cancelado** lo pendiente de las otras versiones del evento, con el motivo. Lo ya enviado o confirmado no se toca. | `ColaSmsTests`, Postman "Difundir el Cancel detiene lo pendiente" |
+| 10 | **RNF-08:** los envíos y reintentos no revisaban que la versión siguiera aprobada y vigente. | Antes de cada envío o reintento la cola consulta `VersionMensaje.MotivoParaDetenerDifusion`: si la versión fue reemplazada, ya no está aprobada o venció, el SMS se cancela y no sale. Un Cancel vale aunque haya vencido. | `ColaSmsTests`, `TrabajosDifusionTests` |
+| 11 | **Riesgo para la población:** una cancelación salía con las instrucciones de evacuación de la alerta. La copiaba de la versión que cancelaba, o la pisaba al vincular un protocolo. | Un Cancel no hereda el texto ni el protocolo de la alerta. Usa la instrucción oficial del Cancel o un texto de cierre (`InstruccionCancelNeutra`), y no admite protocolo. En la pantalla no aparece el selector de protocolo para un Cancel. | `VersionesMensajeTests`, Postman "Preparar Cancel" |
+| 12 | Un aviso Cancel figuraba como "no apto para difusión", pero se difundía. | La regla es que **sí** se difunde: la población debe saber que la alerta terminó. Un Cancel enlazado a su alerta es apto sin expiración, área ni instrucción propias. Si no se encuentra el aviso que cancela, el motivo es "referencia inexistente". | `AvisoAptitudTests` |
+
 ## Riesgos que quedan
 
 - **Twilio no se probó con una cuenta real.** El adaptador está probado con un cliente simulado; los SMS de la demo los "envía" el simulador.
 - **El nivel de riesgo de cada municipio es un criterio propio**, no un dato oficial (ver `datos/cuenca-pirai/README.md`).
-- **La integración continua no se pudo correr todavía en GitHub.** El flujo está escrito y cada paso se probó en local; la primera ejecución real será al subir la rama.
+- **Reintento real de SMS con Twilio** (fallo del proveedor, 60 s, máximo 2): probado solo con proveedores falsos en `ColaSmsTests`, porque el simulador nunca falla.

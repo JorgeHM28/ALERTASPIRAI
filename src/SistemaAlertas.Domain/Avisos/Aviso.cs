@@ -132,6 +132,7 @@ public class Aviso : Entidad
         if (referenciado.Remitente != Remitente)
             throw new ExcepcionDominio("Referencia incoherente: el aviso referenciado es de otro remitente.");
         CadenaId = referenciado.CadenaId ?? referenciado.Id;
+        EvaluarAptitud(DateTimeOffset.UtcNow);
     }
 
     /// <summary>
@@ -168,21 +169,29 @@ public class Aviso : Entidad
     /// Decide si el aviso puede difundirse y deja registrados los motivos si no.
     /// Incompleto: le falta algo que la población necesita (titular o descripción, instrucción, área, expiración).
     /// Vencido: ya pasó su fecha de expiración. Devuelve true si cambió el resultado.
+    /// Un Cancel sí se difunde: la población debe saber que la alerta terminó. No necesita expiración, área ni instrucción
+    /// propias (las toma de la versión que cancela, o una instrucción de cierre), igual que al prepararlo.
     /// </summary>
     public bool EvaluarAptitud(DateTimeOffset ahora)
     {
+        var esCancel = TipoMensaje == TipoMensajeCap.Cancel;
         var faltantes = new List<string>();
         if (string.IsNullOrWhiteSpace(Titular) && string.IsNullOrWhiteSpace(Descripcion)) faltantes.Add("Falta el titular o la descripción.");
-        if (string.IsNullOrWhiteSpace(Instruccion)) faltantes.Add("Falta la instrucción a la población.");
-        if (Area is null || Area.IsEmpty) faltantes.Add("Falta el área afectada (polígono).");
-        if (Expira is null) faltantes.Add("Falta la fecha de expiración.");
+        if (!esCancel)
+        {
+            if (string.IsNullOrWhiteSpace(Instruccion)) faltantes.Add("Falta la instrucción a la población.");
+            if (Area is null || Area.IsEmpty) faltantes.Add("Falta el área afectada (polígono).");
+            if (Expira is null) faltantes.Add("Falta la fecha de expiración.");
+        }
 
-        var vencido = Expira is { } e && e <= ahora;
+        var vencido = !esCancel && Expira is { } e && e <= ahora;
         var motivos = new List<string>(faltantes);
         if (vencido) motivos.Add($"Vencido: expiró el {Expira!.Value.ToUniversalTime():yyyy-MM-dd HH:mm} UTC.");
         if (EstadoCap != EstadoCap.Actual) motivos.Add($"El CAP tiene status {EstadoCap}: no es un aviso real.");
-        if (TipoMensaje is TipoMensajeCap.Cancel or TipoMensajeCap.Ack or TipoMensajeCap.Error)
+        if (TipoMensaje is TipoMensajeCap.Ack or TipoMensajeCap.Error)
             motivos.Add($"Un mensaje {TipoMensaje} no se difunde a la población.");
+        if (esCancel && CadenaId is null)
+            motivos.Add($"Referencia inexistente: el aviso que cancela ({Referencias ?? "sin <references>"}) no está registrado.");
         if (Estado == EstadoAviso.Descartado) motivos.Add("El aviso fue descartado.");
 
         var cambio = AptitudEvaluadaEn <= SinEvaluar || Incompleto != faltantes.Count > 0 || Vencido != vencido

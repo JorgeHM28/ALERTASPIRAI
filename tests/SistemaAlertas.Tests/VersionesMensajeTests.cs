@@ -431,4 +431,58 @@ public class VersionesMensajeTests
         var modulo = new ModuloCap(new FabricaImportadores([new ImportadorCapXml(), new ImportadorCapJson()]), new ValidadorCap());
         Assert.False(modulo.Validar("<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\"><identifier>x</identifier></alert>").Valido);
     }
+
+    // ---------- Sprint 3: un Cancel no lleva instrucciones de evacuación ----------
+
+    [Fact]
+    public void Un_cancel_preparado_desde_la_alerta_no_hereda_su_instruccion_ni_su_protocolo()
+    {
+        var alerta = Aprobada();
+        Assert.NotNull(alerta.ProtocoloId);
+
+        var contenido = VersionMensaje.ContenidoDerivado(TipoMensajeCap.Cancel, alerta.Contenido, null, null, null);
+        var cancel = new VersionMensaje(alerta.AvisoId, alerta.CadenaId, 2, TipoMensajeCap.Cancel, contenido, Area, EstadoCap.Actual,
+            "sat@santacruz.gob.bo", Operador, alerta);
+
+        Assert.Null(cancel.ProtocoloId);
+        Assert.Equal(VersionMensaje.InstruccionCancelNeutra, cancel.Contenido.Instruccion);
+        Assert.DoesNotContain("Evacuar", cancel.Contenido.Instruccion);
+        Assert.StartsWith("Fin del aviso", cancel.Contenido.Titular);
+        // Los hechos oficiales se conservan.
+        Assert.Equal(alerta.Contenido.Evento, cancel.Contenido.Evento);
+        cancel.EnviarARevision("<alert/>", Ahora, Ahora);
+        Assert.Equal(EstadoVersion.EnRevision, cancel.Estado);
+    }
+
+    [Fact]
+    public void Un_cancel_respeta_lo_que_redacta_el_operador()
+    {
+        var alerta = Aprobada();
+        var c = VersionMensaje.ContenidoDerivado(TipoMensajeCap.Cancel, alerta.Contenido, "Termina la alerta", null, "Puede volver a su vivienda.");
+        Assert.Equal("Termina la alerta", c.Titular);
+        Assert.Equal("Puede volver a su vivienda.", c.Instruccion);
+    }
+
+    [Fact]
+    public void Un_update_si_parte_del_texto_aprobado_y_conserva_su_protocolo()
+    {
+        var alerta = Aprobada();
+        var contenido = VersionMensaje.ContenidoDerivado(TipoMensajeCap.Update, alerta.Contenido, null, null, null);
+        var update = new VersionMensaje(alerta.AvisoId, alerta.CadenaId, 2, TipoMensajeCap.Update, contenido, Area, EstadoCap.Actual,
+            "sat@santacruz.gob.bo", Operador, alerta);
+        Assert.Equal(alerta.Contenido.Instruccion, update.Contenido.Instruccion);
+        Assert.Equal(alerta.ProtocoloId, update.ProtocoloId);
+    }
+
+    [Fact]
+    public void A_un_cancel_no_se_le_vincula_un_protocolo()
+    {
+        var alerta = Aprobada();
+        var cancel = new VersionMensaje(alerta.AvisoId, alerta.CadenaId, 2, TipoMensajeCap.Cancel,
+            VersionMensaje.ContenidoDerivado(TipoMensajeCap.Cancel, alerta.Contenido, null, null, "Puede volver a su vivienda."), Area,
+            EstadoCap.Actual, "sat@santacruz.gob.bo", Operador, alerta);
+        var ex = Assert.Throws<ExcepcionDominio>(() => cancel.VincularProtocolo(Protocolo()));
+        Assert.Contains("Cancel no lleva protocolo", ex.Message);
+        Assert.Equal("Puede volver a su vivienda.", cancel.Contenido.Instruccion);
+    }
 }

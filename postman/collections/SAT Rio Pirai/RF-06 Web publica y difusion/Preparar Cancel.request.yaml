@@ -20,4 +20,5 @@ scripts:
         pm.expect(d.resumen.tipo).to.eql('Cancel');
         pm.expect(d.referenciaVersionId).to.eql(pm.collectionVariables.get('versionUpdateId'));
       });
+      pm.test('un Cancel no hereda el protocolo de la alerta', () => pm.expect(d.protocoloId).to.be.null);
       pm.collectionVariables.set('versionCancelId', d.resumen.id);

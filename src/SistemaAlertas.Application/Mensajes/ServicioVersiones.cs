@@ -46,11 +46,14 @@ public sealed class ServicioVersiones(IAppDbContext db, IModuloCap moduloCap, Op
         else
             tipo = vigente is null ? TipoMensajeCap.Alert : TipoMensajeCap.Update;
 
+        // Un Cancel usa la instrucción del Cancel oficial o un texto neutro, nunca la de la alerta (instrucciones de evacuación).
+        var instruccionAviso = tipo == TipoMensajeCap.Cancel && string.IsNullOrWhiteSpace(aviso.Instruccion)
+            ? VersionMensaje.InstruccionCancelNeutra : aviso.Instruccion;
         var contenido = new ContenidoMensaje(aviso.Evento, aviso.Urgencia, aviso.Severidad, aviso.Certeza,
-                aviso.Titular, aviso.Descripcion, aviso.Instruccion,
+                aviso.Titular, aviso.Descripcion, instruccionAviso,
                 aviso.Vigente, aviso.Expira ?? vigente?.Contenido.Expira, aviso.DescripcionArea ?? vigente?.Contenido.DescripcionArea)
             .Redactar(redaccion.Titular ?? aviso.Titular, redaccion.Descripcion ?? aviso.Descripcion,
-                redaccion.Instruccion ?? aviso.Instruccion);
+                redaccion.Instruccion ?? instruccionAviso);
 
         var version = new VersionMensaje(aviso.Id, cadenaId, await SiguienteNumeroAsync(cadenaId, ct), tipo, contenido,
             aviso.Area?.Copy() ?? vigente?.Area?.Copy(), aviso.EstadoCap, opciones.Remitente, usuarioId, vigente);
@@ -76,8 +79,7 @@ public sealed class ServicioVersiones(IAppDbContext db, IModuloCap moduloCap, Op
         if (aviso.Estado == EstadoAviso.Descartado) throw new ExcepcionDominio("El aviso fue descartado.");
         await ExigirSinVersionEnCursoAsync(referencia.CadenaId, ct);
 
-        var contenido = referencia.Contenido.Redactar(redaccion.Titular ?? referencia.Contenido.Titular,
-            redaccion.Descripcion ?? referencia.Contenido.Descripcion, redaccion.Instruccion ?? referencia.Contenido.Instruccion);
+        var contenido = VersionMensaje.ContenidoDerivado(tipo, referencia.Contenido, redaccion.Titular, redaccion.Descripcion, redaccion.Instruccion);
         var version = new VersionMensaje(referencia.AvisoId, referencia.CadenaId, await SiguienteNumeroAsync(referencia.CadenaId, ct),
             tipo, contenido, referencia.Area?.Copy(), referencia.EstadoCap, opciones.Remitente, usuarioId, referencia);
         db.VersionesMensaje.Add(version);

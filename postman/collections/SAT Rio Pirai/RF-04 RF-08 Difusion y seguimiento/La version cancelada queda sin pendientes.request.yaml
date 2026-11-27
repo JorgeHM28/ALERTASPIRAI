@@ -1,0 +1,22 @@
+$kind: http-request
+name: 'La versión cancelada queda sin pendientes'
+method: GET
+url: '{{baseUrl}}/api/difusion/seguimiento/{{versionUpdateId}}'
+order: 1600
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('responde 200', () => pm.response.to.have.status(200));
+      const d = pm.response.json();
+      pm.test('RF-04: no le queda nada pendiente', () => {
+        pm.expect(d.resumen.sms.pendientes).to.eql(0);
+        pm.expect(d.resumen.tareas.pendientes).to.eql(0);
+      });
+      pm.test('lo detenido figura como Cancelado con su motivo', () => {
+        const canceladas = d.tareas.filter(t => t.estado === 'Cancelado');
+        pm.expect(canceladas.length).to.be.at.least(1);
+        canceladas.forEach(t => pm.expect(t.resultado).to.include('lo reemplazó la versión'));
+      });
+      pm.test('la tarea ya confirmada sigue confirmada', () =>
+        pm.expect(d.tareas.find(t => t.id === pm.collectionVariables.get('tareaRadioId')).estado).to.eql('Confirmada'));

@@ -93,7 +93,8 @@ public class VersionMensaje : Entidad
         PreparadoPorId = preparadoPorId;
         IdentificadorCap = $"SAT-PIRAI-{CreadoEn:yyyyMMdd}-{Id.ToString("N")[..12]}";
         // Un Update que conserva las instrucciones de la versión que corrige conserva también su protocolo.
-        if (referencia?.ProtocoloId is not null && contenido.Instruccion == referencia.Contenido.Instruccion)
+        // Un Cancel nunca: su mensaje es que la alerta terminó, no las instrucciones de la alerta.
+        if (tipo != TipoMensajeCap.Cancel && referencia?.ProtocoloId is not null && contenido.Instruccion == referencia.Contenido.Instruccion)
             CopiarProtocolo(referencia);
     }
 
@@ -166,6 +167,8 @@ public class VersionMensaje : Entidad
     public void VincularProtocolo(ProtocoloOficial protocolo)
     {
         EstadoActual.Editar(this);
+        if (Tipo == TipoMensajeCap.Cancel)
+            throw new ExcepcionDominio("Un Cancel no lleva protocolo: sus instrucciones dicen que la alerta terminó, no qué hacer ante ella.");
         if (!protocolo.Activo) throw new ExcepcionDominio($"El protocolo «{protocolo.Titulo}» está desactivado.");
         ProtocoloId = protocolo.Id;
         ProtocoloTitulo = protocolo.Titulo;
@@ -246,6 +249,22 @@ public class VersionMensaje : Entidad
         if (!esAdministrador && PreparadoPorId != usuarioId)
             throw new UnauthorizedAccessException("Solo quien preparó el borrador o un administrador puede eliminarlo.");
     }
+
+    /// <summary>Instrucción de un Cancel cuando el aviso oficial no trae la suya: nunca la de la alerta que cancela.</summary>
+    public const string InstruccionCancelNeutra =
+        "El aviso anterior queda cancelado. Siga las indicaciones de las autoridades de su comunidad y manténgase atento a nuevos avisos.";
+
+    /// <summary>
+    /// Contenido de un Update o Cancel preparado desde una versión aprobada. Un Update parte del texto aprobado (Prototype).
+    /// Un Cancel no: decir "evacúe" en una cancelación confunde a la población, así que parte de un titular, una descripción
+    /// y una instrucción de cierre. Lo que el operador redacte reemplaza a esos textos.
+    /// </summary>
+    public static ContenidoMensaje ContenidoDerivado(TipoMensajeCap tipo, ContenidoMensaje aprobado, string? titular, string? descripcion,
+        string? instruccion) => tipo == TipoMensajeCap.Cancel
+        ? aprobado.Redactar(titular ?? $"Fin del aviso: {aprobado.Evento}",
+            descripcion ?? $"Se cancela el aviso anterior ({aprobado.Titular ?? aprobado.Evento}).",
+            instruccion ?? InstruccionCancelNeutra)
+        : aprobado.Redactar(titular ?? aprobado.Titular, descripcion ?? aprobado.Descripcion, instruccion ?? aprobado.Instruccion);
 
     /// <summary>
     /// RF-04 y RNF-08: por qué lo que quedó pendiente de esta versión ya no debe salir. Null si sigue valiendo:

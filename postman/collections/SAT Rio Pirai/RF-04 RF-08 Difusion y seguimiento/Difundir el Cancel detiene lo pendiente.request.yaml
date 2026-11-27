@@ -1,0 +1,19 @@
+$kind: http-request
+name: 'Difundir el Cancel detiene lo pendiente de la versión anterior'
+method: POST
+url: '{{baseUrl}}/api/difusion/{{versionCancelId}}'
+order: 1500
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tokenAprobador}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // Se puede correr varias veces: la segunda vez el Cancel ya está difundido.
+      pm.test('responde 200 (o 400 si ya se difundió en una corrida anterior)', () => pm.expect([200, 400]).to.include(pm.response.code));
+      if (pm.response.code === 200) {
+        pm.test('RF-04: detuvo lo que seguía pendiente de la versión que cancela', () => pm.expect(pm.response.json().trabajosDetenidos).to.be.at.least(1));
+      }

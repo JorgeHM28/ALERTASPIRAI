@@ -23,11 +23,14 @@ Entrega: 4/12/2026. Requisitos: RF-04, RF-08, RNF-02, RNF-04 y RNF-08, más los 
 
 Cada canal es independiente: si uno falla, queda una incidencia en la bitácora y los demás siguen.
 
+**Update y Cancel.** Al difundir un Update o un Cancel, antes que nada se detiene lo que seguía pendiente de las versiones anteriores del mismo evento: los SMS en cola y las tareas sin hacer quedan como **Cancelado**, con el motivo. Lo ya enviado o confirmado no se toca. Un Cancel nunca lleva las instrucciones de la alerta. Usa la instrucción del Cancel oficial o un texto de cierre ("El aviso anterior queda cancelado…"), y no se le vincula protocolo. Un aviso Cancel es apto para difundirse, porque la población debe saber que la alerta terminó.
+
 ## Cola SMS (RNF-02 y RNF-08)
 
 - La cola es la tabla `trabajos_difusion`: sobrevive a un reinicio de la API.
 - Un servicio en segundo plano revisa la cola cada 5 s (`Sms:IntervaloColaSegundos`). Toma lotes de 200 (`Sms:TamanoLote`) y manda 10 SMS a la vez (`Sms:EnviosSimultaneos`). En las pruebas, 1000 SMS con 20 ms de red cada uno terminan en unos 2 s.
 - **Reintentos:** solo ante un fallo recuperable (proveedor saturado, sin red). Se reintenta a los 60 s, como máximo 2 veces (3 intentos en total). Un fallo definitivo, como un número inválido, no se reintenta.
+- Antes de cada envío o reintento se revisa la versión. Si fue reemplazada por un Update o Cancel, ya no está aprobada o venció, el SMS queda **Cancelado** y no sale.
 - Un aviso de prueba o simulacro (`status` Exercise o Test) no sale por un proveedor real: queda **Bloqueado**. Con el simulador sale marcado `[PRUEBA]`.
 
 ## Seguimiento (RF-08)

@@ -67,4 +67,28 @@ public class AvisoAptitudTests
         Assert.Equal("application/json", aviso.TipoContenidoOriginal);
         Assert.Equal(64, aviso.HashOriginal!.Length);
     }
+
+    // ---------- Sprint 3: un Cancel oficial sí se difunde ----------
+
+    private static MensajeCap Cancel() =>
+        new MensajeCapBuilder().DeRemitente("coed@santacruz.gob.bo").ConTipo(TipoMensajeCap.Cancel)
+            .ConReferencias("coed@santacruz.gob.bo,ALERTA-1,2026-12-01T07:00:00-04:00")
+            .AgregarInfo(i => i.ConEvento("Crecida").ConUrgencia(UrgenciaCap.Past).ConSeveridad(SeveridadCap.Minor)
+                .ConCerteza(CertezaCap.Observed).ConTitular("Fin de la alerta"))
+            .Build();
+
+    [Fact]
+    public void Un_cancel_enlazado_a_su_alerta_es_apto_aunque_no_traiga_expiracion_area_ni_instruccion()
+    {
+        var alerta = new Aviso(Mensaje(DateTimeOffset.UtcNow.AddHours(6)), FormatoAviso.Manual, "<alert/>", Area, Guid.NewGuid());
+        var cancel = new Aviso(Cancel(), FormatoAviso.CapXml, "<alert/>", null, Guid.NewGuid());
+        Assert.False(cancel.AptoParaDifusion);
+        Assert.Contains(cancel.MotivosNoApto, m => m.Contains("Referencia inexistente"));
+
+        cancel.EnlazarCadena(alerta);
+
+        Assert.True(cancel.AptoParaDifusion, string.Join(" ", cancel.MotivosNoApto));
+        Assert.DoesNotContain(cancel.MotivosNoApto, m => m.Contains("no se difunde"));
+        Assert.Empty(cancel.MotivosNoPreparable(DateTimeOffset.UtcNow));
+    }
 }
