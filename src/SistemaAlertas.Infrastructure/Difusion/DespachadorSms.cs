@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SistemaAlertas.Application.Abstracciones;
+using SistemaAlertas.Application.Difusion;
 using SistemaAlertas.Application.Difusion.Sms;
 using SistemaAlertas.Domain.Difusion;
 
@@ -10,10 +11,12 @@ namespace SistemaAlertas.Infrastructure.Difusion;
 /// Procesa un lote de la cola SMS (RF-04, RNF-02, RNF-08): toma los envíos pendientes cuyo próximo intento ya llegó,
 /// los manda al proveedor en paralelo (con un tope de envíos simultáneos) y guarda el resultado de cada uno.
 /// Un fallo recuperable queda agendado 60 s después, hasta 2 reintentos; un fallo definitivo termina el envío.
+/// RNF-08: antes de cada envío o reintento se mira la versión. Si fue reemplazada, ya no está aprobada o venció,
+/// el envío se cancela con el motivo y no sale.
 /// Lo llama ProcesadorColaSms cada pocos segundos; es una clase aparte para poder probarla sin el servicio en segundo plano.
 /// </summary>
-public sealed class DespachadorSms(IAppDbContext db, IEmisorSms emisor, OpcionesSms opciones, TimeProvider reloj,
-    ILogger<DespachadorSms>? logger = null)
+public sealed class DespachadorSms(IAppDbContext db, IVersionesDifusion versiones, IEmisorSms emisor, OpcionesSms opciones,
+    TimeProvider reloj, ILogger<DespachadorSms>? logger = null)
 {
     /// <returns>Cuántos envíos se intentaron en este lote.</returns>
     public async Task<int> ProcesarLoteAsync(CancellationToken ct = default)
@@ -26,8 +29,19 @@ public sealed class DespachadorSms(IAppDbContext db, IEmisorSms emisor, Opciones
             .ToListAsync(ct);
         if (lote.Count == 0) return 0;
 
+        var motivos = await versiones.MotivosParaDetenerAsync(lote.Select(e => e.VersionId).Distinct().ToList(), ahora, ct);
+        var cancelados = 0;
+        foreach (var envio in lote)
+            if (motivos.GetValueOrDefault(envio.VersionId) is { } motivo && envio.Cancelar(motivo, ahora)) cancelados++;
+        var porEnviar = lote.Where(e => !e.Terminado).ToList();
+        if (porEnviar.Count == 0)
+        {
+            await db.SaveChangesAsync(ct);
+            return lote.Count;
+        }
+
         using var cupo = new SemaphoreSlim(Math.Max(1, opciones.EnviosSimultaneos));
-        var resultados = await Task.WhenAll(lote.Select(async envio =>
+        var resultados = await Task.WhenAll(porEnviar.Select(async envio =>
         {
             await cupo.WaitAsync(ct);
             try
@@ -47,14 +61,15 @@ public sealed class DespachadorSms(IAppDbContext db, IEmisorSms emisor, Opciones
 
         var fin = reloj.GetUtcNow();
         var espera = TimeSpan.FromSeconds(Math.Max(0, opciones.EsperaReintentoSegundos));
-        for (var i = 0; i < lote.Count; i++)
+        for (var i = 0; i < porEnviar.Count; i++)
         {
             var r = resultados[i];
-            lote[i].RegistrarIntento(new ResultadoIntento(r.Exitoso, r.IdProveedor, r.Error, r.Recuperable, r.Bloqueado),
+            porEnviar[i].RegistrarIntento(new ResultadoIntento(r.Exitoso, r.IdProveedor, r.Error, r.Recuperable, r.Bloqueado),
                 fin, opciones.MaxReintentos, espera);
         }
         await db.SaveChangesAsync(ct);
-        logger?.LogInformation("Cola SMS: lote de {Cantidad} envíos procesado en {Ms} ms", lote.Count, (fin - ahora).TotalMilliseconds);
+        logger?.LogInformation("Cola SMS: {Enviados} envíos procesados y {Cancelados} cancelados en {Ms} ms",
+            porEnviar.Count, cancelados, (fin - ahora).TotalMilliseconds);
         return lote.Count;
     }
 }

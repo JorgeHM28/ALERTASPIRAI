@@ -12,6 +12,7 @@ const REFRESCO_MS = 10_000
 const NOMBRE_CANAL: Record<CanalDifusion, string> = { Sms: 'SMS', Radio: 'Radio', Altavoz: 'Altavoz', RedesSociales: 'Redes sociales' }
 const NOMBRE_ESTADO: Record<EstadoTrabajo, string> = {
   Pendiente: 'Pendiente', Enviado: 'Enviado', Fallido: 'Fallido', Bloqueado: 'Bloqueado', Confirmada: 'Realizada', NoRealizada: 'No realizada',
+  Cancelado: 'Cancelado',
 }
 
 function Estado({ estado }: { estado: EstadoTrabajo | null }) {
@@ -23,8 +24,8 @@ function Estado({ estado }: { estado: EstadoTrabajo | null }) {
 function TextoConteo({ c, tareas }: { c: ConteoEstados; tareas?: boolean }) {
   if (c.total === 0) return <span className="tenue">ninguno</span>
   const partes = tareas
-    ? [`${c.confirmadas} realizadas`, c.noRealizadas ? `${c.noRealizadas} no realizadas` : '', c.pendientes ? `${c.pendientes} pendientes` : '']
-    : [`${c.enviados} enviados`, c.fallidos ? `${c.fallidos} fallidos` : '', c.bloqueados ? `${c.bloqueados} bloqueados` : '', c.pendientes ? `${c.pendientes} pendientes` : '']
+    ? [`${c.confirmadas} realizadas`, c.noRealizadas ? `${c.noRealizadas} no realizadas` : '', c.cancelados ? `${c.cancelados} canceladas` : '', c.pendientes ? `${c.pendientes} pendientes` : '']
+    : [`${c.enviados} enviados`, c.fallidos ? `${c.fallidos} fallidos` : '', c.bloqueados ? `${c.bloqueados} bloqueados` : '', c.cancelados ? `${c.cancelados} cancelados` : '', c.pendientes ? `${c.pendientes} pendientes` : '']
   return <span>{partes.filter(Boolean).join(' · ')} <span className="tenue">de {c.total}</span></span>
 }
 
@@ -125,7 +126,7 @@ function Detalle({ d, editar, alCambiar }: { d: SeguimientoDetalle; editar: bool
         <thead><tr><th>Comunidad</th><th>Teléfono</th><th>Estado</th><th>Intentos</th><th>Detalle</th></tr></thead>
         <tbody>{d.envios.map(e => <tr key={e.id}>
           <td>{e.comunidad ?? '—'}</td><td>{e.destino}</td><td><Estado estado={e.estado} /></td><td>{e.intentos}</td>
-          <td>{e.estado === 'Pendiente' && e.proximoIntento ? `Próximo intento ${fecha(e.proximoIntento)}` : e.ultimoError ?? e.codigoProveedor ?? ''}</td>
+          <td>{e.estado === 'Pendiente' && e.proximoIntento ? `Próximo intento ${fecha(e.proximoIntento)}` : e.estado === 'Cancelado' ? e.resultado ?? '' : e.ultimoError ?? e.codigoProveedor ?? ''}</td>
         </tr>)}</tbody></table></div>
     </>}
   </div>
@@ -155,6 +156,7 @@ function Tareas({ tareas, editar, alCambiar }: { tareas: TareaVista[]; editar: b
     </div>
     <p className="texto-tarea">{t.textoLegible}</p>
     {t.observacion && <p className="tenue">Observación: {t.observacion}</p>}
+    {t.estado === 'Cancelado' && t.resultado && <p className="tenue">{t.resultado}</p>}
     {abierta?.id === t.id && <form onSubmit={cerrar} className="tarjeta interior">
       <label>{abierta.modo === 'confirmar' ? 'Observación (opcional)' : 'Motivo (obligatorio)'}
         <input value={texto} onChange={e => setTexto(e.target.value)} required={abierta.modo === 'no-realizada'} maxLength={500} autoFocus /></label>

@@ -85,23 +85,23 @@ export interface ListaDestinos {
 }
 export interface ResultadoDifusion {
   versionId: string; esPrueba: boolean; capEmitidoId: string; sha256: string; publicadoEnWeb: boolean; urlWeb: string | null
-  trabajosSms: number; tareasManuales: number; incidencias: { canal: string; detalle: string }[]
+  trabajosSms: number; tareasManuales: number; incidencias: { canal: string; detalle: string }[]; trabajosDetenidos: number
 }
 // RF-08: seguimiento de la difusión.
-export type EstadoTrabajo = 'Pendiente' | 'Enviado' | 'Fallido' | 'Bloqueado' | 'Confirmada' | 'NoRealizada'
+export type EstadoTrabajo = 'Pendiente' | 'Enviado' | 'Fallido' | 'Bloqueado' | 'Confirmada' | 'NoRealizada' | 'Cancelado'
 export type CanalDifusion = 'Sms' | 'Radio' | 'Altavoz' | 'RedesSociales'
-export interface ConteoEstados { total: number; pendientes: number; enviados: number; fallidos: number; bloqueados: number; confirmadas: number; noRealizadas: number; terminados: number }
+export interface ConteoEstados { total: number; pendientes: number; enviados: number; fallidos: number; bloqueados: number; confirmadas: number; noRealizadas: number; cancelados: number; terminados: number }
 export interface SeguimientoResumen {
   versionId: string; avisoId: string; numero: number; tipo: string; titular: string; esPrueba: boolean; difundidaEn: string
   sms: ConteoEstados; tareas: ConteoEstados; avance: number; completo: boolean
 }
 export interface TareaVista {
   id: string; canal: CanalDifusion; comunidadId: string | null; comunidad: string | null; estado: EstadoTrabajo; textoLegible: string
-  observacion: string | null; confirmadoPor: string | null; creadaEn: string; resultadoEn: string | null
+  observacion: string | null; confirmadoPor: string | null; creadaEn: string; resultadoEn: string | null; resultado: string | null
 }
 export interface EnvioSmsVista {
   id: string; comunidad: string | null; destino: string; estado: EstadoTrabajo; intentos: number; codigoProveedor: string | null
-  ultimoError: string | null; proximoIntento: string | null; resultadoEn: string | null
+  ultimoError: string | null; proximoIntento: string | null; resultadoEn: string | null; resultado: string | null
 }
 export interface SeguimientoDetalle {
   resumen: SeguimientoResumen

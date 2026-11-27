@@ -638,6 +638,7 @@ h3[tabindex="-1"]:focus-visible { outline: 3px solid var(--primario); outline-of
 .estado-trabajo { display: inline-block; padding: .1rem .5rem; border-radius: 6px; font-size: .75rem; font-weight: 700; border: 1px solid var(--borde); background: var(--fondo); }
 .estado-trabajo-Pendiente { color: var(--estado-revision-fg); border-color: var(--estado-revision-borde); background: var(--estado-revision-bg); }
 .estado-trabajo-Enviado, .estado-trabajo-Confirmada { color: var(--estado-aprobada-fg); border-color: var(--estado-aprobada-borde); background: var(--estado-aprobada-bg); }
+.estado-trabajo-Cancelado { color: var(--texto); opacity: .8; border-style: dashed; }
 .estado-trabajo-Fallido, .estado-trabajo-NoRealizada, .estado-trabajo-Bloqueado { color: var(--estado-rechazada-fg); border-color: var(--estado-rechazada-borde); background: var(--estado-rechazada-bg); }
 .avance { position: relative; min-width: 120px; height: 1.35rem; border-radius: 999px; background: var(--fondo); border: 1px solid var(--borde); overflow: hidden; }
 .avance > span { position: absolute; inset: 0 auto 0 0; background: var(--estado-aprobada-borde); }

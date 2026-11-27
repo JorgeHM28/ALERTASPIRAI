@@ -11,6 +11,8 @@ public sealed class ContextoDifusion(VersionAprobada version, TimeProvider? relo
     public VersionAprobada Version { get; } = version;
     public PublicacionWeb? Publicacion { get; set; }
     public int TrabajosSms { get; set; }
+    /// <summary>Trabajos pendientes de versiones anteriores que se cancelaron (RF-04).</summary>
+    public int TrabajosDetenidos { get; set; }
     public List<TareaManual> Tareas { get; } = [];
 
     /// <summary>Un comando que no falla pero no pudo hacer su trabajo deja aquí el motivo; se registra como incidencia.</summary>
@@ -35,6 +37,18 @@ public interface IComandoDifusion
     /// <summary>Nombre del canal para las incidencias.</summary>
     string Canal { get; }
     Task EjecutarAsync(ContextoDifusion contexto, CancellationToken ct = default);
+}
+
+/// <summary>
+/// RF-04: primer comando. Un Update o Cancel detiene los SMS y las tareas que seguían pendientes de las versiones
+/// anteriores del mismo evento, para que no salga el mensaje viejo después del nuevo.
+/// </summary>
+public sealed class DetenerDespachosAnteriores(IDetenedorDespachosAnteriores detenedor) : IComandoDifusion
+{
+    public string Canal => "Versiones anteriores";
+
+    public async Task EjecutarAsync(ContextoDifusion c, CancellationToken ct = default) =>
+        c.TrabajosDetenidos = await detenedor.DetenerAsync(c.Version, ct);
 }
 
 public sealed class PublicarEnWeb(IPublicadorWeb publicador) : IComandoDifusion

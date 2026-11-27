@@ -247,6 +247,19 @@ public class VersionMensaje : Entidad
             throw new UnauthorizedAccessException("Solo quien preparó el borrador o un administrador puede eliminarlo.");
     }
 
+    /// <summary>
+    /// RF-04 y RNF-08: por qué lo que quedó pendiente de esta versión ya no debe salir. Null si sigue valiendo:
+    /// aprobada o difundida, no reemplazada por un Update o Cancel y vigente (un Cancel vale aunque haya vencido).
+    /// </summary>
+    public string? MotivoParaDetenerDifusion(DateTimeOffset ahora)
+    {
+        if (ReemplazadaPorId is not null) return $"La versión {Numero} fue reemplazada por un Update o Cancel: no se envía.";
+        if (!EstadoActual.PermiteDifundir) return $"La versión {Numero} está {Estado}: no se envía.";
+        if (Tipo != TipoMensajeCap.Cancel && Contenido.Expira is { } e && e <= ahora)
+            return $"La versión {Numero} venció el {e.ToUniversalTime():yyyy-MM-dd HH:mm} UTC: no se envía.";
+        return null;
+    }
+
     public void MarcarDifundida(DateTimeOffset ahora)
     {
         Estado = EstadoActual.Difundir(this);

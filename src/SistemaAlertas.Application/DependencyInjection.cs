@@ -41,6 +41,7 @@ public static class DependencyInjection
             services.AddSingleton<IRedaccionCanal>(redaccion);
 
         // Command: un comando por canal, en el orden en que se ejecutan. Agregar un canal es una línea más.
+        services.AddScoped<IComandoDifusion, DetenerDespachosAnteriores>();
         services.AddScoped<IComandoDifusion, PublicarEnWeb>();
         services.AddScoped<IComandoDifusion, EncolarSms>();
         services.AddScoped<IComandoDifusion, CrearTareasManuales>();

@@ -146,4 +146,38 @@ public class TrabajosDifusionTests
         Assert.Equal("Update", Cap("Update", true, Guid.NewGuid()).Tipo);
         Assert.Null(Cap("Alert", true, null).ReferenciaCapId);
     }
+
+    [Fact]
+    public void Cancelar_cierra_un_pendiente_y_no_toca_lo_terminado()
+    {
+        var e = Envio();
+        e.RegistrarIntento(Pasajero, T0);
+        Assert.True(e.Cancelar("Reemplazada", T0.AddSeconds(10)));
+        Assert.Equal(EstadoTrabajo.Cancelado, e.Estado);
+        Assert.Null(e.ProximoIntento);
+        Assert.Equal("Reemplazada", e.Resultado);
+
+        var hecho = Envio();
+        hecho.RegistrarIntento(Ok, T0);
+        Assert.False(hecho.Cancelar("Reemplazada", T0));
+        Assert.Equal(EstadoTrabajo.Enviado, hecho.Estado);
+
+        var tarea = Tarea();
+        Assert.True(tarea.Cancelar("Reemplazada", T0));
+        Assert.Throws<ExcepcionDominio>(() => tarea.Confirmar(Guid.NewGuid(), null, T0));
+    }
+
+    [Fact]
+    public void Una_version_deja_de_valer_si_la_reemplazan_o_vence_pero_un_cancel_vale_aunque_venza()
+    {
+        var t = ColaSmsTests.T0;
+        var cadena = Guid.NewGuid();
+        var v1 = ColaSmsTests.VersionAprobada(cadena, expira: t.AddHours(1));
+        Assert.Null(v1.MotivoParaDetenerDifusion(t));
+        Assert.Contains("venció", v1.MotivoParaDetenerDifusion(t.AddHours(2)));
+
+        var cancel = ColaSmsTests.VersionAprobada(cadena, 2, Domain.Cap.TipoMensajeCap.Cancel, v1, expira: t.AddHours(1));
+        Assert.Contains("reemplazada", v1.MotivoParaDetenerDifusion(t));
+        Assert.Null(cancel.MotivoParaDetenerDifusion(t.AddHours(2)));
+    }
 }

@@ -8,8 +8,9 @@ public enum CanalDifusion { Sms, Radio, Altavoz, RedesSociales }
 /// <summary>
 /// Estado de un trabajo de difusión.
 /// SMS: Pendiente → Enviado | Fallido | Bloqueado. Tarea manual: Pendiente → Confirmada | NoRealizada.
+/// Cualquiera de los dos: Pendiente → Cancelado, cuando su versión fue reemplazada por un Update o Cancel, o venció.
 /// </summary>
-public enum EstadoTrabajo { Pendiente, Enviado, Fallido, Bloqueado, Confirmada, NoRealizada }
+public enum EstadoTrabajo { Pendiente, Enviado, Fallido, Bloqueado, Confirmada, NoRealizada, Cancelado }
 
 /// <summary>
 /// Trabajo de difusión (RF-04, RF-08): lo que hay que hacer por un canal para una versión aprobada.
@@ -41,6 +42,17 @@ public abstract class TrabajoDifusion : Entidad
         Canal = canal;
         EsPrueba = esPrueba;
         CreadoEn = ahora;
+    }
+
+    /// <summary>
+    /// RF-04 y RNF-08: un trabajo pendiente de una versión que ya no vale (reemplazada o vencida) no debe salir.
+    /// Se cierra como Cancelado con el motivo. Devuelve false si ya había terminado (lo hecho no se deshace).
+    /// </summary>
+    public virtual bool Cancelar(string motivo, DateTimeOffset ahora)
+    {
+        if (Terminado) return false;
+        Terminar(EstadoTrabajo.Cancelado, motivo, ahora);
+        return true;
     }
 
     protected void Terminar(EstadoTrabajo estado, string resultado, DateTimeOffset ahora)
@@ -86,6 +98,13 @@ public class EnvioSms : TrabajoDifusion
         Destino = destino.Trim();
         Texto = texto;
         ProximoIntento = ahora;
+    }
+
+    public override bool Cancelar(string motivo, DateTimeOffset ahora)
+    {
+        if (!base.Cancelar(motivo, ahora)) return false;
+        ProximoIntento = null;
+        return true;
     }
 
     /// <summary>Registra el resultado de un intento y decide si toca reintentar (RNF-08).</summary>

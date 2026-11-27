@@ -80,6 +80,8 @@ public static class DependencyInjection
         services.AddScoped<IFuenteVersionesAprobadas, FuenteVersionesAprobadas>();
         // Sprint 3: todo lo de la difusión se guarda en la base (CAP emitido, envíos SMS, tareas, incidencias y bitácora).
         services.AddScoped<IArchivoCap, ArchivoCapPersistente>();
+        services.AddScoped<IVersionesDifusion, VersionesDifusionEf>();
+        services.AddScoped<IDetenedorDespachosAnteriores, DetenedorDespachosAnteriores>();
         services.AddScoped<IPublicadorWeb, PublicadorWebPersistente>();
         services.AddScoped<IColaSms, ColaSmsPersistente>();
         services.AddScoped<DespachadorSms>();

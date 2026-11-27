@@ -6,7 +6,8 @@ using SistemaAlertas.Domain.Difusion;
 
 namespace SistemaAlertas.Application.Difusion;
 
-public sealed record ConteoEstados(int Total, int Pendientes, int Enviados, int Fallidos, int Bloqueados, int Confirmadas, int NoRealizadas)
+public sealed record ConteoEstados(int Total, int Pendientes, int Enviados, int Fallidos, int Bloqueados, int Confirmadas, int NoRealizadas,
+    int Cancelados = 0)
 {
     public int Terminados => Total - Pendientes;
     public static ConteoEstados De(IEnumerable<EstadoTrabajo> estados)
@@ -14,7 +15,7 @@ public sealed record ConteoEstados(int Total, int Pendientes, int Enviados, int 
         var l = estados.ToList();
         return new(l.Count, l.Count(e => e == EstadoTrabajo.Pendiente), l.Count(e => e == EstadoTrabajo.Enviado),
             l.Count(e => e == EstadoTrabajo.Fallido), l.Count(e => e == EstadoTrabajo.Bloqueado),
-            l.Count(e => e == EstadoTrabajo.Confirmada), l.Count(e => e == EstadoTrabajo.NoRealizada));
+            l.Count(e => e == EstadoTrabajo.Confirmada), l.Count(e => e == EstadoTrabajo.NoRealizada), l.Count(e => e == EstadoTrabajo.Cancelado));
     }
 }
 
@@ -30,10 +31,12 @@ public sealed record SeguimientoComunidad(Guid? ComunidadId, string Comunidad, s
     EstadoTrabajo? Altavoz);
 
 public sealed record TareaVista(Guid Id, CanalDifusion Canal, Guid? ComunidadId, string? Comunidad, EstadoTrabajo Estado,
-    string TextoLegible, string? Observacion, string? ConfirmadoPor, DateTimeOffset CreadaEn, DateTimeOffset? ResultadoEn);
+    string TextoLegible, string? Observacion, string? ConfirmadoPor, DateTimeOffset CreadaEn, DateTimeOffset? ResultadoEn,
+    string? Resultado = null);
 
 public sealed record EnvioSmsVista(Guid Id, Guid? ComunidadId, string? Comunidad, string Destino, EstadoTrabajo Estado, int Intentos,
-    string? CodigoProveedor, string? UltimoError, DateTimeOffset? ProximoIntento, DateTimeOffset CreadoEn, DateTimeOffset? ResultadoEn);
+    string? CodigoProveedor, string? UltimoError, DateTimeOffset? ProximoIntento, DateTimeOffset CreadoEn, DateTimeOffset? ResultadoEn,
+    string? Resultado = null);
 
 /// <param name="SmsTerminadosEn">Cuándo terminó el último SMS (enviado, fallido o bloqueado), si ya no queda ninguno pendiente.</param>
 /// <param name="DentroDeMeta">RNF-02: todos los SMS terminaron dentro de los 5 minutos desde la difusión. Null mientras falten.</param>
@@ -103,10 +106,10 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
         return new SeguimientoDetalle(resumen, cap, v.PublicadaWebEn, porComunidad,
             tareas.OrderBy(t => t.Canal).ThenBy(t => Nombre(t.ComunidadId)).Select(t => new TareaVista(t.Id, t.Canal, t.ComunidadId,
                 Nombre(t.ComunidadId), t.Estado, t.TextoLegible, t.Observacion,
-                t.ConfirmadoPorId is { } u ? usuarios.GetValueOrDefault(u) : null, t.CreadoEn, t.ResultadoEn)).ToList(),
+                t.ConfirmadoPorId is { } u ? usuarios.GetValueOrDefault(u) : null, t.CreadoEn, t.ResultadoEn, t.Resultado)).ToList(),
             envios.OrderBy(e => Nombre(e.ComunidadId)).Select(e => new EnvioSmsVista(e.Id, e.ComunidadId, Nombre(e.ComunidadId),
                 mostrarDestino ? e.Destino : Enmascarar(e.Destino), e.Estado, e.Intentos, e.CodigoProveedor, e.UltimoError,
-                e.ProximoIntento, e.CreadoEn, e.ResultadoEn)).ToList(),
+                e.ProximoIntento, e.CreadoEn, e.ResultadoEn, e.Resultado)).ToList(),
             smsTerminados, dentroDeMeta, reloj.GetUtcNow());
     }
 
@@ -131,7 +134,7 @@ public sealed class ServicioSeguimiento(IAppDbContext db, IUsuarioActual usuario
                 reloj.GetUtcNow(), tarea.VersionId), ct);
         var nombre = await db.Usuarios.AsNoTracking().Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync(ct);
         return new TareaVista(tarea.Id, tarea.Canal, tarea.ComunidadId, comunidad, tarea.Estado, tarea.TextoLegible, tarea.Observacion,
-            nombre, tarea.CreadoEn, tarea.ResultadoEn);
+            nombre, tarea.CreadoEn, tarea.ResultadoEn, tarea.Resultado);
     }
 
     private static SeguimientoResumen Resumen(Guid versionId, Guid avisoId, int numero, string tipo, string titular, bool esPrueba,

@@ -123,6 +123,50 @@ public sealed class GestorTareasPersistente : IGestorTareasManuales
     }
 }
 
+/// <summary>
+/// RF-04: cancela los trabajos pendientes (SMS en cola y tareas sin hacer) de las otras versiones del mismo evento.
+/// Solo toca los pendientes: lo que ya se envió o se confirmó queda como está.
+/// </summary>
+public sealed class DetenedorDespachosAnteriores(IAppDbContext db, IVersionesDifusion versiones, TimeProvider reloj)
+    : IDetenedorDespachosAnteriores
+{
+    public async Task<int> DetenerAsync(VersionAprobada v, CancellationToken ct = default)
+    {
+        var nueva = await versiones.AnterioresAsync(v.VersionId, ct);
+        var anteriores = nueva.Anteriores;
+        if (anteriores.Count == 0) return 0;
+
+        var pendientes = await db.TrabajosDifusion
+            .Where(t => anteriores.Contains(t.VersionId) && t.Estado == EstadoTrabajo.Pendiente).ToListAsync(ct);
+        var ahora = reloj.GetUtcNow();
+        var motivo = $"Detenido: lo reemplazó la versión {nueva.Numero} ({nueva.Tipo}).";
+        var detenidos = pendientes.Count(t => t.Cancelar(motivo, ahora));
+        await db.GuardarODescartarAsync(ct);
+        return detenidos;
+    }
+}
+
+public sealed class VersionesDifusionEf(IAppDbContext db) : IVersionesDifusion
+{
+    public async Task<IReadOnlyDictionary<Guid, string?>> MotivosParaDetenerAsync(IReadOnlyCollection<Guid> versionIds,
+        DateTimeOffset ahora, CancellationToken ct = default)
+    {
+        var versiones = await db.VersionesMensaje.AsNoTracking().Where(v => versionIds.Contains(v.Id)).ToListAsync(ct);
+        return versionIds.ToDictionary(id => id, id => versiones.FirstOrDefault(v => v.Id == id) is { } v
+            ? v.MotivoParaDetenerDifusion(ahora)
+            : "La versión del mensaje ya no existe: no se envía.");
+    }
+
+    public async Task<(int Numero, string Tipo, IReadOnlyList<Guid> Anteriores)> AnterioresAsync(Guid versionId, CancellationToken ct = default)
+    {
+        var v = await db.VersionesMensaje.AsNoTracking().Where(x => x.Id == versionId)
+            .Select(x => new { x.CadenaId, x.Numero, x.Tipo }).FirstAsync(ct);
+        var otras = await db.VersionesMensaje.AsNoTracking()
+            .Where(x => x.CadenaId == v.CadenaId && x.Id != versionId).Select(x => x.Id).ToListAsync(ct);
+        return (v.Numero, v.Tipo.ToString(), otras);
+    }
+}
+
 /// <summary>Deja cada incidencia en el log y en la bitácora del aviso, para verla en el seguimiento (RF-08).</summary>
 public sealed class RegistroIncidenciasPersistente(IAppDbContext db, ILogger<RegistroIncidenciasPersistente> logger) : IRegistroIncidencias
 {

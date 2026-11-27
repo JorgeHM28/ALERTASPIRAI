@@ -52,6 +52,28 @@ public interface IGestorTareasManuales
 }
 
 /// <summary>
+/// Lo que la cola y el detenedor necesitan saber de las versiones (RF-04, RNF-08), sin cargar el resto del mensaje.
+/// </summary>
+public interface IVersionesDifusion
+{
+    /// <summary>Para cada versión, el motivo por el que lo pendiente ya no debe salir; null si sigue valiendo.</summary>
+    Task<IReadOnlyDictionary<Guid, string?>> MotivosParaDetenerAsync(IReadOnlyCollection<Guid> versionIds, DateTimeOffset ahora,
+        CancellationToken ct = default);
+
+    /// <summary>Número y tipo de la versión, y las otras versiones de su mismo evento.</summary>
+    Task<(int Numero, string Tipo, IReadOnlyList<Guid> Anteriores)> AnterioresAsync(Guid versionId, CancellationToken ct = default);
+}
+
+/// <summary>
+/// RF-04: al difundir un Update o Cancel se detiene lo que quedó pendiente de las versiones anteriores del mismo
+/// evento (SMS en cola y tareas manuales sin hacer). Devuelve cuántos trabajos se cancelaron.
+/// </summary>
+public interface IDetenedorDespachosAnteriores
+{
+    Task<int> DetenerAsync(VersionAprobada version, CancellationToken ct = default);
+}
+
+/// <summary>
 /// Genera, valida y archiva el CAP final de la versión aprobada (RF-04). Si el XML no es válido contra el XSD de CAP 1.2
 /// lanza una excepción de dominio y no se difunde nada.
 /// </summary>
