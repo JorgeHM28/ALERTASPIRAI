@@ -1,6 +1,10 @@
 namespace SistemaAlertas.Application.Difusion.Sms;
 
-public enum ModoSms { Simulador, Twilio }
+/// <summary>
+/// Proveedor de SMS. Simulador: no envía nada. Twilio: servicio en la nube (sin cuentas de prueba en Bolivia).
+/// SmsGateway: un celular Android con la app "SMS Gateway for Android" envía con su chip.
+/// </summary>
+public enum ModoSms { Simulador, Twilio, SmsGateway }
 
 /// <summary>Sección "Sms" de la configuración. Las credenciales van en user-secrets o variables de entorno, nunca en el repo.</summary>
 public sealed class OpcionesSms
@@ -26,6 +30,19 @@ public sealed class OpcionesSms
     public int EnviosSimultaneos { get; set; } = 10;
 
     public OpcionesTwilio Twilio { get; set; } = new();
+
+    public OpcionesSmsGateway SmsGateway { get; set; } = new();
+}
+
+/// <summary>Datos que muestra la app SMS Gateway for Android en su sección "Local Server" o "Cloud Server".</summary>
+public sealed class OpcionesSmsGateway
+{
+    /// <summary>Modo local: http://IP-del-celular:8080. Modo nube: https://api.sms-gate.app/3rdparty/v1.</summary>
+    public string Url { get; set; } = string.Empty;
+    public string Usuario { get; set; } = string.Empty;
+    public string Contrasena { get; set; } = string.Empty;
+    /// <summary>Cuánto se espera la respuesta del celular antes de dar el envío como fallo pasajero.</summary>
+    public int TiempoEsperaSegundos { get; set; } = 15;
 }
 
 public sealed class OpcionesTwilio

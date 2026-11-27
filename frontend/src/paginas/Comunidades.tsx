@@ -5,7 +5,7 @@ import { useConfirmar } from '../components/ui/useConfirmar'
 import { Alert } from '../components/ui/Alert'
 import { useEnfocarAlAbrir } from '../components/ui/useEnfocarAlAbrir'
 
-const TIPOS: TipoCanal[] = ['Sms', 'WhatsApp', 'Llamada', 'Email', 'Radio']
+const TIPOS: TipoCanal[] = ['Sms', 'WhatsApp', 'Email', 'Radio']
 const PROCEDENCIAS = ['Asamblea comunal', 'Padrón municipal', 'Dirigente de la OTB', 'Registro en campaña de prevención', 'Solicitud propia']
 const ACCION_CONTACTO: Record<string, string> = { Alta: 'Alta', Modificacion: 'Modificación', Baja: 'Baja' }
 

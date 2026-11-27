@@ -40,7 +40,7 @@ Entrega: 20/11/2026. Requisitos: RF-02, RF-05, RF-06, RF-07 y RF-11.
 ## Destinos por comunidad (RF-07)
 
 - **Alcance:** son las comunidades cuya zona toca el área de la versión. Si la comunidad tiene ubicación, esa ubicación debe caer dentro del área.
-- **Contactos:** solo entran los habilitados (activos, autorizados y con canal), por los canales elegidos. Los canales deben estar entre los aprobados (`Destinos:CanalesAprobados`, por defecto Sms, WhatsApp, Llamada y Radio).
+- **Contactos:** solo entran los habilitados (activos, autorizados y con canal), por los canales elegidos. Los canales deben estar entre los aprobados (`Destinos:CanalesAprobados`, por defecto Sms, WhatsApp, Llamada y Radio; en el Sprint 3 se quitó Llamada).
 - **Sin duplicados:** la clave de la tabla `destinos_envio` es (lista, canal, dirección).
 - **Pendientes:** una comunidad del alcance que no aporta ningún destino queda en `comunidades_pendientes` con su motivo.
 - Los destinos se ven enmascarados para quien no tiene permiso de edición.

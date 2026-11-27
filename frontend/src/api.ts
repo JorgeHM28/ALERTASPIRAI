@@ -4,7 +4,7 @@ const CLAVE_SESION = 'sat-pirai-sesion'
 export type Rol = 'Administrador' | 'Operador' | 'Aprobador' | 'Consulta'
 export type NivelRiesgo = 'Bajo' | 'Medio' | 'Alto' | 'MuyAlto'
 export const ETIQUETA_NIVEL_RIESGO: Record<NivelRiesgo, string> = { Bajo: 'Bajo', Medio: 'Medio', Alto: 'Alto', MuyAlto: 'Muy alto' }
-export type TipoCanal = 'Sms' | 'WhatsApp' | 'Llamada' | 'Email' | 'Radio'
+export type TipoCanal = 'Sms' | 'WhatsApp' | 'Email' | 'Radio'
 export type Permiso = 'Lectura' | 'Edicion' | 'Aprobacion' | 'Administracion'
 
 export interface Usuario {

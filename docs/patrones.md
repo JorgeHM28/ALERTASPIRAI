@@ -28,7 +28,7 @@ Las pruebas que demuestran cada patrón están en `tests/SistemaAlertas.Tests/Me
 ### Factory Method
 **Problema:** los avisos llegan en formatos distintos (XML CAP 1.2, registro manual y otras fuentes a futuro). El caso de uso "registrar aviso" no debe depender de cada formato.
 **Solución:** una interfaz `IImportadorAviso` con una implementación por formato, y una fábrica que devuelve el importador correcto según el origen.
-**Segundo uso (RF-04, Sprint 3):** el canal SMS. Cada proveedor (Twilio o el simulador para la demo) aporta un solo objeto, el emisor. Una fábrica lo crea según la configuración `Sms:Modo`.
+**Segundo uso (RF-04, Sprint 3):** el canal SMS. Cada proveedor (el simulador, Twilio o SMS Gateway for Android) aporta un solo objeto, el emisor. Una fábrica lo crea según la configuración `Sms:Modo`.
 **Beneficio:** agregar un formato o un proveedor nuevo es crear una clase nueva sin tocar el código existente (principio abierto/cerrado).
 
 ### Builder
@@ -63,7 +63,7 @@ Mismo criterio: se usan los que resuelven un problema real. Cuatro se usan y tre
 
 | Patrón | Decisión | Dónde | RF |
 |---|---|---|---|
-| Adapter | Se usa | Proveedor SMS (Twilio), XML CAP 1.2, geometrías PostGIS a GeoJSON | RF-04, RF-01, RF-09 |
+| Adapter | Se usa | Proveedor SMS (Twilio y SMS Gateway for Android), XML CAP 1.2, geometrías PostGIS a GeoJSON | RF-04, RF-01, RF-09 |
 | Facade | Se usa | `ServicioDifusion` (difusión multicanal) y `ModuloCap` (importar, generar, validar CAP) | RF-04, RF-01 |
 | Decorator | Se usa | Bitácora y modo prueba sobre `IEmisorSms` (y reintentos inmediatos, disponibles) | RNF-08, RNF-04 |
 | Proxy (protección) | Se usa | `ProxyRepositorioContactos` enmascara los números | RF-12 |
@@ -75,14 +75,14 @@ Mismo criterio: se usan los que resuelven un problema real. Cuatro se usan y tre
 
 | Patrón | Archivos |
 |---|---|
-| Adapter (SMS) | `Application/Difusion/Sms/IEmisorSms.cs` (objetivo), `Infrastructure/Sms/TwilioEmisor.cs` (adapta el SDK de Twilio), `Infrastructure/Sms/SimuladorEmisor.cs`, `Infrastructure/Sms/RegistroSms.cs` (elige por `Sms:Modo`). |
+| Adapter (SMS) | `Application/Difusion/Sms/IEmisorSms.cs` (objetivo), `Infrastructure/Sms/TwilioEmisor.cs` (adapta el SDK de Twilio), `Infrastructure/Sms/SmsGatewayEmisor.cs` (adapta la API HTTP de la app de Android), `Infrastructure/Sms/SimuladorEmisor.cs`, `Infrastructure/Sms/RegistroSms.cs` (elige por `Sms:Modo`). |
 | Adapter (CAP) | `Application/Avisos/Importacion/ImportadorCapXml.cs`: XML CAP 1.2 de OASIS → `MensajeCap` → entidad `Aviso`. |
 | Adapter (GeoJSON) | `Application/Abstracciones/IConversorGeoJson.cs` (objetivo), `Infrastructure/Geo/ConversorGeoJson.cs` (adapta NetTopologySuite y su serializador). Lo usan `ZonasController` y `AvisosController`. |
 | Facade | `Application/Difusion/ServicioDifusion.cs` con los subsistemas de `Application/Difusion/Abstracciones.cs` (`IPublicadorWeb`, `IDestinatariosDifusion`, `IColaSms`, `IGestorTareasManuales`, `IRegistroIncidencias`, `IFuenteVersionesAprobadas`) e implementaciones en `Infrastructure/Difusion/`. `Application/Cap/IModuloCap.cs` y `ModuloCap.cs` con `ValidadorCap.cs`. Endpoints `POST /api/difusion/{versionAprobadaId}` y `POST /api/avisos/validar-cap`. |
 | Decorator | `Infrastructure/Sms/Decoradores/`: `EmisorSmsDecorador` (base), `EmisorConReintentos`, `EmisorConBitacora`, `EmisorModoPrueba`. Cadena armada en `RegistroSms.AddCanalSms`. |
 | Proxy | `Application/Comunidades/IRepositorioContactos.cs` (sujeto), `Infrastructure/Persistence/Repositorios/RepositorioContactos.cs` (real), `ProxyRepositorioContactos.cs` (proxy), `Application/Comunidades/EnmascaradorDatos.cs`, `Api/Comun/UsuarioActualHttp.cs`. |
 
-Pruebas: `ConversorGeoJsonTests`, `ImportadorCapAdapterTests` (en `ImportadoresTests.cs`), `TwilioEmisorTests`, `DecoradoresSmsTests`, `ProxyRepositorioContactosTests`, `ModuloCapTests` y `ServicioDifusionTests`.
+Pruebas: `ConversorGeoJsonTests`, `ImportadorCapAdapterTests` (en `ImportadoresTests.cs`), `TwilioEmisorTests`, `SmsGatewayEmisorTests`, `DecoradoresSmsTests`, `ProxyRepositorioContactosTests`, `ModuloCapTests` y `ServicioDifusionTests`.
 
 ## Patrones que se usan
 

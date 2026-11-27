@@ -17,7 +17,7 @@ public partial class CanalContacto
         destino = (destino ?? string.Empty).Trim();
         switch (tipo)
         {
-            case TipoCanal.Sms or TipoCanal.WhatsApp or TipoCanal.Llamada:
+            case TipoCanal.Sms or TipoCanal.WhatsApp:
                 destino = destino.Replace(" ", "").Replace("-", "");
                 if (!Telefono().IsMatch(destino))
                     throw new ExcepcionDominio($"'{destino}' no es un teléfono válido. Usa formato internacional, por ejemplo +59171234567.");

@@ -15,7 +15,7 @@ body:
       "procedencia": "Asamblea comunal",
       "autorizado": true,
       "referenciaAutorizacion": "Acta de asamblea 9/2025",
-      "canales": [ { "tipo": "Llamada", "destino": "+59173333333", "preferido": true } ]
+      "canales": [ { "tipo": "WhatsApp", "destino": "+59173333333", "preferido": true } ]
     }
 scripts:
   - type: afterResponse

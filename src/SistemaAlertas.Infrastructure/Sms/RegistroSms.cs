@@ -28,6 +28,19 @@ public static class RegistroSms
             services.AddSingleton(sp => new TwilioEmisor(sp.GetRequiredService<ITwilioRestClient>(), t));
         }
 
+        if (opciones.Modo == ModoSms.SmsGateway)
+        {
+            var g = opciones.SmsGateway;
+            if (string.IsNullOrWhiteSpace(g.Url) || string.IsNullOrWhiteSpace(g.Usuario) || string.IsNullOrWhiteSpace(g.Contrasena))
+                throw new InvalidOperationException(
+                    "Sms:Modo es SmsGateway pero faltan Sms:SmsGateway:Url, Usuario o Contrasena (configúralos con dotnet user-secrets).");
+            if (!Uri.TryCreate(g.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+                throw new InvalidOperationException($"Sms:SmsGateway:Url no es una URL válida: {g.Url}");
+            // Un solo HttpClient para toda la aplicación: reutiliza las conexiones con el celular.
+            services.AddSingleton(_ => new SmsGatewayEmisor(
+                new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(1, g.TiempoEsperaSegundos)) }, g));
+        }
+
         services.AddSingleton<IBitacoraEnvios, BitacoraEnviosEnMemoria>();
 
         // Decorator: la cadena se arma a mano, de afuera hacia adentro: bitácora → modo prueba → proveedor (Adapter).
@@ -36,9 +49,12 @@ public static class RegistroSms
         // Cada intento queda en la bitácora; el modo prueba va antes del proveedor para que un aviso de prueba no salga.
         services.AddSingleton<IEmisorSms>(sp =>
         {
-            IEmisorSms proveedor = opciones.Modo == ModoSms.Twilio
-                ? sp.GetRequiredService<TwilioEmisor>()
-                : sp.GetRequiredService<SimuladorEmisor>();
+            IEmisorSms proveedor = opciones.Modo switch
+            {
+                ModoSms.Twilio => sp.GetRequiredService<TwilioEmisor>(),
+                ModoSms.SmsGateway => sp.GetRequiredService<SmsGatewayEmisor>(),
+                _ => sp.GetRequiredService<SimuladorEmisor>()
+            };
             return new EmisorConBitacora(new EmisorModoPrueba(proveedor), sp.GetRequiredService<IBitacoraEnvios>());
         });
         return services;

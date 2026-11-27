@@ -31,6 +31,7 @@ Cada canal es independiente: si uno falla, queda una incidencia en la bitácora 
 - Un servicio en segundo plano revisa la cola cada 5 s (`Sms:IntervaloColaSegundos`). Toma lotes de 200 (`Sms:TamanoLote`) y manda 10 SMS a la vez (`Sms:EnviosSimultaneos`). En las pruebas, 1000 SMS con 20 ms de red cada uno terminan en unos 2 s.
 - **Reintentos:** solo ante un fallo recuperable (proveedor saturado, sin red). Se reintenta a los 60 s, como máximo 2 veces (3 intentos en total). Un fallo definitivo, como un número inválido, no se reintenta.
 - Antes de cada envío o reintento se revisa la versión. Si fue reemplazada por un Update o Cancel, ya no está aprobada o venció, el SMS queda **Cancelado** y no sale.
+- **Proveedores:** Simulador (por defecto), Twilio, o **SMS Gateway for Android**: un celular manda los SMS con su chip, útil porque Twilio no da cuentas de prueba en Bolivia. Cómo configurarlo: `docs/sms-gateway.md`.
 - Un aviso de prueba o simulacro (`status` Exercise o Test) no sale por un proveedor real: queda **Bloqueado**. Con el simulador sale marcado `[PRUEBA]`.
 
 ## Seguimiento (RF-08)
@@ -59,6 +60,8 @@ La migración `Sprint3Difusion`:
 - Crea `caps_emitidos`, `trabajos_difusion` (una sola tabla para envío SMS y tarea manual, con la columna `tipo`) y `eventos_aviso`.
 - Agrega `versiones_mensaje.publicada_web_en`.
 - Amplía `avisos.tipo_contenido_original` a 100 caracteres (el tipo MIME del Excel).
+
+La migración `Sprint3QuitarLlamada` quita el canal **Llamada**, porque el sistema no hace llamadas: borra esos canales de los contactos y de las listas de destinos. Los canales de un contacto quedan en SMS, WhatsApp, Email y Radio.
 
 Relación con el diagrama ER: CAP emitido, Trabajo de difusión (Envío SMS y Tarea manual) y Bitácora quedan como tablas. El **Canal** se guarda como texto en cada trabajo (`Sms`, `Radio`, `Altavoz`, `RedesSociales`), igual que el canal de cada contacto. La relación "Dispone" (Comunidad y Canal, con su responsable) queda para cuando haya acuerdos con las comunidades.
 

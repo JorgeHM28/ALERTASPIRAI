@@ -13,7 +13,7 @@ namespace SistemaAlertas.Application.Mensajes;
 public sealed class OpcionesDestinos
 {
     public const string Seccion = "Destinos";
-    public List<TipoCanal> CanalesAprobados { get; set; } = [TipoCanal.Sms, TipoCanal.WhatsApp, TipoCanal.Llamada, TipoCanal.Radio];
+    public List<TipoCanal> CanalesAprobados { get; set; } = [TipoCanal.Sms, TipoCanal.WhatsApp, TipoCanal.Radio];
 }
 
 /// <summary>
