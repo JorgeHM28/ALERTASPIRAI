@@ -89,9 +89,26 @@ jobs:
         run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
       # La contraseña del admin se pasa explícita: el Postman CLI más nuevo no toma del archivo los valores de tipo "secret".
       - name: Colección Postman completa
-        run: >
-          postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml
-          --env-var adminContrasena=Admin12345
+        run: |
+          set -o pipefail
+          postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml \
+            --env-var adminContrasena=Admin12345 | tee postman.txt
+      # Cada prueba que falla queda como anotación del flujo, visible en la página de la ejecución.
+      - name: Pruebas Postman que fallaron
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import re
+          lineas = open('postman.txt', encoding='utf-8', errors='replace').read().splitlines()
+          for i, l in enumerate(lineas):
+              m = re.match(r'\s*\d+[.⠄]\s+(\w+Error)\s+(.*)', l)
+              if not m:
+                  continue
+              bloque = lineas[i:i + 8]
+              donde = next((b.strip() for b in bloque if 'inside "' in b), '')
+              detalle = ' '.join(b.strip() for b in bloque[1:3] if b.strip() and 'inside "' not in b and not b.strip().startswith('at '))
+              print(f"::error title=Postman::{m.group(2).strip()} | {detalle} | {donde}"[:900])
+          PY
       - name: Log de la API si algo falló
         if: failure()
         run: tail -200 api.log
