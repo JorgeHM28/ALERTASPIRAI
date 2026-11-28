@@ -79,8 +79,10 @@ public sealed class EncolarSms(IDestinatariosDifusion destinatarios, IColaSms co
             return;
         }
         var ahora = c.Reloj.GetUtcNow();
+        // El SMS sale sin tildes: así cabe en el alfabeto básico de SMS y el chip no lo rechaza (ver TextoSms).
+        var texto = TextoSms.ParaSms(v.TextoSms);
         c.TrabajosSms = await cola.EncolarAsync(lista.Select(d =>
-            new EnvioSms(v.VersionId, v.AvisoId, d.ComunidadId, d.ContactoId, d.Telefono, v.TextoSms, v.EsPrueba, ahora)).ToList(), ct);
+            new EnvioSms(v.VersionId, v.AvisoId, d.ComunidadId, d.ContactoId, d.Telefono, texto, v.EsPrueba, ahora)).ToList(), ct);
     }
 }
 

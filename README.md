@@ -95,7 +95,7 @@ Para probar rápido en la web (el detalle está en [docs/sprint-3.md](docs/sprin
 
 Plan, matriz de trazabilidad y defectos corregidos: [docs/sqa.md](docs/sqa.md).
 
-- **Unitarias:** `dotnet test` ejecuta las pruebas xUnit del dominio, la aplicación, la cola SMS y los datos de la cuenca (232 en esta entrega).
+- **Unitarias:** `dotnet test` ejecuta las pruebas xUnit del dominio, la aplicación, la cola SMS y los datos de la cuenca (244 en esta entrega).
 - **API con Postman:** la colección `postman/collections/SAT Rio Pirai` tiene una carpeta por requisito, con 145 peticiones y 322 aserciones. Incluye los casos de error y de permisos, por ejemplo "Consulta no puede crear zonas → 403".
   - En la app de Postman, abre esta carpeta del repo (Local View) o impórtala con **Import**, elige el entorno **Local** y ejecuta la colección completa con **Run**. El login guarda el token solo.
   - Por consola: `postman collection run "postman/collections/SAT Rio Pirai" -e postman/environments/Local.environment.yaml`

@@ -6,7 +6,7 @@ Sprint 3. Cómo se prueba el sistema, qué cubre cada prueba, cómo se mide y qu
 
 | Control | Herramienta | Resultado (27/11/2026) |
 |---|---|---|
-| Pruebas unitarias y de integración | xUnit, EF Core en memoria | 232 pruebas, todas pasan |
+| Pruebas unitarias y de integración | xUnit, EF Core en memoria | 244 pruebas, todas pasan |
 | Pruebas de la API real | Colección Postman (CLI) contra PostgreSQL/PostGIS | 145 peticiones y 322 aserciones, 0 fallas. Se puede correr dos veces seguidas: la segunda da 321, porque dos pruebas aceptan "ya estaba hecho" |
 | Cobertura de código | coverlet (`tests/cobertura.runsettings`) | 81,4 % de líneas y 76,5 % de ramas (Domain 87,2 %, Application 81,0 %, Infrastructure 72,3 %) |
 | Análisis estático .NET | Analizadores de .NET, conjunto recomendado (`Directory.Build.props`) | 0 avisos; en CI se compila con `-warnaserror` |
@@ -91,6 +91,15 @@ Están en `.editorconfig`, cada una con su motivo:
 | 6 | El nombre de zona se comparaba en minúsculas según la configuración regional. | Analizadores CA1304 y CA1311 | Diccionario sin distinción de mayúsculas (`OrdinalIgnoreCase`) y minúsculas invariantes. |
 | 7 | El login y el registro aceptaban intentos sin límite (fuerza bruta, cuentas masivas). | Revisión de seguridad | Límite por IP (`LimiteAcceso:PorMinuto`, 10 por defecto). |
 | 8 | La cola SMS reintentaba dentro de la misma llamada con esperas de medio segundo; con los 60 s que pide RNF-08 habría bloqueado la cola. | Revisión de RNF-08 | El reintento lo agenda la cola persistente (`EnvioSms.ProximoIntento`). |
+
+### Defectos de la prueba real con SMS Gateway (27/11/2026)
+
+Un integrante del equipo probó el SMS con un celular real.
+
+| # | Defecto | Corrección | Prueba |
+|---|---|---|---|
+| 13 | El sistema marcaba "Enviado" cuando el celular solo había **aceptado** el pedido. El chip rechazó la alerta (`RESULT_ERROR_GENERIC_FAILURE`), el SMS nunca llegó y no hubo reintento. | Después de enviar, se consulta `GET /message/{id}` hasta un resultado: `Failed` es fallo pasajero con el error del chip (la cola reintenta), `Delivered` o `Sent` estable es enviado, y si no hay resultado a tiempo es fallo pasajero. | `SmsGatewayEmisorTests` |
+| 14 | La alerta tenía tildes: el celular usó UCS-2, la partió en tres mensajes de 70 caracteres y el chip la rechazó. El mismo texto sin tildes llegó. | El SMS sale sin tildes, sin ñ y solo con caracteres del alfabeto básico de SMS (`TextoSms.ParaSms`). Los demás canales conservan las tildes. | `TextoSmsTests`, `ServicioDifusionTests` |
 
 ### Defectos del informe de pruebas del equipo (27/11/2026)
 

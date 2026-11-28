@@ -43,6 +43,21 @@ public sealed class OpcionesSmsGateway
     public string Contrasena { get; set; } = string.Empty;
     /// <summary>Cuánto se espera la respuesta del celular antes de dar el envío como fallo pasajero.</summary>
     public int TiempoEsperaSegundos { get; set; } = 15;
+
+    /// <summary>
+    /// Después de que el celular acepta el pedido, se consulta cómo terminó (GET /message/{id}): el chip puede rechazarlo.
+    /// Con false se confía en la aceptación (no recomendado).
+    /// </summary>
+    public bool ConfirmarEnvio { get; set; } = true;
+    /// <summary>Tiempo máximo para que el celular informe el resultado. En las pruebas reales el fallo llegó a los 47 s.</summary>
+    public int TiempoConfirmacionSegundos { get; set; } = 90;
+    /// <summary>Cada cuánto se consulta el estado.</summary>
+    public int IntervaloConsultaSegundos { get; set; } = 3;
+    /// <summary>
+    /// "Sent" no siempre es final: en la prueba real pasó a "Failed" 15 s después. Se espera este margen antes de darlo
+    /// por enviado ("Delivered" sí es final).
+    /// </summary>
+    public int MargenTrasEnviadoSegundos { get; set; } = 25;
 }
 
 public sealed class OpcionesTwilio

@@ -109,7 +109,12 @@ public class ServicioDifusionTests
         Assert.True(r.PublicadoEnWeb);
         Assert.Equal($"/?aviso={version.VersionId}", r.UrlWeb);
         Assert.Equal(2, r.TrabajosSms);
-        Assert.All(cola.Envios, e => { Assert.Equal(version.TextoSms, e.Texto); Assert.Equal(EstadoTrabajo.Pendiente, e.Estado); });
+        Assert.All(cola.Envios, e =>
+        {
+            // El SMS sale sin tildes (TextoSms.ParaSms), con el nivel en palabras.
+            Assert.Equal("Alerta roja rio Pirai. Evacue hacia zonas altas.", e.Texto);
+            Assert.Equal(EstadoTrabajo.Pendiente, e.Estado);
+        });
         Assert.Equal([CanalDifusion.Radio, CanalDifusion.Altavoz, CanalDifusion.RedesSociales], tareas.Creadas.Select(t => t.Canal));
         Assert.Equal(3, r.TareasManuales);
         Assert.Empty(r.Incidencias);
